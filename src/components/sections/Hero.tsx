@@ -50,13 +50,13 @@ export default function Hero() {
       {/* Content Container */}
       <div className="relative z-10 h-screen flex flex-col items-center justify-center px-6">
         {/* Main Title */}
-        <h1 className="text-5xl md:text-[6.5rem] font-display text-white uppercase tracking-wider text-center mb-8 px-12">
+        <h1 className="text-5xl md:text-[6.5rem] font-display text-white uppercase tracking-wider text-center mb-4 px-1">
           {EVENT_INFO.name}
         </h1>
 
         {/* Typewriter Text Section */}
         <div className="text-center mb-20">
-          <div className="text-xl md:text-2xl text-white">
+          <div className="text-2xl md:text-4xl text-white">
             <span>Ta med dig </span>
             <span className="font-display text-red-500">
               {currentText}
