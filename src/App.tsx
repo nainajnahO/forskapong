@@ -2,7 +2,7 @@ import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
 import Hero from './components/sections/Hero'
 import About from './components/sections/About'
-import Schedule from './components/sections/Schedule'
+import ScheduleElegant from './components/sections/ScheduleElegant'
 import Sponsors from './components/sections/Sponsors'
 import Tickets from './components/sections/Tickets'
 
@@ -12,7 +12,7 @@ function App() {
       <Navbar />
       <Hero />
       <About id="about" />
-      <Schedule id="schedule" />
+      <ScheduleElegant id="schedule" />
       <Sponsors id="sponsors" />
       <Tickets id="tickets" />
       <Footer />
