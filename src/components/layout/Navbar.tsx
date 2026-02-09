@@ -154,24 +154,47 @@ export default function Navbar() {
               ))}
             </div>
 
-            {/* Theme Toggle Button (Desktop) */}
-            <button
-              onClick={toggleTheme}
-              className="hidden lg:block p-2.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-all duration-500 ease-in-out backdrop-blur-sm"
-              style={{
-                opacity: isScrolled ? 0 : 1,
-                pointerEvents: isScrolled ? 'none' : 'auto',
-                transform: isScrolled ? 'scale(0)' : 'scale(1)',
-                width: isScrolled ? 0 : 'auto',
-              }}
-              aria-label="Toggle theme"
-            >
-              {theme === 'light' ? (
-                <Moon className="w-5 h-5" />
-              ) : (
-                <Sun className="w-5 h-5" />
-              )}
-            </button>
+            {/* Mobile: Vertical stack of theme + menu buttons */}
+            <div className="flex flex-col lg:flex-row items-center gap-2 lg:gap-4">
+              {/* Theme Toggle Button */}
+              <button
+                onClick={toggleTheme}
+                className="p-1.5 rounded-full lg:bg-white/20 lg:hover:bg-white/30 text-white transition-all duration-500 ease-in-out lg:backdrop-blur-sm"
+                style={{
+                  opacity: isScrolled ? 0 : 1,
+                  pointerEvents: isScrolled ? 'none' : 'auto',
+                  transform: isScrolled ? 'scale(0)' : 'scale(1)',
+                  width: isScrolled ? 0 : 'auto',
+                }}
+                aria-label="Toggle theme"
+              >
+                {theme === 'light' ? (
+                  <Moon className="w-5 h-5" />
+                ) : (
+                  <Sun className="w-5 h-5" />
+                )}
+              </button>
+
+              {/* Mobile Menu Button */}
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="lg:hidden p-0 text-white"
+                style={{
+                  opacity: isScrolled ? 0 : 1,
+                  pointerEvents: isScrolled ? 'none' : 'auto',
+                  transform: isScrolled ? 'scale(0)' : 'scale(1)',
+                  width: isScrolled ? 0 : 'auto',
+                  transition: 'all 0.3s ease-in-out',
+                }}
+                aria-label="Toggle menu"
+              >
+                {isMobileMenuOpen ? (
+                  <X className="w-5 h-5" />
+                ) : (
+                  <FourDotIcon className="w-5 h-5" />
+                )}
+              </button>
+            </div>
 
             {/* CTA Button - mobile: only when scrolled, desktop: always visible */}
             <button
@@ -198,26 +221,6 @@ export default function Navbar() {
                 <ArrowUpRight className="w-6 h-6 text-white" />
               </div>
             </button>
-
-            {/* Mobile Menu Button - visible on mobile when not scrolled, rightmost position */}
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden p-2.5 text-white"
-              style={{
-                opacity: isScrolled ? 0 : 1,
-                pointerEvents: isScrolled ? 'none' : 'auto',
-                transform: isScrolled ? 'scale(0)' : 'scale(1)',
-                width: isScrolled ? 0 : 'auto',
-                transition: 'all 0.3s ease-in-out',
-              }}
-              aria-label="Toggle menu"
-            >
-              {isMobileMenuOpen ? (
-                <X className="w-5 h-5" />
-              ) : (
-                <FourDotIcon className="w-5 h-5" />
-              )}
-            </button>
           </div>
         </Container>
       </nav>
@@ -238,15 +241,6 @@ export default function Navbar() {
                 {link.label}
               </button>
             ))}
-            <button
-              onClick={() => {
-                toggleTheme();
-                setIsMobileMenuOpen(false);
-              }}
-              className="text-white text-sm hover:text-white/70 transition-colors"
-            >
-              {theme === 'light' ? 'Dark' : 'Light'}
-            </button>
             <button
               onClick={() => {
                 handleTicketClick();
