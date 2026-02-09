@@ -1,6 +1,7 @@
 import { ArrowRight } from 'lucide-react';
 import { TICKET_INFO } from '@/lib/constants';
 import Container from '../common/Container';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface TicketsProps {
   id?: string;
@@ -47,8 +48,8 @@ const TicketIllustration = () => (
       />
 
       {/* Circle cutouts on dashed line */}
-      <circle cx="140" cy="25" r="8" fill="black" />
-      <circle cx="140" cy="155" r="8" fill="black" />
+      <circle cx="140" cy="25" r="8" fill="currentColor" className="text-background transition-colors duration-500" />
+      <circle cx="140" cy="155" r="8" fill="currentColor" className="text-background transition-colors duration-500" />
 
       {/* Decorative text */}
       <text
@@ -85,6 +86,8 @@ const TicketIllustration = () => (
 );
 
 export default function Tickets({ id }: TicketsProps) {
+  const { theme } = useTheme();
+
   return (
     <section id={id} className="w-full py-20">
       <Container>
@@ -99,7 +102,7 @@ export default function Tickets({ id }: TicketsProps) {
 
         {/* Heading */}
         <div className="mb-16">
-          <h1 className="text-4xl md:text-6xl font-display">
+          <h1 className="text-4xl md:text-6xl font-display text-foreground transition-colors duration-500">
             {TICKET_INFO.heading} <span className="font-bold text-red-600">{TICKET_INFO.headingHighlight}</span>
           </h1>
         </div>
@@ -113,9 +116,13 @@ export default function Tickets({ id }: TicketsProps) {
 
           {/* Right: Registration Info */}
           <div className="space-y-8">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8">
-              <h3 className="text-2xl font-bold text-white mb-4">Hur anmäler man sig?</h3>
-              <p className="text-zinc-400 mb-6 leading-relaxed">
+            <div className={`rounded-2xl p-8 transition-colors duration-500 ${
+              theme === 'light'
+                ? 'bg-white border border-zinc-200'
+                : 'bg-zinc-900 border border-zinc-800'
+            }`}>
+              <h3 className="text-2xl font-bold text-foreground mb-4 transition-colors duration-500">Hur anmäler man sig?</h3>
+              <p className={`mb-6 leading-relaxed transition-colors duration-500 ${theme === 'light' ? 'text-zinc-700' : 'text-zinc-400'}`}>
                 {TICKET_INFO.registrationNote}
               </p>
 
@@ -123,24 +130,24 @@ export default function Tickets({ id }: TicketsProps) {
                 <div className="flex items-start gap-3">
                   <div className="w-1 h-6 bg-gradient-to-b from-red-600 to-orange-500 mt-1 flex-shrink-0" />
                   <div>
-                    <p className="text-white font-semibold">Lagstorlek</p>
-                    <p className="text-zinc-400 text-sm">2 personer per lag</p>
+                    <p className="text-foreground font-semibold transition-colors duration-500">Lagstorlek</p>
+                    <p className={`text-sm transition-colors duration-500 ${theme === 'light' ? 'text-zinc-600' : 'text-zinc-400'}`}>2 personer per lag</p>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
                   <div className="w-1 h-6 bg-gradient-to-b from-red-600 to-orange-500 mt-1 flex-shrink-0" />
                   <div>
-                    <p className="text-white font-semibold">Anmälan</p>
-                    <p className="text-zinc-400 text-sm">Öppnar snart</p>
+                    <p className="text-foreground font-semibold transition-colors duration-500">Anmälan</p>
+                    <p className={`text-sm transition-colors duration-500 ${theme === 'light' ? 'text-zinc-600' : 'text-zinc-400'}`}>Öppnar snart</p>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
                   <div className="w-1 h-6 bg-gradient-to-b from-red-600 to-orange-500 mt-1 flex-shrink-0" />
                   <div>
-                    <p className="text-white font-semibold">Plats</p>
-                    <p className="text-zinc-400 text-sm">Bridgens Hus, Uppsala</p>
+                    <p className="text-foreground font-semibold transition-colors duration-500">Plats</p>
+                    <p className={`text-sm transition-colors duration-500 ${theme === 'light' ? 'text-zinc-600' : 'text-zinc-400'}`}>Bridgens Hus, Uppsala</p>
                   </div>
                 </div>
               </div>

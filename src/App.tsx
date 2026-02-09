@@ -8,7 +8,7 @@ import Tickets from './components/sections/Tickets'
 
 function App() {
   return (
-    <div className="min-h-screen bg-black text-white overflow-x-hidden">
+    <div className="min-h-screen bg-background text-foreground overflow-x-hidden transition-colors duration-500">
       <Navbar />
       <Hero />
       <About id="about" />

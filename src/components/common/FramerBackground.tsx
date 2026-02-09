@@ -8,10 +8,10 @@ const FramerBackground: React.FC = () => {
         className="absolute"
         style={{
           border: 'none',
-          width: '130%',
-          height: '130%',
-          top: '-10%',
-          left: '-10%',
+          width: '120%',
+          height: '125%',
+          top: '0%',
+          left: '0%',
         }}
         title="Background Animation"
         loading="eager"

@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, Sun, Moon } from 'lucide-react';
 import logo from '../../assets/logo.webp';
 import { NAV_LINKS } from '@/lib/constants';
 import Container from '../common/Container';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -33,9 +35,7 @@ export default function Navbar() {
   return (
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled
-          ? 'bg-black/40 backdrop-blur-md py-3'
-          : 'bg-black/20 backdrop-blur-sm py-5'
+        isScrolled ? 'py-3' : 'py-5'
       }`}
     >
       <Container size="full" className="flex items-center justify-between">
@@ -44,7 +44,7 @@ export default function Navbar() {
           <img
             src={logo}
             alt="Forsränningen Logo"
-            className="h-11 w-auto"
+            className="h-10 w-auto"
           />
         </div>
 
@@ -56,12 +56,25 @@ export default function Navbar() {
               <button
                 key={link.label}
                 onClick={() => handleNavClick(link.href)}
-                className="px-4 py-2 text-white bg-white/10 rounded-full text-sm font-medium hover:bg-white/20 transition-colors"
+                className="px-4 py-2.5 text-white bg-white/20 rounded-full text-sm hover:bg-white/30 transition-colors backdrop-blur-sm"
               >
                 {link.label}
               </button>
             ))}
           </div>
+
+          {/* Theme Toggle Button */}
+          <button
+            onClick={toggleTheme}
+            className="p-2.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-all duration-300 backdrop-blur-sm"
+            aria-label="Toggle theme"
+          >
+            {theme === 'light' ? (
+              <Moon className="w-5 h-5" />
+            ) : (
+              <Sun className="w-5 h-5" />
+            )}
+          </button>
 
           {/* CTA Button */}
           <button

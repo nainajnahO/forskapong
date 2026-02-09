@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 import Container from '../common/Container';
+import { useTheme } from '@/contexts/ThemeContext';
 
 // SVG Logo Placeholder Components
 const LogoCircles = () => (
@@ -43,10 +44,16 @@ const LogoStylized = () => (
 
 const SponsorCard = ({
   logoComponent: LogoComponent,
+  theme,
 }: {
   logoComponent: ComponentType;
+  theme: 'light' | 'dark';
 }) => (
-  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 flex items-center justify-center h-32 hover:border-zinc-700 transition-colors">
+  <div className={`rounded-2xl p-6 flex items-center justify-center h-32 transition-colors ${
+    theme === 'light'
+      ? 'bg-white border border-zinc-200 hover:border-zinc-300'
+      : 'bg-zinc-900 border border-zinc-800 hover:border-zinc-700'
+  }`}>
     <LogoComponent />
   </div>
 );
@@ -56,6 +63,7 @@ interface SponsorsProps {
 }
 
 export default function Sponsors({ id }: SponsorsProps) {
+  const { theme } = useTheme();
   const sponsors = [
     { logoComponent: LogoCircles },
     { logoComponent: LogoBoldText },
@@ -77,15 +85,15 @@ export default function Sponsors({ id }: SponsorsProps) {
 
         {/* Heading */}
         <div className="mb-16">
-          <h1 className="text-4xl md:text-6xl font-display">
-            Möt våra <span className="italic text-zinc-400">sponsorer</span>
+          <h1 className="text-4xl md:text-6xl font-display text-foreground transition-colors duration-500">
+            Möt våra <span className={`italic transition-colors duration-500 ${theme === 'light' ? 'text-zinc-600' : 'text-zinc-400'}`}>sponsorer</span>
           </h1>
         </div>
 
         {/* Sponsor Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           {sponsors.map((sponsor, index) => (
-            <SponsorCard key={index} logoComponent={sponsor.logoComponent} />
+            <SponsorCard key={index} logoComponent={sponsor.logoComponent} theme={theme} />
           ))}
         </div>
       </Container>

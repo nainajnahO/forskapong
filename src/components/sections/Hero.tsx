@@ -1,45 +1,31 @@
-import { useState, useEffect } from 'react';
 import FramerBackground from '../common/FramerBackground';
+import FluidBackground from '../common/FluidBackground';
+import StaticNoise from '../common/StaticNoise';
+import RotatingCube from '@/components/common/RotatingCube';
 import { EVENT_INFO, HERO_ROTATING_WORDS } from '@/lib/constants';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useAutoRotateCube } from '@/hooks/useAutoRotateCube';
+import useScreenSize from '@/hooks/useScreenSize';
 
 export default function Hero() {
-  const [currentWordIndex, setCurrentWordIndex] = useState(0);
-  const [currentText, setCurrentText] = useState('');
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  useEffect(() => {
-    const currentWord = HERO_ROTATING_WORDS[currentWordIndex];
-    const typeSpeed = isDeleting ? 75 : 150;
-    const pauseDuration = 2000;
-
-    const timer = setTimeout(() => {
-      if (!isDeleting) {
-        // Typing phase
-        if (currentText.length < currentWord.length) {
-          setCurrentText(currentWord.slice(0, currentText.length + 1));
-        } else {
-          // Word is complete, pause then start deleting
-          setTimeout(() => setIsDeleting(true), pauseDuration);
-        }
-      } else {
-        // Deleting phase
-        if (currentText.length > 0) {
-          setCurrentText(currentText.slice(0, -1));
-        } else {
-          // Deletion complete, move to next word
-          setIsDeleting(false);
-          setCurrentWordIndex((prev) => (prev + 1) % HERO_ROTATING_WORDS.length);
-        }
-      }
-    }, typeSpeed);
-
-    return () => clearTimeout(timer);
-  }, [currentText, isDeleting, currentWordIndex]);
+  const { theme } = useTheme();
+  const screenSize = useScreenSize();
+  const cubeSize = screenSize.lessThan('md') ? 80 : 120;
+  const { cubeRef, setIsDragging } = useAutoRotateCube(HERO_ROTATING_WORDS);
 
   return (
-    <div className="relative w-full min-h-screen overflow-hidden bg-black">
-      {/* Framer Background */}
-      <FramerBackground />
+    <div className="relative w-full min-h-screen overflow-hidden bg-background transition-colors duration-500">
+      {/* Background - Switch based on theme */}
+      {theme === 'light' ? (
+        <div className="absolute inset-0">
+          <FramerBackground />
+        </div>
+      ) : (
+        <div className="absolute inset-0">
+          <FluidBackground preset="Lava" />
+          <StaticNoise opacity={0.3} resolution={450} tileSize={300} />
+        </div>
+      )}
 
       {/* Content Container */}
       <div className="relative z-10 h-screen flex flex-col items-center justify-center px-6">
@@ -48,14 +34,19 @@ export default function Hero() {
           {EVENT_INFO.name}
         </h1>
 
-        {/* Typewriter Text Section */}
+        {/* Rotating Cube Section */}
         <div className="text-center mb-20">
-          <div className="text-2xl md:text-4xl text-white">
-            <span>Ta med dig </span>
-            <span className="font-display text-red-500">
-              {currentText}
-              <span className="animate-pulse">|</span>
-            </span>
+          <div className="text-2xl md:text-4xl text-white flex items-center justify-center gap-3">
+            <span>Ta med dig</span>
+            <RotatingCube
+              ref={cubeRef}
+              words={HERO_ROTATING_WORDS}
+              className="font-display text-red-500"
+              size={cubeSize}
+              draggable={true}
+              onDragStart={() => setIsDragging(true)}
+              onDragEnd={() => setIsDragging(false)}
+            />
           </div>
         </div>
 
@@ -63,15 +54,15 @@ export default function Hero() {
         <div className="absolute bottom-20 left-0 right-0 px-10">
           <div className="flex items-center gap-6 max-w-full">
             {/* Left: Date */}
-            <span className="text-white text-sm md:text-base font-light whitespace-nowrap">
+            <span className="text-white text-lg md:text-2xl font-light whitespace-nowrap">
               {EVENT_INFO.date}
             </span>
 
             {/* Center: Divider Line */}
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white to-transparent" />
+            <div className="flex-1 h-0.5 bg-gradient-to-r from-transparent via-white to-transparent" />
 
             {/* Right: Location */}
-            <span className="text-white text-sm md:text-base font-light whitespace-nowrap">
+            <span className="text-white text-lg md:text-2xl font-light whitespace-nowrap">
               {EVENT_INFO.location}
             </span>
           </div>
