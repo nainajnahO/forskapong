@@ -1,7 +1,12 @@
 import { ArrowRight } from 'lucide-react';
 import { TICKET_INFO } from '@/lib/constants';
 import Container from '../common/Container';
+import SectionLabel from '../common/SectionLabel';
+import SectionHeader from '../common/SectionHeader';
+import Card from '../common/Card';
 import { useTheme } from '@/contexts/ThemeContext';
+import { cn } from '@/lib/utils';
+import { themeText } from '@/lib/theme-utils';
 
 interface TicketsProps {
   id?: string;
@@ -89,23 +94,15 @@ export default function Tickets({ id }: TicketsProps) {
   const { theme } = useTheme();
 
   return (
-    <section id={id} className="w-full py-20">
+    <section id={id} className="w-full py-16 md:py-24">
       <Container>
-        {/* Section Label */}
-        <div className="flex items-center gap-4 mb-12">
-          <div className="flex-1 h-px bg-gradient-to-r from-red-600 to-transparent" />
-          <h2 className="text-sm font-semibold tracking-widest text-red-600 whitespace-nowrap">
-            {TICKET_INFO.sectionTitle}
-          </h2>
-          <div className="flex-1 h-px bg-gradient-to-l from-red-600 to-transparent" />
-        </div>
+        <SectionLabel variant="gradient">{TICKET_INFO.sectionTitle}</SectionLabel>
 
-        {/* Heading */}
-        <div className="mb-16">
-          <h1 className="text-4xl md:text-6xl font-display text-foreground transition-colors duration-500">
-            {TICKET_INFO.heading} <span className="font-bold text-red-600">{TICKET_INFO.headingHighlight}</span>
-          </h1>
-        </div>
+        <SectionHeader
+          title={TICKET_INFO.heading}
+          titleHighlight={TICKET_INFO.headingHighlight}
+          highlightClassName="font-bold text-red-600"
+        />
 
         {/* Main Content Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -116,13 +113,9 @@ export default function Tickets({ id }: TicketsProps) {
 
           {/* Right: Registration Info */}
           <div className="space-y-8">
-            <div className={`rounded-2xl p-8 transition-colors duration-500 ${
-              theme === 'light'
-                ? 'bg-white border border-zinc-200'
-                : 'bg-zinc-900 border border-zinc-800'
-            }`}>
+            <Card variant="elevated" padding="lg">
               <h3 className="text-2xl font-bold text-foreground mb-4 transition-colors duration-500">Hur anmäler man sig?</h3>
-              <p className={`mb-6 leading-relaxed transition-colors duration-500 ${theme === 'light' ? 'text-zinc-700' : 'text-zinc-400'}`}>
+              <p className={cn('mb-6 leading-relaxed transition-colors duration-500', themeText(theme, 'secondary'))}>
                 {TICKET_INFO.registrationNote}
               </p>
 
@@ -131,7 +124,7 @@ export default function Tickets({ id }: TicketsProps) {
                   <div className="w-1 h-6 bg-gradient-to-b from-red-600 to-orange-500 mt-1 flex-shrink-0" />
                   <div>
                     <p className="text-foreground font-semibold transition-colors duration-500">Lagstorlek</p>
-                    <p className={`text-sm transition-colors duration-500 ${theme === 'light' ? 'text-zinc-600' : 'text-zinc-400'}`}>2 personer per lag</p>
+                    <p className={cn('text-sm transition-colors duration-500', themeText(theme, 'muted'))}>2 personer per lag</p>
                   </div>
                 </div>
 
@@ -139,7 +132,7 @@ export default function Tickets({ id }: TicketsProps) {
                   <div className="w-1 h-6 bg-gradient-to-b from-red-600 to-orange-500 mt-1 flex-shrink-0" />
                   <div>
                     <p className="text-foreground font-semibold transition-colors duration-500">Anmälan</p>
-                    <p className={`text-sm transition-colors duration-500 ${theme === 'light' ? 'text-zinc-600' : 'text-zinc-400'}`}>Öppnar snart</p>
+                    <p className={cn('text-sm transition-colors duration-500', themeText(theme, 'muted'))}>Öppnar snart</p>
                   </div>
                 </div>
 
@@ -147,7 +140,7 @@ export default function Tickets({ id }: TicketsProps) {
                   <div className="w-1 h-6 bg-gradient-to-b from-red-600 to-orange-500 mt-1 flex-shrink-0" />
                   <div>
                     <p className="text-foreground font-semibold transition-colors duration-500">Plats</p>
-                    <p className={`text-sm transition-colors duration-500 ${theme === 'light' ? 'text-zinc-600' : 'text-zinc-400'}`}>Bridgens Hus, Uppsala</p>
+                    <p className={cn('text-sm transition-colors duration-500', themeText(theme, 'muted'))}>Bridgens Hus, Uppsala</p>
                   </div>
                 </div>
               </div>
@@ -161,7 +154,7 @@ export default function Tickets({ id }: TicketsProps) {
                 Anmäl er här
                 <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </a>
-            </div>
+            </Card>
           </div>
         </div>
       </Container>

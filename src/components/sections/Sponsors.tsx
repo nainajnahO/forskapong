@@ -1,6 +1,11 @@
 import type { ComponentType } from 'react';
 import Container from '../common/Container';
+import SectionLabel from '../common/SectionLabel';
+import SectionHeader from '../common/SectionHeader';
+import Card from '../common/Card';
 import { useTheme } from '@/contexts/ThemeContext';
+import { cn } from '@/lib/utils';
+import { themeText } from '@/lib/theme-utils';
 
 // SVG Logo Placeholder Components
 const LogoCircles = () => (
@@ -44,18 +49,12 @@ const LogoStylized = () => (
 
 const SponsorCard = ({
   logoComponent: LogoComponent,
-  theme,
 }: {
   logoComponent: ComponentType;
-  theme: 'light' | 'dark';
 }) => (
-  <div className={`rounded-2xl p-6 flex items-center justify-center h-32 transition-colors ${
-    theme === 'light'
-      ? 'bg-white border border-zinc-200 hover:border-zinc-300'
-      : 'bg-zinc-900 border border-zinc-800 hover:border-zinc-700'
-  }`}>
+  <Card variant="bordered" className="flex items-center justify-center h-32">
     <LogoComponent />
-  </div>
+  </Card>
 );
 
 interface SponsorsProps {
@@ -72,28 +71,20 @@ export default function Sponsors({ id }: SponsorsProps) {
   ];
 
   return (
-    <section id={id} className="w-full py-20">
+    <section id={id} className="w-full py-16 md:py-24">
       <Container>
-        {/* Section Label */}
-        <div className="flex items-center gap-4 mb-12">
-          <div className="flex-1 h-px bg-gradient-to-r from-red-600 to-transparent" />
-          <h2 className="text-sm font-semibold tracking-widest text-red-600 whitespace-nowrap">
-            SPONSORER
-          </h2>
-          <div className="flex-1 h-px bg-gradient-to-l from-red-600 to-transparent" />
-        </div>
+        <SectionLabel variant="gradient">SPONSORER</SectionLabel>
 
-        {/* Heading */}
-        <div className="mb-16">
-          <h1 className="text-4xl md:text-6xl font-display text-foreground transition-colors duration-500">
-            Möt våra <span className={`italic transition-colors duration-500 ${theme === 'light' ? 'text-zinc-600' : 'text-zinc-400'}`}>sponsorer</span>
-          </h1>
-        </div>
+        <SectionHeader
+          title="Möt våra"
+          titleHighlight="sponsorer"
+          highlightClassName={cn('italic transition-colors duration-500', themeText(theme, 'secondary'))}
+        />
 
         {/* Sponsor Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           {sponsors.map((sponsor, index) => (
-            <SponsorCard key={index} logoComponent={sponsor.logoComponent} theme={theme} />
+            <SponsorCard key={index} logoComponent={sponsor.logoComponent} />
           ))}
         </div>
       </Container>

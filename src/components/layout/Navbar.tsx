@@ -1,34 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowUpRight, Sun, Moon, X } from 'lucide-react';
-
-// Custom 4-dot menu icon (2x2 circles)
-const FourDotIcon = ({ className }: { className?: string }) => (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 20 20"
-    fill="currentColor"
-    className={className}
-  >
-    <circle cx="6" cy="6" r="3" />
-    <circle cx="14" cy="6" r="3" />
-    <circle cx="6" cy="14" r="3" />
-    <circle cx="14" cy="14" r="3" />
-  </svg>
-);
+import { ArrowUpRight, Sun, Moon } from 'lucide-react';
 import logo from '../../assets/logo.webp';
 import { NAV_LINKS } from '@/lib/constants';
 import Container from '../common/Container';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useScrollState } from '@/hooks/useScrollState';
+import { useScrollToSection } from '@/hooks/useScrollToSection';
+import { useViewportWidth } from '@/hooks/useViewportWidth';
+import { cn } from '@/lib/utils';
 
 export default function Navbar() {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [viewportWidth, setViewportWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
+  const isScrolled = useScrollState(50);
+  const viewportWidth = useViewportWidth();
   const [pillWidth, setPillWidth] = useState(19);
   const logoRef = useRef<HTMLDivElement>(null);
   const ctaRef = useRef<HTMLButtonElement>(null);
-  const { theme, toggleTheme } = useTheme();
+  const { backgroundVariant, toggleBackground } = useTheme();
+  const scrollToSection = useScrollToSection();
 
   // Calculate responsive offset based on viewport width
   const getResponsiveOffset = () => {
@@ -59,44 +47,17 @@ export default function Navbar() {
     }
   }, [isScrolled, viewportWidth]);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-    };
-
-    const handleResize = () => {
-      setViewportWidth(window.innerWidth);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []);
-
-  const handleNavClick = (href: string) => {
-    const element = document.querySelector(href);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
   const handleTicketClick = () => {
-    const ticketsSection = document.querySelector('#tickets');
-    if (ticketsSection) {
-      ticketsSection.scrollIntoView({ behavior: 'smooth' });
-    }
+    scrollToSection('#tickets');
   };
 
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-in-out ${
+        className={cn(
+          'fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-in-out',
           isScrolled ? 'py-3' : 'py-5'
-        }`}
+        )}
         style={{ willChange: isScrolled ? 'auto' : 'transform' }}
       >
         <Container size="full" className="relative flex items-center justify-between min-h-[3.75rem]">
@@ -146,7 +107,7 @@ export default function Navbar() {
               {NAV_LINKS.map((link) => (
                 <button
                   key={link.label}
-                  onClick={() => handleNavClick(link.href)}
+                  onClick={() => scrollToSection(link.href)}
                   className="px-4 py-2.5 text-white bg-white/20 rounded-full text-sm hover:bg-white/30 transition-colors backdrop-blur-sm"
                 >
                   {link.label}
@@ -154,53 +115,30 @@ export default function Navbar() {
               ))}
             </div>
 
-            {/* Mobile: Vertical stack of theme + menu buttons */}
-            <div className="flex flex-col lg:flex-row items-center gap-2 lg:gap-4">
-              {/* Theme Toggle Button */}
-              <button
-                onClick={toggleTheme}
-                className="p-1.5 rounded-full lg:bg-white/20 lg:hover:bg-white/30 text-white transition-all duration-500 ease-in-out lg:backdrop-blur-sm"
-                style={{
-                  opacity: isScrolled ? 0 : 1,
-                  pointerEvents: isScrolled ? 'none' : 'auto',
-                  transform: isScrolled ? 'scale(0)' : 'scale(1)',
-                  width: isScrolled ? 0 : 'auto',
-                }}
-                aria-label="Toggle theme"
-              >
-                {theme === 'light' ? (
-                  <Moon className="w-5 h-5" />
-                ) : (
-                  <Sun className="w-5 h-5" />
-                )}
-              </button>
-
-              {/* Mobile Menu Button */}
-              <button
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="lg:hidden p-0 text-white"
-                style={{
-                  opacity: isScrolled ? 0 : 1,
-                  pointerEvents: isScrolled ? 'none' : 'auto',
-                  transform: isScrolled ? 'scale(0)' : 'scale(1)',
-                  width: isScrolled ? 0 : 'auto',
-                  transition: 'all 0.3s ease-in-out',
-                }}
-                aria-label="Toggle menu"
-              >
-                {isMobileMenuOpen ? (
-                  <X className="w-5 h-5" />
-                ) : (
-                  <FourDotIcon className="w-5 h-5" />
-                )}
-              </button>
-            </div>
+            {/* Background Toggle Button */}
+            <button
+              onClick={toggleBackground}
+              className="text-white hover:text-white/70 transition-all duration-500 ease-in-out"
+              style={{
+                opacity: isScrolled ? 0 : 1,
+                pointerEvents: isScrolled ? 'none' : 'auto',
+                transform: isScrolled ? 'scale(0)' : 'scale(1)',
+                width: isScrolled ? 0 : 'auto',
+              }}
+              aria-label="Toggle background style"
+            >
+              {backgroundVariant === 'framer' ? (
+                <Moon className="w-5 h-5" />
+              ) : (
+                <Sun className="w-5 h-5" />
+              )}
+            </button>
 
             {/* CTA Button - mobile: only when scrolled, desktop: always visible */}
             <button
               ref={ctaRef}
               onClick={handleTicketClick}
-              className="flex items-center justify-between gap-3 pl-6 pr-2 py-2 bg-white text-black font-semibold rounded-full hover:bg-gray-100 absolute lg:relative right-0 lg:right-auto"
+              className="flex items-center justify-between gap-3 pl-6 pr-2 py-2 bg-white text-black font-semibold rounded-full hover:bg-zinc-100 absolute lg:relative right-0 lg:right-auto"
               style={{
                 transform: isScrolled
                   ? `translateX(calc(-50vw + 50% + ${getResponsiveOffset()}rem)) scale(1)`
@@ -224,35 +162,6 @@ export default function Navbar() {
           </div>
         </Container>
       </nav>
-
-      {/* Mobile Menu Dropdown */}
-      {isMobileMenuOpen && (
-        <div className="fixed top-20 right-6 z-40 lg:hidden">
-          <div className="flex flex-col items-end space-y-3">
-            {NAV_LINKS.map((link) => (
-              <button
-                key={link.label}
-                onClick={() => {
-                  handleNavClick(link.href);
-                  setIsMobileMenuOpen(false);
-                }}
-                className="text-white text-sm hover:text-white/70 transition-colors"
-              >
-                {link.label}
-              </button>
-            ))}
-            <button
-              onClick={() => {
-                handleTicketClick();
-                setIsMobileMenuOpen(false);
-              }}
-              className="text-white text-sm hover:text-white/70 transition-colors"
-            >
-              Anmäl Er
-            </button>
-          </div>
-        </div>
-      )}
     </>
   );
 }

@@ -1,3 +1,6 @@
+// Shared Layout Constants
+export const SECTION_PADDING = "py-16 md:py-24" as const;
+
 // Event Information
 export const EVENT_INFO = {
   name: 'Forskåpong 2026',

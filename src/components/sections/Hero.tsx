@@ -3,20 +3,21 @@ import FluidBackground from '../common/FluidBackground';
 import StaticNoise from '../common/StaticNoise';
 import RotatingCube from '@/components/common/RotatingCube';
 import { EVENT_INFO, HERO_ROTATING_WORDS } from '@/lib/constants';
+import Container from '../common/Container';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAutoRotateCube } from '@/hooks/useAutoRotateCube';
 import useScreenSize from '@/hooks/useScreenSize';
 
 export default function Hero() {
-  const { theme } = useTheme();
+  const { backgroundVariant } = useTheme();
   const screenSize = useScreenSize();
   const cubeSize = screenSize.lessThan('md') ? 80 : 120;
   const { cubeRef, setIsDragging } = useAutoRotateCube(HERO_ROTATING_WORDS);
 
   return (
     <div className="relative w-full min-h-screen overflow-hidden bg-background transition-colors duration-500">
-      {/* Background - Switch based on theme */}
-      {theme === 'light' ? (
+      {/* Background - Switch based on background variant */}
+      {backgroundVariant === 'framer' ? (
         <div className="absolute inset-0">
           <FramerBackground />
         </div>
@@ -51,7 +52,7 @@ export default function Hero() {
         </div>
 
         {/* Bottom Info Bar */}
-        <div className="absolute bottom-20 left-0 right-0 px-10">
+        <Container className="absolute bottom-20 left-0 right-0">
           <div className="flex items-center gap-6 max-w-full">
             {/* Left: Date */}
             <span className="text-white text-lg md:text-2xl font-light whitespace-nowrap">
@@ -66,7 +67,7 @@ export default function Hero() {
               {EVENT_INFO.location}
             </span>
           </div>
-        </div>
+        </Container>
       </div>
     </div>
   );
