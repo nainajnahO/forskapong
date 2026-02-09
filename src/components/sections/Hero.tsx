@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import FluidBackground from '../common/FluidBackground';
-import StaticNoise from '../common/StaticNoise';
+import FramerBackground from '../common/FramerBackground';
 import { EVENT_INFO, HERO_ROTATING_WORDS } from '@/lib/constants';
 
 export default function Hero() {
@@ -39,13 +38,8 @@ export default function Hero() {
 
   return (
     <div className="relative w-full min-h-screen overflow-hidden bg-black">
-      {/* Animated Fluid Background */}
-      <div className="absolute inset-0">
-        <FluidBackground preset="Lava" />
-      </div>
-
-      {/* TV Static Noise Overlay */}
-      <StaticNoise />
+      {/* Framer Background */}
+      <FramerBackground />
 
       {/* Content Container */}
       <div className="relative z-10 h-screen flex flex-col items-center justify-center px-6">
