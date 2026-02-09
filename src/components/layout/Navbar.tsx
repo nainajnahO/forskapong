@@ -1,5 +1,21 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowUpRight, Sun, Moon, Menu, X } from 'lucide-react';
+import { ArrowUpRight, Sun, Moon, X } from 'lucide-react';
+
+// Custom 4-dot menu icon (2x2 circles)
+const FourDotIcon = ({ className }: { className?: string }) => (
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 20 20"
+    fill="currentColor"
+    className={className}
+  >
+    <circle cx="6" cy="6" r="3" />
+    <circle cx="14" cy="6" r="3" />
+    <circle cx="6" cy="14" r="3" />
+    <circle cx="14" cy="14" r="3" />
+  </svg>
+);
 import logo from '../../assets/logo.webp';
 import { NAV_LINKS } from '@/lib/constants';
 import Container from '../common/Container';
@@ -186,7 +202,7 @@ export default function Navbar() {
             {/* Mobile Menu Button - visible on mobile when not scrolled, rightmost position */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden p-2.5 rounded-full bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm"
+              className="lg:hidden p-2.5 text-white"
               style={{
                 opacity: isScrolled ? 0 : 1,
                 pointerEvents: isScrolled ? 'none' : 'auto',
@@ -199,7 +215,7 @@ export default function Navbar() {
               {isMobileMenuOpen ? (
                 <X className="w-5 h-5" />
               ) : (
-                <Menu className="w-5 h-5" />
+                <FourDotIcon className="w-5 h-5" />
               )}
             </button>
           </div>
@@ -208,49 +224,39 @@ export default function Navbar() {
 
       {/* Mobile Menu Dropdown */}
       {isMobileMenuOpen && (
-        <div className="fixed top-20 left-0 right-0 z-40 lg:hidden">
-          <Container size="full">
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 space-y-4">
-              {NAV_LINKS.map((link) => (
-                <button
-                  key={link.label}
-                  onClick={() => {
-                    handleNavClick(link.href);
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="block w-full text-left px-4 py-3 text-white bg-white/20 rounded-full text-sm hover:bg-white/30 transition-colors backdrop-blur-sm"
-                >
-                  {link.label}
-                </button>
-              ))}
+        <div className="fixed top-20 right-6 z-40 lg:hidden">
+          <div className="flex flex-col items-end space-y-3">
+            {NAV_LINKS.map((link) => (
               <button
+                key={link.label}
                 onClick={() => {
-                  toggleTheme();
+                  handleNavClick(link.href);
                   setIsMobileMenuOpen(false);
                 }}
-                className="flex items-center justify-between w-full px-4 py-3 text-white bg-white/20 rounded-full text-sm hover:bg-white/30 transition-colors backdrop-blur-sm"
+                className="text-white text-sm hover:text-white/70 transition-colors"
               >
-                <span>Theme</span>
-                {theme === 'light' ? (
-                  <Moon className="w-5 h-5" />
-                ) : (
-                  <Sun className="w-5 h-5" />
-                )}
+                {link.label}
               </button>
-              <button
-                onClick={() => {
-                  handleTicketClick();
-                  setIsMobileMenuOpen(false);
-                }}
-                className="flex items-center justify-between w-full gap-3 pl-6 pr-2 py-2 bg-white text-black font-semibold rounded-full hover:bg-gray-100 transition-colors"
-              >
-                <span>Anmäl Er</span>
-                <div className="w-10 h-10 -my-1 -mr-1 bg-red-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <ArrowUpRight className="w-6 h-6 text-white" />
-                </div>
-              </button>
-            </div>
-          </Container>
+            ))}
+            <button
+              onClick={() => {
+                toggleTheme();
+                setIsMobileMenuOpen(false);
+              }}
+              className="text-white text-sm hover:text-white/70 transition-colors"
+            >
+              {theme === 'light' ? 'Dark' : 'Light'}
+            </button>
+            <button
+              onClick={() => {
+                handleTicketClick();
+                setIsMobileMenuOpen(false);
+              }}
+              className="text-white text-sm hover:text-white/70 transition-colors"
+            >
+              Anmäl Er
+            </button>
+          </div>
         </div>
       )}
     </>
