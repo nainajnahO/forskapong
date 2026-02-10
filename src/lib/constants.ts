@@ -151,7 +151,7 @@ export const SHOWCASE_CONFIG = {
     {
       text: 'Klara, färdiga, gå!',
       subtext: '10 minuter per match.',
-      position: ['15%', '50%'] as const,
+      position: ['15%', '34%'] as const,
     },
     {
       text: 'Armbågen?',
@@ -163,12 +163,13 @@ export const SHOWCASE_CONFIG = {
       subtext: '1 omformation per match.' +
           '\n-Studsprick? 2 bort'  +
           '\n-Parprick? 3 bort',
-      position: ['25%', '30%'] as const,
+      position: ['20%', '15%'] as const,
     },
     {
       text: 'Redo att spela?',
-      subtext: '28 februari 2026',
-      position: ['45%', '50%'] as const,
+      subtext: 'Vi ses den' +
+          '\n28 februari 2026',
+      position: ['25%', '50%'] as const,
     },
   ] as const,
 } as const;

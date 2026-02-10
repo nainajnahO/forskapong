@@ -1,10 +1,5 @@
 import { ABOUT_CONTENT } from '@/lib/constants';
 import Container from '../common/Container';
-import SectionLabel from '../common/SectionLabel';
-import SectionHeader from '../common/SectionHeader';
-import racketImg from '@/assets/racket.webp';
-import ballImg from '@/assets/ball.webp';
-import cupImg from '@/assets/cup.webp';
 import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
 import { themeText } from '@/lib/theme-utils';
@@ -16,60 +11,16 @@ interface AboutProps {
 export default function About({ id }: AboutProps) {
   const { theme } = useTheme();
   return (
-    <section id={id} className="w-full py-16 md:py-24">
+    <section id={id} className="w-full pt-0 pb-16 md:pb-24">
       <Container>
-        <SectionLabel>Om Forskåpong</SectionLabel>
-
-        <SectionHeader
-          title={ABOUT_CONTENT.title}
-          titleHighlight={ABOUT_CONTENT.titleHighlight}
-          className="mb-16"
-        />
-
-        {/* Two Column Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-8 mb-16">
-          {/* LEFT: Product Images (40% width) */}
-          <div className="md:col-span-2 flex gap-6 justify-center items-end">
-            {/* Ping-Pong Paddle */}
-            <div className="flex flex-col items-center">
-              <img
-                src={racketImg}
-                alt="Ping-pong paddle"
-                className="w-24 h-32 object-contain"
-              />
-              <p className={cn('text-xs mt-4 text-center transition-colors duration-500', themeText(theme, 'muted'))}>Paddle</p>
-            </div>
-
-            {/* Ping-Pong Ball */}
-            <div className="flex flex-col items-center">
-              <img
-                src={ballImg}
-                alt="Ping-pong ball"
-                className="w-32 h-32 object-contain"
-              />
-              <p className={cn('text-xs mt-4 transition-colors duration-500', themeText(theme, 'muted'))}>Ball</p>
-            </div>
-
-            {/* Red Solo Cup */}
-            <div className="flex flex-col items-center">
-              <img
-                src={cupImg}
-                alt="Red solo cup"
-                className="w-20 h-24 object-contain"
-              />
-              <p className={cn('text-xs mt-4 text-center transition-colors duration-500', themeText(theme, 'muted'))}>Cup</p>
-            </div>
-          </div>
-
-          {/* RIGHT: Description Text (60% width) */}
-          <div className="md:col-span-3 space-y-4">
-            <p className={cn('font-sans leading-relaxed text-base transition-colors duration-500', themeText(theme, 'secondary'))}>
-              {ABOUT_CONTENT.description1}
-            </p>
-            <p className={cn('font-sans leading-relaxed text-base transition-colors duration-500', themeText(theme, 'secondary'))}>
-              {ABOUT_CONTENT.description2}
-            </p>
-          </div>
+        {/* Description Text */}
+        <div className="space-y-4 mb-16 max-w-3xl">
+          <p className={cn('font-sans leading-relaxed text-base transition-colors duration-500', themeText(theme, 'secondary'))}>
+            {ABOUT_CONTENT.description1}
+          </p>
+          <p className={cn('font-sans leading-relaxed text-base transition-colors duration-500', themeText(theme, 'secondary'))}>
+            {ABOUT_CONTENT.description2}
+          </p>
         </div>
 
         {/* Full-Width Image Placeholder */}
