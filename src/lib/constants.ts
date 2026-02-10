@@ -16,6 +16,7 @@ export const NAV_LINKS = [
   { label: 'Om', href: '#about' },
   { label: 'Schema', href: '#schedule' },
   { label: 'Sponsorer', href: '#sponsors' },
+  { label: 'Plats', href: '#venue' },
 ] as const;
 
 // Social Media Links
@@ -170,6 +171,23 @@ export const SHOWCASE_CONFIG = {
       position: ['45%', '50%'] as const,
     },
   ] as const,
+} as const;
+
+// Venue Map Configuration
+export const VENUE_MAP_CONFIG = {
+  scrollPages: 3,
+  mapStyle: 'mapbox://styles/mapbox/dark-v11',
+  venue: { lng: 17.6389, lat: 59.8586 },
+  cameraWaypoints: [
+    { progress: 0.0, center: [17.63, 59.86] as const, zoom: 13, pitch: 45, bearing: -20 },
+    { progress: 0.5, center: [17.638, 59.858] as const, zoom: 15.5, pitch: 60, bearing: 30 },
+    { progress: 1.0, center: [17.6389, 59.8586] as const, zoom: 17.5, pitch: 65, bearing: 60 },
+  ],
+  annotations: [
+    { text: 'Hitta hit', subtext: 'Uppsala, Sverige', scrollRange: [0, 0.35] as const, position: ['15%', '50%'] as const },
+    { text: 'Bridgens Hus', subtext: 'Dragarbrunnsgatan 45', scrollRange: [0.4, 0.75] as const, position: ['20%', '30%'] as const },
+    { text: 'Vi ses där!', subtext: '28 februari 2026', scrollRange: [0.75, 1.0] as const, position: ['25%', '70%'] as const },
+  ],
 } as const;
 
 // Ticket Information

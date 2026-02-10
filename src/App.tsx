@@ -5,6 +5,7 @@ import ExplodedView from './components/sections/ExplodedView'
 import About from './components/sections/About'
 import ScheduleElegant from './components/sections/ScheduleElegant'
 import Sponsors from './components/sections/Sponsors'
+import VenueMap from './components/sections/VenueMap'
 import Tickets from './components/sections/Tickets'
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
       <About id="about" />
       <ScheduleElegant id="schedule" />
       <Sponsors id="sponsors" />
+      <VenueMap id="venue" />
       <Tickets id="tickets" />
       <Footer />
     </div>
