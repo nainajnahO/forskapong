@@ -12,9 +12,10 @@ import { cn } from '@/lib/utils';
 export default function Navbar() {
   const isScrolled = useScrollState(50);
   const viewportWidth = useViewportWidth();
-  const [pillWidth, setPillWidth] = useState(19);
+  const [pillMetrics, setPillMetrics] = useState({ left: 0, width: 0 });
   const logoRef = useRef<HTMLDivElement>(null);
   const ctaRef = useRef<HTMLButtonElement>(null);
+  const pillRef = useRef<HTMLDivElement>(null);
   const { backgroundVariant, toggleBackground } = useTheme();
   const scrollToSection = useScrollToSection();
 
@@ -26,20 +27,20 @@ export default function Navbar() {
     return 6.5; // Small phone portrait
   };
 
-  // Calculate pill width based on actual element widths
+  // Calculate pill position and width based on actual element positions
   useEffect(() => {
-    if (isScrolled && logoRef.current && ctaRef.current) {
-      // Wait for animation to complete (700ms) before measuring
+    if (isScrolled && logoRef.current && ctaRef.current && pillRef.current) {
       const timer = setTimeout(() => {
-        if (logoRef.current && ctaRef.current) {
+        if (logoRef.current && ctaRef.current && pillRef.current?.parentElement) {
           const logoRect = logoRef.current.getBoundingClientRect();
           const ctaRect = ctaRef.current.getBoundingClientRect();
+          const containerRect = pillRef.current.parentElement.getBoundingClientRect();
 
-          // Raw distance from logo left edge to CTA right edge
-          const totalWidth = ctaRect.right - logoRect.left;
-          const padding = 20; // Slight padding (6px logo side, 5px CTA side)
+          const pad = 10;
+          const left = logoRect.left - containerRect.left - pad;
+          const width = ctaRect.right - logoRect.left + pad * 2;
 
-          setPillWidth((totalWidth + padding) / 16); // Convert to rem
+          setPillMetrics({ left: left / 16, width: width / 16 });
         }
       }, 700);
 
@@ -63,16 +64,19 @@ export default function Navbar() {
         <Container size="full" className="relative flex items-center justify-between min-h-[3.75rem]">
           {/* Frosted Glass Pill Container - appears when scrolled */}
           <div
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/10 backdrop-blur-md transition-all duration-700 ease-in-out"
+            ref={pillRef}
+            className="absolute top-1/2 -translate-y-1/2 rounded-full bg-white/10 backdrop-blur-md ease-in-out duration-700"
             style={{
+              transitionProperty: 'opacity, transform, height',
               opacity: isScrolled ? 1 : 0,
               transform: isScrolled
-                ? 'translate(-50%, -50%) scale(1)'
-                : 'translate(-50%, -50%) scale(0.9)',
+                ? 'translateY(-50%) scale(1)'
+                : 'translateY(-50%) scale(0.9)',
               pointerEvents: 'none',
               zIndex: 0,
               height: isScrolled ? '3.75rem' : '0',
-              width: isScrolled ? `${pillWidth}rem` : '0',
+              left: isScrolled ? `${pillMetrics.left}rem` : '50%',
+              width: isScrolled ? `${pillMetrics.width}rem` : '0',
             }}
           />
 
