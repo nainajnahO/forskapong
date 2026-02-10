@@ -118,6 +118,62 @@ export const SCHEDULE_PHASES = [
   },
 ] as const;
 
+// 3D Showcase Camera Journey Configuration
+export const SHOWCASE_CONFIG = {
+  modelPath: '/models/beerpong.glb',
+  scrollPages: 4,
+  // Camera waypoints: scroll progress → camera position + lookAt target
+  // Model: center(0, 0.23, 0.03) size(1.05 wide, 1.40 tall, 4.04 deep along Z)
+  cameraWaypoints: [
+    {
+      progress: 0.0,
+      position: [2.00, 2.00, 4.00] as const,
+      lookAt: [0, 0.23, 0] as const,
+    },
+    {
+      progress: 0.33,
+      position: [-0.17, 0.98, 2.04] as const,
+      lookAt: [0, 0.23, 0] as const,
+    },
+    {
+      progress: 0.66,
+      position: [-0.32, 0.49, -1.96] as const,
+      lookAt: [0, 0.23, 0] as const,
+    },
+    {
+      progress: 1.0,
+      position: [2.46, 0.87, -3.29] as const,
+      lookAt: [0, 0.23, 0] as const,
+    },
+  ] as const,
+  annotations: [
+    {
+      text: 'Forskåpong',
+      subtext: '76:e upplagan',
+      position: ['15%', '50%'] as const,
+      scrollRange: [0.00, 0.22] as const,
+    },
+    {
+      text: 'Armbågen?',
+      subtext: 'Ditt viktigaste verktyg',
+      position: ['30%', '70%'] as const,
+      scrollRange: [0.22, 0.44] as const,
+    },
+    {
+      text: 'Muggarna',
+      subtext: 'Träffa rätt',
+      position: ['25%', '30%'] as const,
+      scrollRange: [0.55, 0.77] as const,
+    },
+    {
+      text: 'Redo att spela?',
+      subtext: '28 februari 2026',
+      position: ['45%', '50%'] as const,
+      scrollRange: [0.78, 1.00] as const,
+    },
+  ] as const,
+} as const;
+
 // Ticket Information
 export const TICKET_INFO = {
   sectionTitle: 'ANMÄLAN',

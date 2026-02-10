@@ -30,3 +30,17 @@ export interface AttendeeCategory {
   name: string;
   highlighted: boolean;
 }
+
+// 3D Showcase Types
+export interface CameraWaypoint {
+  readonly progress: number;
+  readonly position: readonly [number, number, number];
+  readonly lookAt: readonly [number, number, number];
+}
+
+export interface ShowcaseAnnotation {
+  readonly text: string;
+  readonly subtext?: string;
+  readonly position: readonly [string, string]; // [top CSS, left CSS]
+  readonly scrollRange: readonly [number, number];
+}

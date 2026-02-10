@@ -1,0 +1,27 @@
+import { Canvas } from '@react-three/fiber'
+import { AdaptiveDpr, AdaptiveEvents, Environment } from '@react-three/drei'
+import BeerPongModel from '@/components/common/BeerPongModel'
+import CameraRig from '@/components/common/CameraRig'
+
+interface ExplodedViewCanvasProps {
+  scrollProgress: React.RefObject<number>
+}
+
+export default function ExplodedViewCanvas({ scrollProgress }: ExplodedViewCanvasProps) {
+  return (
+    <Canvas
+      gl={{ alpha: true, antialias: true }}
+      camera={{ position: [2, 2, 4], fov: 45 }}
+      style={{ background: 'transparent' }}
+    >
+      <ambientLight intensity={1.5} />
+      <directionalLight position={[5, 8, 5]} intensity={2} />
+      <directionalLight position={[-3, 4, -5]} intensity={1} />
+      <Environment preset="city" />
+      <BeerPongModel />
+      <CameraRig scrollProgress={scrollProgress} />
+      <AdaptiveDpr pixelated />
+      <AdaptiveEvents />
+    </Canvas>
+  )
+}
