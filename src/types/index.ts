@@ -42,5 +42,4 @@ export interface ShowcaseAnnotation {
   readonly text: string;
   readonly subtext?: string;
   readonly position: readonly [string, string]; // [top CSS, left CSS]
-  readonly scrollRange: readonly [number, number];
 }

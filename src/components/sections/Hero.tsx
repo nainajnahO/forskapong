@@ -1,18 +1,14 @@
 import FramerBackground from '../common/FramerBackground';
 import FluidBackground from '../common/FluidBackground';
 import StaticNoise from '../common/StaticNoise';
-import RotatingCube from '@/components/common/RotatingCube';
 import { EVENT_INFO, HERO_ROTATING_WORDS } from '@/lib/constants';
 import Container from '../common/Container';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useAutoRotateCube } from '@/hooks/useAutoRotateCube';
-import useScreenSize from '@/hooks/useScreenSize';
+import { useTypewriter } from '@/hooks/useTypewriter';
 
 export default function Hero() {
   const { backgroundVariant } = useTheme();
-  const screenSize = useScreenSize();
-  const cubeSize = screenSize.lessThan('md') ? 80 : 120;
-  const { cubeRef, setIsDragging } = useAutoRotateCube(HERO_ROTATING_WORDS);
+  const { displayText } = useTypewriter({ words: HERO_ROTATING_WORDS });
 
   return (
     <div className="relative w-full min-h-screen overflow-hidden bg-background transition-colors duration-500">
@@ -35,19 +31,14 @@ export default function Hero() {
           {EVENT_INFO.name}
         </h1>
 
-        {/* Rotating Cube Section */}
+        {/* Typewriter Section */}
         <div className="text-center mb-20">
-          <div className="text-2xl md:text-4xl text-white flex items-center justify-center gap-3">
+          <div className="text-2xl md:text-4xl text-white flex items-baseline justify-center gap-3">
             <span>Ta med dig</span>
-            <RotatingCube
-              ref={cubeRef}
-              words={HERO_ROTATING_WORDS}
-              className="font-display text-red-500"
-              size={cubeSize}
-              draggable={true}
-              onDragStart={() => setIsDragging(true)}
-              onDragEnd={() => setIsDragging(false)}
-            />
+            <span className="font-display text-red-500">
+              {displayText}
+              <span className="typewriter-cursor">|</span>
+            </span>
           </div>
         </div>
 

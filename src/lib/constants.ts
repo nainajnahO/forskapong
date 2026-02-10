@@ -148,28 +148,26 @@ export const SHOWCASE_CONFIG = {
   ] as const,
   annotations: [
     {
-      text: 'Forskåpong',
-      subtext: '76:e upplagan',
+      text: 'Klara, färdiga, gå!',
+      subtext: '10 minuter per match.',
       position: ['15%', '50%'] as const,
-      scrollRange: [0.00, 0.22] as const,
     },
     {
       text: 'Armbågen?',
-      subtext: 'Ditt viktigaste verktyg',
+      subtext: 'Är den verkligen bakom bordet...',
       position: ['30%', '70%'] as const,
-      scrollRange: [0.22, 0.44] as const,
     },
     {
       text: 'Muggarna',
-      subtext: 'Träffa rätt',
+      subtext: '1 omformation per match.' +
+          '\n-Studsprick? 2 bort'  +
+          '\n-Parprick? 3 bort',
       position: ['25%', '30%'] as const,
-      scrollRange: [0.55, 0.77] as const,
     },
     {
       text: 'Redo att spela?',
       subtext: '28 februari 2026',
       position: ['45%', '50%'] as const,
-      scrollRange: [0.78, 1.00] as const,
     },
   ] as const,
 } as const;

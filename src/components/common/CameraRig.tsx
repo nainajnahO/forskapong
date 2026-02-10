@@ -23,29 +23,33 @@ function lerpWaypoints(progress: number) {
   const range = b.progress - a.progress
   const t = range === 0 ? 1 : Math.max(0, Math.min(1, (progress - a.progress) / range))
 
-  // Smooth step for nicer interpolation
-  const smooth = t * t * (3 - 2 * t)
-
   tmpPos.set(
-    a.position[0] + (b.position[0] - a.position[0]) * smooth,
-    a.position[1] + (b.position[1] - a.position[1]) * smooth,
-    a.position[2] + (b.position[2] - a.position[2]) * smooth,
+    a.position[0] + (b.position[0] - a.position[0]) * t,
+    a.position[1] + (b.position[1] - a.position[1]) * t,
+    a.position[2] + (b.position[2] - a.position[2]) * t,
   )
 
   tmpLook.set(
-    a.lookAt[0] + (b.lookAt[0] - a.lookAt[0]) * smooth,
-    a.lookAt[1] + (b.lookAt[1] - a.lookAt[1]) * smooth,
-    a.lookAt[2] + (b.lookAt[2] - a.lookAt[2]) * smooth,
+    a.lookAt[0] + (b.lookAt[0] - a.lookAt[0]) * t,
+    a.lookAt[1] + (b.lookAt[1] - a.lookAt[1]) * t,
+    a.lookAt[2] + (b.lookAt[2] - a.lookAt[2]) * t,
   )
 }
 
 export default function CameraRig({ scrollProgress }: CameraRigProps) {
-  const { camera } = useThree()
+  const { camera, size } = useThree()
 
   useFrame(() => {
     lerpWaypoints(scrollProgress.current)
     camera.position.copy(tmpPos)
     camera.lookAt(tmpLook)
+
+    const aspect = size.width / size.height
+    const targetFov = aspect < 1 ? 60 : 45
+    if ((camera as THREE.PerspectiveCamera).fov !== targetFov) {
+      ;(camera as THREE.PerspectiveCamera).fov = targetFov
+      camera.updateProjectionMatrix()
+    }
   })
 
   return null

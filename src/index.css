@@ -64,5 +64,14 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-snap-type: y proximity;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.typewriter-cursor {
+  animation: blink 0.7s step-end infinite;
+  margin-left: 1px;
 }

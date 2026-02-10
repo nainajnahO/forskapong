@@ -19,13 +19,17 @@ No testing framework is configured.
 
 ## Architecture
 
-**Single Page App**: `App.tsx` composes sections in order: Navbar → Hero → About → ScheduleElegant → Sponsors → Tickets → Footer. Each section receives an `id` prop for anchor navigation.
+**Single Page App**: `App.tsx` composes sections in order: Navbar → Hero → ExplodedView → About → ScheduleElegant → Sponsors → Tickets → Footer. Each section receives an `id` prop for anchor navigation.
 
 **Path Alias**: `@/` → `./src/` (configured in both `tsconfig.json` and `vite.config.ts`). Always use this alias.
 
 **Constants**: All event data, schedule, navigation links, and text content lives in `src/lib/constants.ts`. Update this file to change content — not the components.
 
 **Barrel Exports**: Common components are re-exported from `src/components/index.ts` (Card, Container, SectionLabel, SectionHeader, MediaBetweenText).
+
+**Types**: Shared TypeScript interfaces live in `src/types/index.ts` (schedule, navigation, attendee, 3D showcase types).
+
+**Design Tokens**: `src/lib/design-tokens.ts` exports a `COLORS` object with semantic Tailwind class mappings (text.primary, text.secondary, border.default).
 
 ### Theme System
 
@@ -45,10 +49,24 @@ Access the current theme via `useTheme()` from `@/contexts/ThemeContext` (return
 - Fonts: `font-display` (Irish Grover) for headings, `font-sans` (Inter) for body
 - Animations: Framer Motion via `motion` from `motion/react`
 
+### ExplodedView 3D Section
+
+The most complex section — a scroll-driven 3D camera journey with text overlays. Key files:
+
+- `ExplodedView.tsx` — Outer section: tall scrollable div (`scrollPages * 100vh`) with a `sticky` viewport. Sets up snap points from camera waypoints.
+- `ExplodedViewCanvas.tsx` — R3F `<Canvas>` with lighting, environment, model, and camera rig.
+- `CameraRig.tsx` — Reads `scrollProgress` ref in `useFrame` to interpolate camera between waypoints using **smoothstep easing**.
+- `BeerPongModel.tsx` — Loads the `.glb` model via drei's `useGLTF`.
+- `ExplodedViewAnnotations.tsx` — HTML overlay with scroll-driven opacity/position via Framer Motion `useTransform`.
+- `useExplodedViewScroll.ts` — Single `useScroll` hook that bridges Framer Motion `scrollYProgress` to a plain ref for R3F's render loop. This is the glue between the two animation systems.
+
+The ref-based bridge is necessary because R3F's `useFrame` runs outside React's render cycle and can't consume MotionValues directly.
+
 ## Tech Stack
 
 - React 19, Vite 7, TypeScript, Tailwind CSS 3.4 (with tailwindcss-animate plugin)
 - Framer Motion (`motion` package), lucide-react for icons
+- React Three Fiber (`@react-three/fiber`), drei (`@react-three/drei`), Three.js — used for the ExplodedView 3D section
 - Package manager: npm
 
 ## Known Gotchas
