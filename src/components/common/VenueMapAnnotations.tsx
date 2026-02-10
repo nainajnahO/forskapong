@@ -5,23 +5,18 @@ import { cn } from '@/lib/utils'
 
 interface VenueMapAnnotationsProps {
   scrollYProgress: MotionValue<number>
-  isMobile: boolean
 }
 
 function Annotation({
   text,
   subtext,
-  position,
   scrollRange,
   scrollYProgress,
-  isMobile,
 }: {
   text: string
   subtext: string
-  position: readonly [string, string]
   scrollRange: readonly [number, number]
   scrollYProgress: MotionValue<number>
-  isMobile: boolean
 }) {
   const [start, end] = scrollRange
   const midIn = start + (end - start) * 0.25
@@ -43,18 +38,8 @@ function Annotation({
 
   return (
     <motion.div
-      className={cn(
-        'absolute pointer-events-none',
-        !isMobile && 'max-w-[80vw]',
-      )}
-      style={{
-        top: isMobile ? '6rem' : position[0],
-        left: isMobile ? 0 : position[1],
-        right: isMobile ? 0 : 'auto',
-        transform: isMobile ? 'none' : 'translate(-50%, -50%)',
-        opacity,
-        y,
-      }}
+      className="absolute pointer-events-none left-0 right-0 top-24"
+      style={{ opacity, y }}
     >
       <p
         className={cn(
@@ -67,7 +52,7 @@ function Annotation({
       </p>
       <p
         className={cn(
-          'font-sans text-base md:text-xl text-zinc-400 text-center mt-1',
+          'font-sans text-base md:text-xl text-zinc-400 text-center mt-1 whitespace-pre-line',
           'drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]',
         )}
       >
@@ -77,7 +62,7 @@ function Annotation({
   )
 }
 
-export default function VenueMapAnnotations({ scrollYProgress, isMobile }: VenueMapAnnotationsProps) {
+export default function VenueMapAnnotations({ scrollYProgress }: VenueMapAnnotationsProps) {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden">
       {VENUE_MAP_CONFIG.annotations.map((annotation) => (
@@ -85,10 +70,8 @@ export default function VenueMapAnnotations({ scrollYProgress, isMobile }: Venue
           key={annotation.text}
           text={annotation.text}
           subtext={annotation.subtext}
-          position={annotation.position}
           scrollRange={annotation.scrollRange}
           scrollYProgress={scrollYProgress}
-          isMobile={isMobile}
         />
       ))}
     </div>

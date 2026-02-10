@@ -175,18 +175,34 @@ export const SHOWCASE_CONFIG = {
 
 // Venue Map Configuration
 export const VENUE_MAP_CONFIG = {
-  scrollPages: 3,
+  scrollPages: 5,
   mapStyle: 'mapbox://styles/mapbox/dark-v11',
-  venue: { lng: 17.6389, lat: 59.8586 },
+  venue: { lng: 17.648043, lat: 59.837987 },
   cameraWaypoints: [
-    { progress: 0.0, center: [17.63, 59.86] as const, zoom: 13, pitch: 45, bearing: -20 },
-    { progress: 0.5, center: [17.638, 59.858] as const, zoom: 15.5, pitch: 60, bearing: 30 },
-    { progress: 1.0, center: [17.6389, 59.8586] as const, zoom: 17.5, pitch: 65, bearing: 60 },
+    { progress: 0,          center: [17.634663, 59.845666] as const, zoom: 12,   pitch: 24, bearing: 17 },
+    { progress: 0.055555,   center: [17.633594, 59.849386] as const, zoom: 12.8, pitch: 30, bearing: 45 },
+    { progress: 0.111111,   center: [17.632487, 59.851849] as const, zoom: 13.6, pitch: 48, bearing: 94 },
+    { progress: 0.166667,   center: [17.637732, 59.849341] as const, zoom: 15.1, pitch: 59, bearing: 119 },
+    { progress: 0.222222,   center: [17.638425, 59.84686] as const,  zoom: 15.9, pitch: 63, bearing: 152 },
+    { progress: 0.277778,   center: [17.637819, 59.844697] as const, zoom: 16.9, pitch: 76, bearing: 170 },
+    { progress: 0.333333,   center: [17.638519, 59.842928] as const, zoom: 17.4, pitch: 80, bearing: 171 },
+    { progress: 0.388889,   center: [17.639496, 59.840328] as const, zoom: 17.7, pitch: 80, bearing: 171 },
+    { progress: 0.444444,   center: [17.640123, 59.838603] as const, zoom: 17.7, pitch: 80, bearing: 171 },
+    { progress: 0.5,        center: [17.644568, 59.839801] as const, zoom: 17.7, pitch: 83, bearing: 77 },
+    { progress: 0.555555,   center: [17.647874, 59.840329] as const, zoom: 17.7, pitch: 83, bearing: 77 },
+    { progress: 0.611111,   center: [17.648445, 59.839723] as const, zoom: 17.7, pitch: 82, bearing: 133 },
+    { progress: 0.666667,   center: [17.648402, 59.83919] as const,  zoom: 18,   pitch: 84, bearing: 166 },
+    { progress: 0.722222,   center: [17.648867, 59.83844] as const,  zoom: 18,   pitch: 85, bearing: 163 },
+    { progress: 0.777778,   center: [17.648706, 59.837716] as const, zoom: 18,   pitch: 84, bearing: 179 },
+    { progress: 0.833333,   center: [17.648527, 59.837459] as const, zoom: 18.4, pitch: 84, bearing: -162 },
+    { progress: 0.888889,   center: [17.647161, 59.837425] as const, zoom: 18.1, pitch: 84, bearing: -128 },
+    { progress: 0.944444,   center: [17.646647, 59.837886] as const, zoom: 18.1, pitch: 83, bearing: -98 },
+    { progress: 1.0,        center: [17.647362, 59.837941] as const, zoom: 19,   pitch: 83, bearing: -98 },
   ],
   annotations: [
     { text: 'Hitta hit', subtext: 'Uppsala, Sverige', scrollRange: [0, 0.35] as const, position: ['15%', '50%'] as const },
-    { text: 'Bridgens Hus', subtext: 'Dragarbrunnsgatan 45', scrollRange: [0.4, 0.75] as const, position: ['20%', '30%'] as const },
-    { text: 'Vi ses där!', subtext: '28 februari 2026', scrollRange: [0.75, 1.0] as const, position: ['25%', '70%'] as const },
+    { text: 'Ångström', subtext: 'Mikrorummet', scrollRange: [0.4, 0.75] as const, position: ['20%', '30%'] as const },
+    { text: 'Vi ses här!', subtext: '31 Mars 2026' + '\n kl 18:00', scrollRange: [0.75, 1.0] as const, position: ['25%', '70%'] as const },
   ],
 } as const;
 
