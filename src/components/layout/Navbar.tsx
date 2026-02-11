@@ -91,11 +91,13 @@ export default function Navbar() {
               willChange: 'transform',
             }}
           >
-            <img
-              src={logo}
-              alt="Forsränningen Logo"
-              className="h-9 lg:h-10 w-auto"
-            />
+            <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+              <img
+                src={logo}
+                alt="Forsränningen Logo"
+                className="h-9 lg:h-10 w-auto cursor-pointer"
+              />
+            </a>
           </div>
 
           {/* Right: Nav Links and CTA Button */}

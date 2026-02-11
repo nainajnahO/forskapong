@@ -129,8 +129,8 @@ export default function ScheduleElegant({ id }: ScheduleElegantProps) {
     >
       <div className="sticky top-0 h-screen flex flex-col overflow-hidden bg-background">
         <div ref={headerRef}>
-          <Container className="pt-12 md:pt-16">
-            <SectionHeader title="Vad" titleHighlight="Händish?" />
+          <Container className="pt-[5.5rem]">
+            <SectionHeader title="Vad" titleHighlight="Händish?" className="text-center mb-10" />
           </Container>
         </div>
 
@@ -138,6 +138,7 @@ export default function ScheduleElegant({ id }: ScheduleElegantProps) {
           <Container className="h-full overflow-hidden">
             <motion.div
               ref={contentRef}
+              className="max-w-2xl mx-auto"
               animate={{ y: translateY }}
               transition={{ type: 'spring', stiffness: 300, damping: 40 }}
             >
