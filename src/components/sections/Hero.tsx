@@ -44,16 +44,16 @@ export default function Hero() {
 
         {/* Bottom Info Bar */}
         <Container className="absolute bottom-20 left-0 right-0">
-          <div className="flex items-center gap-6 max-w-full">
-            {/* Left: Date */}
+          <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6 max-w-full">
+            {/* Date */}
             <span className="text-white text-lg md:text-2xl font-light whitespace-nowrap">
               {EVENT_INFO.date}
             </span>
 
-            {/* Center: Divider Line */}
-            <div className="flex-1 h-0.5 bg-gradient-to-r from-transparent via-white to-transparent" />
+            {/* Divider Line */}
+            <div className="w-32 h-0.5 md:w-auto md:flex-1 bg-gradient-to-r from-transparent via-white to-transparent" />
 
-            {/* Right: Location */}
+            {/* Location */}
             <span className="text-white text-lg md:text-2xl font-light whitespace-nowrap">
               {EVENT_INFO.location}
             </span>
