@@ -1,290 +1,266 @@
-import { SCHEDULE_PHASES } from '@/lib/constants';
-import Container from '../common/Container';
-import SectionLabel from '../common/SectionLabel';
-import type { ScheduleEvent } from '@/types';
-import { useEffect, useState, useRef } from 'react';
-import ballImage from '@/assets/ball.webp';
-import cupImage from '@/assets/cup.webp';
-import { useTheme } from '@/contexts/ThemeContext';
-import { cn } from '@/lib/utils';
-import { themeText, themeLine, themeGradientLine, themeBg } from '@/lib/theme-utils';
+import { useEffect, useRef, useState } from 'react'
+import { useScroll, useMotionValueEvent, motion, AnimatePresence } from 'motion/react'
+import { SCHEDULE_PHASES } from '@/lib/constants'
+import Container from '../common/Container'
+import SectionHeader from '../common/SectionHeader'
+import { useTheme } from '@/contexts/ThemeContext'
+import { cn } from '@/lib/utils'
+import { themeText } from '@/lib/theme-utils'
 
-interface ScheduleElegantProps {
-  id?: string;
-  variant?: 'elegant' | 'simple';
-  showAnimation?: boolean;
-  layout?: 'alternating' | 'linear';
+// ── Time helpers ──────────────────────────────────────────────────
+function parseTimeToMinutes(timeStr: string): number {
+  const match = timeStr.match(/^(\d{1,2}):(\d{2})/)
+  if (!match) return 0
+  return (parseInt(match[1]) - 19) * 60 + parseInt(match[2])
 }
 
-export default function ScheduleElegant({
-  id,
-  variant = 'elegant',
-  showAnimation = true,
-  layout = 'alternating',
-}: ScheduleElegantProps) {
-  const { theme } = useTheme();
-  const [isVisible, setIsVisible] = useState(false);
-  const timelineRef = useRef<HTMLDivElement>(null);
-  const cupRef = useRef<HTMLDivElement>(null);
+function formatMinutesToClock(minutes: number): string {
+  const h = 19 + Math.floor(minutes / 60)
+  const m = minutes % 60
+  return `${h}:${String(m).padStart(2, '0')}`
+}
 
+// ── Enriched event data ──────────────────────────────────────────
+interface EnrichedEvent {
+  time: string
+  title: string
+  description: string
+  italic?: boolean
+  bold?: boolean
+  speakers?: readonly { readonly name: string; readonly title: string }[]
+  phase: string
+  startMinute: number
+}
+
+const EVENTS: EnrichedEvent[] = SCHEDULE_PHASES.flatMap((phase) =>
+  phase.events.map((ev) => ({
+    time: ev.time,
+    title: ev.title,
+    description: ev.description,
+    italic: ev.italic,
+    bold: ev.bold,
+    speakers: ev.speakers,
+    phase: phase.name,
+    startMinute: parseTimeToMinutes(ev.time),
+  })),
+)
+
+// 19:00 → 22:30 = 210 minutes
+const TOTAL_MINUTES = 210
+
+// ── Scroll constants ─────────────────────────────────────────────
+const SCROLL_PAGES = 5
+const SCROLL_MARGIN = 0.04
+const BOTTOM_PADDING = 48
+const USABLE = 1 - 2 * SCROLL_MARGIN
+
+function clamp(v: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, v))
+}
+
+function progressToMinute(p: number): number {
+  return Math.round(clamp((p - SCROLL_MARGIN) / USABLE, 0, 1) * TOTAL_MINUTES)
+}
+
+// ── Component ────────────────────────────────────────────────────
+interface ScheduleElegantProps {
+  id?: string
+}
+
+export default function ScheduleElegant({ id }: ScheduleElegantProps) {
+  const { theme } = useTheme()
+  const sectionRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const headerRef = useRef<HTMLDivElement>(null)
+  const [contentHeight, setContentHeight] = useState(0)
+  const [availableHeight, setAvailableHeight] = useState(0)
+
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ['start start', 'end end'],
+  })
+
+  // Initialize from current scroll position (covers direct #schedule navigation)
+  const [currentMinute, setCurrentMinute] = useState(() =>
+    progressToMinute(scrollYProgress.get()),
+  )
+
+  // Scroll progress → current minute (0 → 210)
+  useMotionValueEvent(scrollYProgress, 'change', (latest) => {
+    setCurrentMinute(progressToMinute(latest))
+  })
+
+  // Measure available height for content translation
   useEffect(() => {
-    if (!showAnimation) return;
+    function measure() {
+      const headerH = headerRef.current?.offsetHeight ?? 0
+      setAvailableHeight(window.innerHeight - headerH - BOTTOM_PADDING)
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [])
 
-    const handleScroll = () => {
-      if (!timelineRef.current || !cupRef.current) return;
+  // Track content height via ResizeObserver
+  useEffect(() => {
+    const el = contentRef.current
+    if (!el) return
+    const observer = new ResizeObserver(() => {
+      setContentHeight(el.scrollHeight)
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
-      const timelineRect = timelineRef.current.getBoundingClientRect();
-      const cupRect = cupRef.current.getBoundingClientRect();
-      const centerY = window.innerHeight / 2;
+  // Translate content up so the latest event stays visible
+  const translateY =
+    contentHeight > availableHeight ? -(contentHeight - availableHeight) : 0
 
-      // Show ball from when timeline starts until ball reaches center of cup
-      const cupCenter = cupRect.top + (cupRect.height / 2);
-      const isInRange = timelineRect.top <= centerY && cupCenter >= centerY;
-      setIsVisible(isInRange);
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll(); // Initial check
-
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [showAnimation]);
-
-  if (variant === 'simple') {
-    return (
-      <section id={id} className="w-full py-16 md:py-24">
-        <Container>
-          <SectionLabel>Körschema</SectionLabel>
-
-          <div className="mb-16">
-            <h1 className="text-4xl md:text-6xl font-bold text-foreground font-display transition-colors duration-500">
-              Vad <span className={cn('italic transition-colors duration-500', themeText(theme, 'secondary'))}>Händish?</span>
-            </h1>
-          </div>
-
-          <div className="space-y-12">
-            {SCHEDULE_PHASES.map((phase, phaseIndex) => (
-              <div key={phaseIndex}>
-                <div className="flex items-center gap-4 mb-8">
-                  <div className="flex-shrink-0">
-                    <div className="bg-red-600 rounded-lg px-6 py-3 w-fit">
-                      <p className="text-white font-bold text-lg">{phase.name}</p>
-                    </div>
-                  </div>
-                  <div className={cn('flex-grow h-px transition-colors duration-500', theme === 'light' ? 'bg-zinc-300' : 'bg-zinc-700')} />
-                  <p className={cn('text-2xl font-bold flex-shrink-0 transition-colors duration-500', themeText(theme, 'secondary'))}>{phase.startTime}</p>
-                </div>
-
-                <div className="space-y-8 ml-4 md:ml-8">
-                  {phase.events.map((event: ScheduleEvent, eventIndex) => (
-                    <div key={eventIndex} className="flex gap-6">
-                      <div className="flex-shrink-0 w-24 md:w-32 text-right">
-                        <p className={cn('text-sm md:text-base transition-colors duration-500', themeText(theme, 'muted'))}>{event.time}</p>
-                      </div>
-                      <div className="flex-grow">
-                        <div className={cn(
-                          'rounded-lg p-6 transition-colors duration-500',
-                          theme === 'light'
-                            ? 'bg-white border border-zinc-200'
-                            : 'bg-zinc-900 border border-zinc-800'
-                        )}>
-                          <h3 className={cn(
-                            'text-xl md:text-2xl mb-2 text-foreground font-display transition-colors duration-500',
-                            event.bold ? 'font-bold' : 'font-semibold',
-                            event.italic ? 'italic' : ''
-                          )}>
-                            {event.title}
-                          </h3>
-                          <p className={cn('text-sm md:text-base mb-4 whitespace-pre-wrap transition-colors duration-500', themeText(theme, 'secondary'))}>
-                            {event.description}
-                          </p>
-
-                          {event.speakers && event.speakers.length > 0 && (
-                            <div className={cn('flex flex-wrap gap-6 mt-6 pt-6 border-t transition-colors duration-500', theme === 'light' ? 'border-zinc-200' : 'border-zinc-800')}>
-                              {event.speakers.map((speaker, speakerIndex) => (
-                                <div key={speakerIndex} className="flex items-center gap-3">
-                                  <div className={cn(
-                                    'flex-shrink-0 w-16 h-16 rounded-full flex items-center justify-center transition-colors duration-500',
-                                    theme === 'light'
-                                      ? 'bg-gradient-to-br from-zinc-200 to-zinc-300'
-                                      : 'bg-gradient-to-br from-zinc-700 to-zinc-800'
-                                  )}>
-                                    <span className={cn('text-xs text-center px-1 transition-colors duration-500', themeText(theme, 'muted'))}>
-                                      {speaker.name.substring(0, 2).toUpperCase()}
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <p className="text-foreground font-semibold text-sm transition-colors duration-500">{speaker.name}</p>
-                                    <p className={cn('text-xs transition-colors duration-500', themeText(theme, 'muted'))}>{speaker.title}</p>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </Container>
-      </section>
-    );
-  }
+  const visibleEvents = EVENTS.filter((ev) => currentMinute >= ev.startMinute)
+  const lastIndex = visibleEvents.length - 1
+  const clockText = formatMinutesToClock(Math.max(0, currentMinute))
 
   return (
-    <section id={id} className="w-full py-16 md:py-24 bg-background relative overflow-hidden transition-colors duration-500">
-      <Container>
-        {/* Section heading */}
-        <div className="mb-20 relative z-10">
-          <div className="flex items-center gap-4 mb-8">
-            <div className={cn('h-px w-10 transition-colors duration-500', themeLine(theme))} />
-            <h2 className="text-sm md:text-base font-semibold tracking-wider text-foreground uppercase transition-colors duration-500">
-              Körschema
-            </h2>
-          </div>
-
-          <h1 className="text-4xl md:text-6xl font-bold text-foreground font-display transition-colors duration-500">
-            Vad <span className="italic text-red-400">Händish?</span>
-          </h1>
-
-          <div className="flex items-center gap-2 mt-6">
-            <div className={cn('h-px w-16 transition-colors duration-500', themeGradientLine(theme))} />
-            <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
-            <div className={cn('h-px w-16 transition-colors duration-500', themeGradientLine(theme))} />
-          </div>
+    <section
+      ref={sectionRef}
+      id={id}
+      style={{ height: `${SCROLL_PAGES * 100}vh` }}
+      className="relative"
+    >
+      <div className="sticky top-0 h-screen flex flex-col overflow-hidden bg-background">
+        <div ref={headerRef}>
+          <Container className="pt-12 md:pt-16">
+            <SectionHeader title="Vad" titleHighlight="Händish?" />
+          </Container>
         </div>
 
-        {/* Fixed Ball - centered on screen, only visible in this section */}
-        {showAnimation && isVisible && (
-          <div className="hidden md:block fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20">
-            <img
-              src={ballImage}
-              alt="Beer pong ball"
-              className="w-16 h-16 object-contain drop-shadow-lg"
-            />
-          </div>
-        )}
+        <div className="flex-1 min-h-0">
+          <Container className="h-full overflow-hidden">
+            <motion.div
+              ref={contentRef}
+              animate={{ y: translateY }}
+              transition={{ type: 'spring', stiffness: 300, damping: 40 }}
+            >
+              <AnimatePresence initial={false}>
+              {visibleEvents.map((ev, i) => {
+                const isLast = i === lastIndex
 
-        {/* Vertical timeline */}
-        <div ref={timelineRef} className="relative max-w-4xl mx-auto">
-          {/* Central timeline line */}
-          <div className={cn(
-            'absolute left-8 md:left-1/2 top-0 bottom-0 w-px hidden md:block transition-colors duration-500',
-            theme === 'light'
-              ? 'bg-gradient-to-b from-red-500/30 via-zinc-300/50 to-red-500/30'
-              : 'bg-gradient-to-b from-red-500/30 via-zinc-700/50 to-red-500/30'
-          )} />
-
-          {/* Timeline events */}
-          <div className="space-y-16">
-            {SCHEDULE_PHASES.map((phase, phaseIndex) => (
-              <div key={phaseIndex} className="relative">
-                {/* Phase content */}
-                <div className={cn('relative', {
-                  'md:pr-[52%]': layout === 'alternating' && phaseIndex % 2 === 0,
-                  'md:pl-[52%]': layout === 'alternating' && phaseIndex % 2 !== 0,
-                })}>
-                  <div>
-                    {/* Phase title - centered above cards */}
-                    <div className="text-center mb-8">
-                      <h3 className="text-2xl md:text-3xl text-foreground font-display font-bold inline-block transition-colors duration-500">
-                        {phase.name}
-                        <span className="ml-4 text-red-400 font-semibold tabular-nums">
-                          {phase.startTime}
-                        </span>
-                      </h3>
-                    </div>
-
-                    {/* Events */}
-                    <div className="space-y-6">
-                      {phase.events.map((event: ScheduleEvent, eventIndex) => (
-                        <div
-                          key={eventIndex}
+                return (
+                  <motion.div
+                    key={`${ev.phase}-${ev.title}`}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10, transition: { duration: 0.2 } }}
+                    transition={{ duration: 0.4, ease: 'easeOut' }}
+                    className={cn(
+                      'grid grid-cols-1 md:grid-cols-[160px_1fr] lg:grid-cols-[200px_1fr] gap-2 md:gap-8',
+                      i < lastIndex ? 'pb-6' : 'pb-0',
+                    )}
+                  >
+                    {/* Clock column — big clock for last visible event, small time for others */}
+                    {isLast ? (
+                      <div className="flex items-start">
+                        <span
                           className={cn(
-                            'group backdrop-blur-sm rounded-lg p-6 transition-all duration-500 shadow-lg',
-                            theme === 'light'
-                              ? 'bg-white/60 border border-zinc-200/50 hover:bg-white/80 hover:border-red-200/50 hover:shadow-red-200/20'
-                              : 'bg-zinc-900/40 border border-zinc-800/50 hover:bg-zinc-900/60 hover:border-red-900/50 hover:shadow-red-900/20'
+                            'text-5xl lg:text-6xl font-display tabular-nums transition-colors duration-500',
+                            themeText(theme, 'primary'),
                           )}
                         >
-                          {/* Time */}
-                          <div className="flex items-center gap-3 mb-3">
-                            <div className="w-2 h-2 rounded-full bg-red-500/50 group-hover:bg-red-500 transition-colors" />
-                            <p className={cn('text-sm tabular-nums transition-colors duration-500', themeText(theme, 'muted'))}>
-                              {event.time}
-                            </p>
-                          </div>
-
-                          {/* Event title */}
-                          <h4 className={cn(
-                            'text-xl md:text-2xl mb-2 text-foreground font-display transition-colors duration-500',
-                            event.bold ? 'font-bold' : 'font-semibold',
-                            event.italic ? 'italic' : ''
-                          )}>
-                            {event.title}
-                          </h4>
-
-                          {/* Description */}
-                          <p className={cn('text-sm md:text-base leading-relaxed whitespace-pre-wrap transition-colors duration-500', themeText(theme, 'secondary'))}>
-                            {event.description}
-                          </p>
-
-                          {/* Speakers */}
-                          {event.speakers && event.speakers.length > 0 && (
-                            <div className={cn('mt-5 pt-5 border-t transition-colors duration-500', theme === 'light' ? 'border-zinc-200/30' : 'border-zinc-800/30')}>
-                              <div className="flex flex-wrap gap-4">
-                                {event.speakers.map((speaker, speakerIndex) => (
-                                  <div
-                                    key={speakerIndex}
-                                    className={cn(
-                                      'flex items-center gap-3 rounded-lg px-4 py-3 border transition-colors duration-500',
-                                      themeBg(theme, 'subtle')
-                                    )}
-                                  >
-                                    <div className={cn(
-                                      'w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-500',
-                                      theme === 'light'
-                                        ? 'bg-gradient-to-br from-zinc-200 to-zinc-300'
-                                        : 'bg-gradient-to-br from-zinc-700 to-zinc-800'
-                                    )}>
-                                      <span className={cn('text-xs transition-colors duration-500', themeText(theme, 'muted'))}>
-                                        {speaker.name.substring(0, 2).toUpperCase()}
-                                      </span>
-                                    </div>
-                                    <div>
-                                      <p className="text-sm text-foreground font-semibold transition-colors duration-500">{speaker.name}</p>
-                                      <p className={cn('text-xs transition-colors duration-500', themeText(theme, 'muted'))}>{speaker.title}</p>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
+                          {clockText}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="hidden md:flex items-start">
+                        <span
+                          className={cn(
+                            'text-sm tabular-nums pt-1 transition-colors duration-500',
+                            themeText(theme, 'muted'),
                           )}
+                        >
+                          {ev.time}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Event content */}
+                    <div
+                      className={cn(
+                        'pl-4 border-l-2 transition-colors duration-500',
+                        isLast
+                          ? theme === 'light'
+                            ? 'border-zinc-400'
+                            : 'border-zinc-500'
+                          : 'border-transparent',
+                      )}
+                    >
+                      <p
+                        className={cn(
+                          'text-xs uppercase tracking-widest mb-1 transition-colors duration-500',
+                          themeText(theme, 'muted'),
+                        )}
+                      >
+                        {ev.phase}
+                      </p>
+                      {/* Mobile inline time — hidden on desktop where the left column shows it */}
+                      {!isLast && (
+                        <p
+                          className={cn(
+                            'text-sm tabular-nums mb-1 md:hidden transition-colors duration-500',
+                            themeText(theme, 'muted'),
+                          )}
+                        >
+                          {ev.time}
+                        </p>
+                      )}
+                      <h4
+                        className={cn(
+                          'text-2xl md:text-3xl font-display transition-colors duration-500',
+                          themeText(theme, 'primary'),
+                          ev.bold ? 'font-bold' : 'font-semibold',
+                          ev.italic ? 'italic' : '',
+                        )}
+                      >
+                        {ev.title}
+                      </h4>
+                      <p
+                        className={cn(
+                          'text-sm md:text-base leading-relaxed whitespace-pre-wrap mt-1 transition-colors duration-500',
+                          themeText(theme, 'secondary'),
+                        )}
+                      >
+                        {ev.description}
+                      </p>
+                      {ev.speakers && ev.speakers.length > 0 && (
+                        <div className="mt-2 space-y-0.5">
+                          {ev.speakers.map((speaker, si) => (
+                            <p
+                              key={si}
+                              className="transition-colors duration-500"
+                            >
+                              <span className="text-sm text-foreground transition-colors duration-500">
+                                {speaker.name}
+                              </span>
+                              <span
+                                className={cn(
+                                  'text-sm ml-2 transition-colors duration-500',
+                                  themeText(theme, 'muted'),
+                                )}
+                              >
+                                {speaker.title}
+                              </span>
+                            </p>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
+                  </motion.div>
+                )
+              })}
+              </AnimatePresence>
+            </motion.div>
+          </Container>
         </div>
-
-        {/* Cup at bottom of section */}
-        {showAnimation && (
-          <div ref={cupRef} className="hidden md:flex justify-center mt-16 relative z-30">
-            <img
-              src={cupImage}
-              alt="Beer pong cup"
-              className="w-32 h-40 object-contain drop-shadow-2xl"
-            />
-          </div>
-        )}
-        {!showAnimation && <div ref={cupRef} />}
-      </Container>
+      </div>
     </section>
-  );
+  )
 }
