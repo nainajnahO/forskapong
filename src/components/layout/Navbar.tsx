@@ -159,7 +159,7 @@ export default function Navbar() {
                     : 'opacity 0.4s ease-in-out, transform 0s 0.4s',
               }}
             >
-              <span className="hidden lg:inline">Anmäl Er</span>
+              <span className="hidden lg:inline">Anmälan</span>
               <span className="lg:hidden">Anmäl</span>
               <div className="w-10 h-10 -my-1 -mr-1 bg-brand-600 rounded-full flex items-center justify-center flex-shrink-0">
                 <ArrowUpRight className="w-6 h-6 text-white" />

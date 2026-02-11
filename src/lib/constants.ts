@@ -5,7 +5,7 @@ export const SECTION_PADDING = "py-16 md:py-24" as const;
 export const EVENT_INFO = {
   name: 'Forskåpong 2026',
   edition: '76:e',
-  date: '28 February 2026',
+  date: '31 Mars 2026',
   time: '19:00',
   location: 'Uppsala, Sweden',
   venue: 'Bridgens Hus',
@@ -208,7 +208,7 @@ export const VENUE_MAP_CONFIG = {
 // Ticket Information
 export const TICKET_INFO = {
   sectionTitle: 'ANMÄLAN',
-  heading: 'Anmäl er',
+  heading: 'Anmälan',
   headingHighlight: 'NU!',
   registrationNote: 'Anmälan sker lagvis (2 personer per lag)',
   registrationUrl: 'https://longdogechallenge.com',
