@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowUpRight, Sun, Moon } from 'lucide-react';
+import { ArrowUpRight, Flame, Waves } from 'lucide-react';
 import logo from '../../assets/logo.webp';
 import { NAV_LINKS } from '@/lib/constants';
 import Container from '../common/Container';
@@ -134,9 +134,9 @@ export default function Navbar() {
               aria-label="Toggle background style"
             >
               {backgroundVariant === 'framer' ? (
-                <Moon className="w-5 h-5" />
+                <Flame className="w-5 h-5" />
               ) : (
-                <Sun className="w-5 h-5" />
+                <Waves className="w-5 h-5" />
               )}
             </button>
 

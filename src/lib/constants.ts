@@ -15,7 +15,6 @@ export const EVENT_INFO = {
 export const NAV_LINKS = [
   { label: 'Om', href: '#about' },
   { label: 'Schema', href: '#schedule' },
-  { label: 'Sponsorer', href: '#sponsors' },
   { label: 'Plats', href: '#venue' },
 ] as const;
 
@@ -31,7 +30,6 @@ export const SOCIAL_LINKS = {
 export const FOOTER_LINKS = [
   { label: 'Om', href: '#about' },
   { label: 'Schema', href: '#schedule' },
-  { label: 'Sponsorer', href: '#sponsors' },
   { label: 'Kontakt', href: '#contact' },
 ] as const;
 
