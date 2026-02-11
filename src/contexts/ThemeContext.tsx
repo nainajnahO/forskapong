@@ -25,7 +25,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     // Check for new backgroundVariant localStorage
     const stored = localStorage.getItem('backgroundVariant');
-    return (stored === 'fluid' || stored === 'framer') ? stored : 'fluid';
+    return (stored === 'fluid' || stored === 'framer') ? stored : 'framer';
   });
 
   useEffect(() => {
