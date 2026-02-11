@@ -21,28 +21,28 @@ export default function Footer() {
             <div className="flex gap-4">
               <a
                 href={SOCIAL_LINKS.facebook}
-                className="text-foreground hover:text-red-600 transition-colors"
+                className="text-foreground hover:text-brand-600 transition-colors"
                 aria-label="Facebook"
               >
                 <Facebook size={24} />
               </a>
               <a
                 href={SOCIAL_LINKS.instagram}
-                className="text-foreground hover:text-red-600 transition-colors"
+                className="text-foreground hover:text-brand-600 transition-colors"
                 aria-label="Instagram"
               >
                 <Instagram size={24} />
               </a>
               <a
                 href={SOCIAL_LINKS.linkedin}
-                className="text-foreground hover:text-red-600 transition-colors"
+                className="text-foreground hover:text-brand-600 transition-colors"
                 aria-label="LinkedIn"
               >
                 <Linkedin size={24} />
               </a>
               <a
                 href={SOCIAL_LINKS.twitter}
-                className="text-foreground hover:text-red-600 transition-colors"
+                className="text-foreground hover:text-brand-600 transition-colors"
                 aria-label="Twitter"
               >
                 <Twitter size={24} />

@@ -44,7 +44,7 @@ export default function ExplodedView({ id }: ExplodedViewProps) {
           <Container>
             <h1 className="text-4xl md:text-6xl font-display text-foreground transition-colors duration-500">
               Årets Mest<br />
-              Hypade <span className="italic text-red-400">Event</span>
+              Hypade <span className="italic text-brand-400">Event</span>
             </h1>
           </Container>
         </motion.div>

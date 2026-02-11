@@ -12,7 +12,7 @@ interface SectionHeaderProps {
 export default function SectionHeader({
   title,
   titleHighlight,
-  highlightClassName = 'italic text-red-400',
+  highlightClassName = 'italic text-brand-400',
   className,
 }: SectionHeaderProps) {
   return (

@@ -14,11 +14,11 @@ export default function SectionLabel({ children, variant = 'default', className 
   if (variant === 'gradient') {
     return (
       <div className={cn('flex items-center gap-4 mb-12', className)}>
-        <div className="flex-1 h-px bg-gradient-to-r from-red-600 to-transparent" />
-        <h2 className="text-sm font-semibold tracking-widest text-red-600 whitespace-nowrap">
+        <div className="flex-1 h-px bg-gradient-to-r from-brand-600 to-transparent" />
+        <h2 className="text-sm font-semibold tracking-widest text-brand-600 whitespace-nowrap">
           {children}
         </h2>
-        <div className="flex-1 h-px bg-gradient-to-l from-red-600 to-transparent" />
+        <div className="flex-1 h-px bg-gradient-to-l from-brand-600 to-transparent" />
       </div>
     );
   }

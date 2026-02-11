@@ -16,7 +16,7 @@ const TicketIllustration = () => (
   <div className="relative w-full h-96 flex items-center justify-center">
     {/* Glowing background */}
     <div className="absolute inset-0 flex items-center justify-center">
-      <div className="w-64 h-40 bg-gradient-to-r from-red-500 to-orange-600 rounded-3xl blur-3xl opacity-30 animate-pulse" />
+      <div className="w-64 h-40 bg-gradient-to-r from-brand-500 to-brand-400 rounded-3xl blur-3xl opacity-30 animate-pulse" />
     </div>
 
     {/* Ticket shape with gradient and rotation */}
@@ -27,14 +27,14 @@ const TicketIllustration = () => (
       className="relative z-10 drop-shadow-2xl"
       style={{
         filter:
-          'drop-shadow(0 20px 40px rgba(239, 68, 68, 0.3)) drop-shadow(0 0 20px rgba(249, 115, 22, 0.2))',
+          'drop-shadow(0 20px 40px rgb(var(--brand-500) / 0.3)) drop-shadow(0 0 20px rgb(var(--brand-400) / 0.2))',
         transform: 'rotateZ(-8deg) rotateY(10deg)',
       }}
     >
       <defs>
         <linearGradient id="ticketGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style={{ stopColor: '#EF4444', stopOpacity: 1 }} />
-          <stop offset="100%" style={{ stopColor: '#F97316', stopOpacity: 1 }} />
+          <stop offset="0%" style={{ stopColor: 'rgb(var(--brand-500))', stopOpacity: 1 }} />
+          <stop offset="100%" style={{ stopColor: 'rgb(var(--brand-400))', stopOpacity: 1 }} />
         </linearGradient>
       </defs>
 
@@ -101,7 +101,7 @@ export default function Tickets({ id }: TicketsProps) {
         <SectionHeader
           title={TICKET_INFO.heading}
           titleHighlight={TICKET_INFO.headingHighlight}
-          highlightClassName="font-bold text-red-600"
+          highlightClassName="font-bold text-brand-600"
         />
 
         {/* Main Content Layout */}
@@ -121,7 +121,7 @@ export default function Tickets({ id }: TicketsProps) {
 
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
-                  <div className="w-1 h-6 bg-gradient-to-b from-red-600 to-orange-500 mt-1 flex-shrink-0" />
+                  <div className="w-1 h-6 bg-gradient-to-b from-brand-600 to-brand-500 mt-1 flex-shrink-0" />
                   <div>
                     <p className="text-foreground font-semibold transition-colors duration-500">Lagstorlek</p>
                     <p className={cn('text-sm transition-colors duration-500', themeText(theme, 'muted'))}>2 personer per lag</p>
@@ -129,7 +129,7 @@ export default function Tickets({ id }: TicketsProps) {
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <div className="w-1 h-6 bg-gradient-to-b from-red-600 to-orange-500 mt-1 flex-shrink-0" />
+                  <div className="w-1 h-6 bg-gradient-to-b from-brand-600 to-brand-500 mt-1 flex-shrink-0" />
                   <div>
                     <p className="text-foreground font-semibold transition-colors duration-500">Anmälan</p>
                     <p className={cn('text-sm transition-colors duration-500', themeText(theme, 'muted'))}>Öppnar snart</p>
@@ -137,7 +137,7 @@ export default function Tickets({ id }: TicketsProps) {
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <div className="w-1 h-6 bg-gradient-to-b from-red-600 to-orange-500 mt-1 flex-shrink-0" />
+                  <div className="w-1 h-6 bg-gradient-to-b from-brand-600 to-brand-500 mt-1 flex-shrink-0" />
                   <div>
                     <p className="text-foreground font-semibold transition-colors duration-500">Plats</p>
                     <p className={cn('text-sm transition-colors duration-500', themeText(theme, 'muted'))}>Bridgens Hus, Uppsala</p>
@@ -149,7 +149,7 @@ export default function Tickets({ id }: TicketsProps) {
                 href={TICKET_INFO.registrationUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-8 w-full bg-gradient-to-r from-red-600 to-orange-500 hover:from-red-500 hover:to-orange-400 text-white py-4 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all group"
+                className="mt-8 w-full bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white py-4 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all group"
               >
                 Anmäl er här
                 <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />

@@ -6,6 +6,9 @@
 
 @layer base {
   :root {
+    --brand-400: 248 113 113;
+    --brand-500: 239 68 68;
+    --brand-600: 220 38 38;
     --background: 0 0% 0%;
     --foreground: 0 0% 98%;
     --card: 0 0% 7%;
@@ -60,6 +63,12 @@
     font-family: 'Inter', system-ui, sans-serif;
     overflow-x: clip;
   }
+}
+
+.framer {
+  --brand-400: 81 160 212;
+  --brand-500: 46 140 199;
+  --brand-600: 37 116 166;
 }
 
 html {

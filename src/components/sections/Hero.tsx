@@ -35,7 +35,7 @@ export default function Hero() {
         <div className="text-center mb-20">
           <div className="text-2xl md:text-4xl text-white flex items-baseline justify-center gap-3">
             <span>Ta med dig</span>
-            <span className="font-display text-red-500">
+            <span className="font-display text-brand-500">
               {displayText}
               <span className="typewriter-cursor">|</span>
             </span>

@@ -30,7 +30,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     localStorage.setItem('backgroundVariant', backgroundVariant);
-    // Remove the light class toggle - we're always in dark mode now
+    document.documentElement.classList.toggle('framer', backgroundVariant === 'framer');
   }, [backgroundVariant]);
 
   const toggleBackground = () => {
