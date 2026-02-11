@@ -18,14 +18,6 @@ export const NAV_LINKS = [
   { label: 'Plats', href: '#venue' },
 ] as const;
 
-// Social Media Links
-export const SOCIAL_LINKS = {
-  facebook: '#facebook',
-  instagram: '#instagram',
-  linkedin: '#linkedin',
-  twitter: '#twitter',
-} as const;
-
 // Footer Links
 export const FOOTER_LINKS = [
   { label: 'Om', href: '#about' },
