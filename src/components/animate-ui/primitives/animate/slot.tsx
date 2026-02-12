@@ -2,6 +2,17 @@ import * as React from 'react';
 import { motion, isMotionComponent, type HTMLMotionProps } from 'motion/react';
 import { cn } from '@/lib/utils';
 
+// Cache motion-wrapped components outside render to satisfy react-hooks/static-components
+const motionComponentCache = new WeakMap<React.ElementType, React.ElementType>();
+function getOrCreateMotionComponent(type: React.ElementType): React.ElementType {
+  let cached = motionComponentCache.get(type);
+  if (!cached) {
+    cached = motion.create(type as keyof HTMLElementTagNameMap);
+    motionComponentCache.set(type, cached);
+  }
+  return cached;
+}
+
 type AnyProps = Record<string, unknown>;
 
 type DOMMotionProps<T extends HTMLElement = HTMLElement> = Omit<
@@ -55,13 +66,9 @@ function Slot<T extends HTMLElement = HTMLElement>({ children, ref, ...props }: 
   const isAlreadyMotion =
     typeof children.type === 'object' && children.type !== null && isMotionComponent(children.type);
 
-  const Base = React.useMemo(
-    () =>
-      isAlreadyMotion
-        ? (children.type as React.ElementType)
-        : motion.create(children.type as React.ElementType),
-    [isAlreadyMotion, children.type],
-  );
+  const Base = isAlreadyMotion
+    ? (children.type as React.ElementType)
+    : getOrCreateMotionComponent(children.type as React.ElementType);
 
   if (!React.isValidElement(children)) return null;
 
@@ -71,6 +78,7 @@ function Slot<T extends HTMLElement = HTMLElement>({ children, ref, ...props }: 
 
   return (
     // @ts-expect-error - dynamic motion component ref typing
+    // eslint-disable-next-line react-hooks/static-components -- component is cached in a WeakMap
     <Base {...mergedProps} ref={mergeRefs(childRef as React.Ref<T>, ref)} />
   );
 }

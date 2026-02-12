@@ -294,7 +294,7 @@ export {
   SpringProvider,
   Spring,
   SpringElement,
-  useSpring,
+  useSpring, // eslint-disable-line react-refresh/only-export-components
   type SpringProviderProps,
   type SpringProps,
   type SpringElementProps,

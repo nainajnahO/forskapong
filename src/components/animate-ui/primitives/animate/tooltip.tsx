@@ -242,7 +242,7 @@ function TooltipOverlay() {
       }),
       flip(),
       shift({ padding: 8 }),
-      floatingArrow({ element: arrowRef }),
+      floatingArrow({ element: arrowRef }), // eslint-disable-line react-hooks/refs
     ],
   });
 
@@ -533,8 +533,8 @@ export {
   TooltipContent,
   TooltipTrigger,
   TooltipArrow,
-  useGlobalTooltip,
-  useTooltip,
+  useGlobalTooltip, // eslint-disable-line react-refresh/only-export-components
+  useTooltip, // eslint-disable-line react-refresh/only-export-components
   type TooltipProviderProps,
   type TooltipProps,
   type TooltipContentProps,
