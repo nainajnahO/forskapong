@@ -2,6 +2,7 @@ import FramerBackground from '../common/FramerBackground';
 import FluidBackground from '../common/FluidBackground';
 import StaticNoise from '../common/StaticNoise';
 import { EVENT_INFO, HERO_ROTATING_WORDS } from '@/lib/constants';
+import Sponsors from './Sponsors';
 import Container from '../common/Container';
 import { useTheme } from '@/contexts/useTheme';
 import { useTypewriter } from '@/hooks/useTypewriter';
@@ -25,7 +26,7 @@ export default function Hero() {
       )}
 
       {/* Content Container */}
-      <div className="relative z-10 h-screen flex flex-col items-center justify-center px-6">
+      <div className="relative z-10 h-screen flex flex-col items-center justify-center px-6 -mt-8 md:mt-0">
         {/* Main Title */}
         <h1 className="text-5xl md:text-[6.5rem] font-display text-white hdr-white-fill uppercase tracking-wider text-center mb-4 px-1">
           {EVENT_INFO.name}
@@ -43,7 +44,7 @@ export default function Hero() {
         </div>
 
         {/* Bottom Info Bar */}
-        <Container className="absolute bottom-20 left-0 right-0">
+        <Container className="absolute bottom-40 left-0 right-0">
           <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6 max-w-full">
             {/* Date */}
             <span className="text-white hdr-white-fill text-lg md:text-2xl font-light whitespace-nowrap">
@@ -59,6 +60,11 @@ export default function Hero() {
             </span>
           </div>
         </Container>
+
+        {/* Sponsors Marquee */}
+        <div className="absolute bottom-0 left-0 right-0">
+          <Sponsors />
+        </div>
       </div>
     </div>
   );
