@@ -33,12 +33,11 @@ export default function Navbar() {
   }, [viewportWidth]);
 
   // Calculate pill position and width based on actual element positions
+  // Delay measurement to after the 700ms CSS transition completes
   useEffect(() => {
     if (isScrolled && logoRef.current && ctaRef.current && pillRef.current) {
-      let rafId: number;
-      // Double-raf ensures layout is complete before measuring
-      rafId = requestAnimationFrame(() => {
-        rafId = requestAnimationFrame(() => {
+      const timeoutId = setTimeout(() => {
+        requestAnimationFrame(() => {
           if (logoRef.current && ctaRef.current && pillRef.current?.parentElement) {
             const logoRect = logoRef.current.getBoundingClientRect();
             const ctaRect = ctaRef.current.getBoundingClientRect();
@@ -51,9 +50,9 @@ export default function Navbar() {
             setPillMetrics({ left: left / 16, width: width / 16 });
           }
         });
-      });
+      }, 750);
 
-      return () => cancelAnimationFrame(rafId);
+      return () => clearTimeout(timeoutId);
     }
   }, [isScrolled, viewportWidth]);
 
@@ -87,7 +86,7 @@ export default function Navbar() {
               ref={pillRef}
               className="absolute top-1/2 -translate-y-1/2 rounded-full bg-white/10 backdrop-blur-md ease-in-out duration-700"
               style={{
-                transitionProperty: 'opacity, transform, height',
+                transitionProperty: 'opacity, transform, height, left, width',
                 opacity: isScrolled ? 1 : 0,
                 transform: isScrolled ? 'translateY(-50%) scale(1)' : 'translateY(-50%) scale(0.9)',
                 pointerEvents: 'none',
