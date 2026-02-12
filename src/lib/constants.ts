@@ -13,8 +13,9 @@ export const EVENT_INFO = {
 
 // Navigation Links
 export const NAV_LINKS = [
+  { label: 'Regler', href: '#showcase' },
   { label: 'Om', href: '#about' },
-  { label: 'Schema', href: '#schedule' },
+  { label: 'Schema', href: '#schedule-v4' },
   { label: 'Plats', href: '#venue' },
 ] as const;
 
