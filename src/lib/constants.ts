@@ -6,7 +6,7 @@ export const EVENT_INFO = {
   name: 'Forskåpong 2026',
   edition: '76:e',
   date: '31 Mars 2026',
-  time: '19:00',
+  time: '18:00',
   location: 'Uppsala, Sweden',
   venue: 'Bridgens Hus',
 } as const;
@@ -51,15 +51,15 @@ export const ABOUT_CONTENT = {
 export const SCHEDULE_PHASES = [
   {
     name: 'Öppnar',
-    startTime: '19:00',
+    startTime: '18:00',
     events: [
       {
-        time: '19:00-19:30',
+        time: '18:00-18:30',
         title: 'Mingel',
         description: 'Dörrna öppnas och alla är välkommna till skönt häng!',
       },
       {
-        time: '19:30',
+        time: '18:30',
         title: 'Välkomstceremoni',
         description: 'Projektledarna hälsar alla varmt välkommna.',
         italic: true,
@@ -72,16 +72,16 @@ export const SCHEDULE_PHASES = [
   },
   {
     name: 'Avspark',
-    startTime: '19:50',
+    startTime: '18:50',
     events: [
       {
-        time: '19:50',
+        time: '18:50',
         title: 'Skotten i Mikrorummet',
         description: 'Forskåpongen går av stapeln för 76:e gången.',
         bold: true,
       },
       {
-        time: '19:50-21:30',
+        time: '19:05-21:30',
         title: 'Spelchemat',
         description:
           'Schemat för era matcher hittar ni här: https://longdogechallenge.com\nKommentatorn för kvällen är ingen mindre än vår kära Aria Assadi.',
@@ -92,10 +92,10 @@ export const SCHEDULE_PHASES = [
   },
   {
     name: 'Utgång',
-    startTime: '22:00',
+    startTime: '21:40',
     events: [
       {
-        time: '22:00-22:15',
+        time: '21:45-22:00',
         title: 'Prisutdelning',
         description: '🤫🤫',
         bold: true,

@@ -1,6 +1,28 @@
+import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { themeText } from '@/lib/theme-utils';
 import type { EnrichedEvent } from './types';
+
+const URL_RE = /(https?:\/\/[^\s]+)/g;
+
+function linkify(text: string): ReactNode[] {
+  const parts = text.split(URL_RE);
+  return parts.map((part, i) =>
+    URL_RE.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-400 underline underline-offset-2 hover:text-blue-300 transition-colors"
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    ),
+  );
+}
 
 interface EventEntryProps {
   ev: EnrichedEvent;
@@ -48,7 +70,7 @@ export default function EventEntry({ ev, isLast, isPast, theme, side }: EventEnt
           themeText(theme, 'secondary'),
         )}
       >
-        {ev.description}
+        {linkify(ev.description)}
       </p>
 
       {/* Speakers */}

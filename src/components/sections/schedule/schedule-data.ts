@@ -5,11 +5,11 @@ import type { EnrichedEvent } from './types';
 export function parseTimeToMinutes(timeStr: string): number {
   const match = timeStr.match(/^(\d{1,2}):(\d{2})/);
   if (!match) return 0;
-  return (parseInt(match[1]) - 19) * 60 + parseInt(match[2]);
+  return (parseInt(match[1]) - 18) * 60 + parseInt(match[2]);
 }
 
 export function formatMinutesToClock(minutes: number): string {
-  const h = 19 + Math.floor(minutes / 60);
+  const h = 18 + Math.floor(minutes / 60);
   const m = minutes % 60;
   return `${h}:${String(m).padStart(2, '0')}`;
 }
@@ -35,7 +35,7 @@ export const PHASES = SCHEDULE_PHASES.map((p) => ({
   startMinute: parseTimeToMinutes(p.startTime),
 }));
 
-export const TOTAL_MINUTES = 210;
+export const TOTAL_MINUTES = 270;
 
 // ── Scroll constants ─────────────────────────────────────────────
 export const SCROLL_PAGES = 5;
