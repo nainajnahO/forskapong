@@ -44,7 +44,7 @@ export default function Hero() {
         </div>
 
         {/* Bottom Info Bar */}
-        <Container className="absolute bottom-40 left-0 right-0">
+        <Container className="absolute bottom-32 md:bottom-40 left-0 right-0">
           <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6 max-w-full">
             {/* Date */}
             <span className="text-white hdr-white-fill text-lg md:text-2xl font-light whitespace-nowrap">
