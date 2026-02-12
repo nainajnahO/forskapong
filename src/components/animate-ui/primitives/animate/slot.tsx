@@ -3,7 +3,7 @@ import { motion, isMotionComponent, type HTMLMotionProps } from 'motion/react';
 import { cn } from '@/lib/utils';
 
 // Cache motion-wrapped components outside render to satisfy react-hooks/static-components
-const motionComponentCache = new WeakMap<React.ElementType, React.ElementType>();
+const motionComponentCache = new Map<React.ElementType, React.ElementType>();
 function getOrCreateMotionComponent(type: React.ElementType): React.ElementType {
   let cached = motionComponentCache.get(type);
   if (!cached) {
