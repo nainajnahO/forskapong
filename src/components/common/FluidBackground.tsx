@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useIsVisible } from '@/hooks/useIsVisible';
 
 const VERTEX_SHADER = `#version 300 es
@@ -237,12 +237,9 @@ export default function FluidBackground({
   const animFrameRef = useRef<number>(0);
   const startTimeRef = useRef<number>(0);
   const isVisible = useIsVisible(canvasRef);
-  const isVisibleRef = useRef(isVisible);
-
-  // Keep ref in sync with state
-  useEffect(() => {
-    isVisibleRef.current = isVisible;
-  }, [isVisible]);
+  const glRef = useRef<WebGL2RenderingContext | null>(null);
+  const uniformsRef = useRef<Record<string, WebGLUniformLocation | null>>({});
+  const [glReady, setGlReady] = useState(false);
 
   // Resolve config: explicit props override preset
   const cfg = PRESETS[preset];
@@ -307,35 +304,53 @@ export default function FluidBackground({
     return { gl, program, uniforms };
   }, []);
 
+  // Initialize GL context once
   useEffect(() => {
     const result = initGL();
     if (!result) return;
 
-    const { gl, uniforms } = result;
+    glRef.current = result.gl;
+    uniformsRef.current = result.uniforms;
     startTimeRef.current = performance.now();
+    setGlReady(true);
 
     const resize = () => {
       const canvas = canvasRef.current;
-      if (!canvas) return;
-      const dpr = window.devicePixelRatio || 1;
+      const gl = glRef.current;
+      if (!canvas || !gl) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const rect = canvas.getBoundingClientRect();
       canvas.width = rect.width * dpr;
       canvas.height = rect.height * dpr;
       gl.viewport(0, 0, canvas.width, canvas.height);
     };
 
-    const render = () => {
-      if (!isVisibleRef.current) {
-        animFrameRef.current = requestAnimationFrame(render);
-        return;
-      }
+    resize();
 
+    const resizeObserver = new ResizeObserver(resize);
+    if (canvasRef.current) resizeObserver.observe(canvasRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Animation loop — only runs when visible
+  useEffect(() => {
+    const gl = glRef.current;
+    const uniforms = uniformsRef.current;
+    if (!glReady || !gl) return;
+
+    if (!isVisible) return;
+
+    const render = () => {
       const elapsed = (performance.now() - startTimeRef.current) * 0.001;
       const totalTime = elapsed * (resolved.speed / 100) * 5 + resolved.offset * 10 * 0.001;
 
       // Set built-in uniforms
       gl.uniform1f(uniforms.u_time, totalTime);
-      gl.uniform1f(uniforms.u_pixelRatio, window.devicePixelRatio || 1);
+      gl.uniform1f(uniforms.u_pixelRatio, Math.min(window.devicePixelRatio || 1, 2));
       gl.uniform2f(uniforms.u_resolution, gl.canvas.width, gl.canvas.height);
 
       // Set configurable uniforms
@@ -356,18 +371,13 @@ export default function FluidBackground({
       animFrameRef.current = requestAnimationFrame(render);
     };
 
-    resize();
-    render();
-
-    const resizeObserver = new ResizeObserver(resize);
-    if (canvasRef.current) resizeObserver.observe(canvasRef.current);
+    animFrameRef.current = requestAnimationFrame(render);
 
     return () => {
       cancelAnimationFrame(animFrameRef.current);
-      resizeObserver.disconnect();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    isVisible, glReady,
     resolved.color1, resolved.color2, resolved.color3,
     resolved.rotation, resolved.proportion, resolved.scale,
     resolved.speed, resolved.distortion, resolved.swirl,

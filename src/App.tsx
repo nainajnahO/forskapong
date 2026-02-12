@@ -3,7 +3,7 @@ import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
 import Hero from './components/sections/Hero'
 import About from './components/sections/About'
-import ScheduleVariant2 from './components/sections/ScheduleVariant2'
+import ScheduleVariant2 from './components/sections/schedule'
 import ExplodedView from './components/sections/ExplodedView'
 
 const VenueMap = lazy(() => import('./components/sections/VenueMap'))

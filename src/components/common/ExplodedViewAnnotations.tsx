@@ -1,8 +1,9 @@
-import { useTransform, motion } from 'motion/react'
+import { motion } from 'motion/react'
 import type { MotionValue } from 'motion/react'
 import { SHOWCASE_CONFIG } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { useViewportWidth } from '@/hooks/useViewportWidth'
+import { useAnnotationTransform } from '@/hooks/useAnnotationTransform'
 
 // Derive annotation scroll ranges from camera waypoints so they're always in sync.
 // Each annotation[i] is visible when the camera is near waypoint[i].
@@ -27,6 +28,7 @@ function Annotation({
   scrollRange,
   scrollYProgress,
   isMobile,
+  isFirst,
 }: {
   text: string
   subtext?: string
@@ -34,30 +36,9 @@ function Annotation({
   scrollRange: [number, number]
   scrollYProgress: MotionValue<number>
   isMobile: boolean
+  isFirst: boolean
 }) {
-  const [start, end] = scrollRange
-  const midIn = start + (end - start) * 0.25
-  const midOut = start + (end - start) * 0.75
-
-  const isFirst = start === 0
-
-  const opacity = useTransform(scrollYProgress, (v) => {
-    if (v >= end) return 0
-    if (!isFirst && v <= start) return 0
-    if (isFirst && v < midIn) return 1
-    if (v < midIn) return (v - start) / (midIn - start)
-    if (v > midOut) return 1 - (v - midOut) / (end - midOut)
-    return 1
-  })
-
-  const y = useTransform(scrollYProgress, (v) => {
-    if (v >= end) return 20
-    if (!isFirst && v <= start) return 20
-    if (isFirst && v < midIn) return 0
-    if (v < midIn) return 20 - 20 * (v - start) / (midIn - start)
-    if (v > midOut) return -20 * (v - midOut) / (end - midOut)
-    return 0
-  })
+  const { opacity, y } = useAnnotationTransform({ scrollYProgress, scrollRange, isFirst })
 
   return (
     <motion.div
@@ -108,6 +89,7 @@ export default function ExplodedViewAnnotations({ scrollYProgress }: ExplodedVie
           scrollRange={computedRanges[i]}
           scrollYProgress={scrollYProgress}
           isMobile={isMobile}
+          isFirst={i === 0}
         />
       ))}
     </div>

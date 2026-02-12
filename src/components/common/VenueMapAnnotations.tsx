@@ -1,7 +1,8 @@
-import { useTransform, motion } from 'motion/react'
+import { motion } from 'motion/react'
 import type { MotionValue } from 'motion/react'
 import { VENUE_MAP_CONFIG } from '@/lib/constants'
 import { cn } from '@/lib/utils'
+import { useAnnotationTransform } from '@/hooks/useAnnotationTransform'
 
 interface VenueMapAnnotationsProps {
   scrollYProgress: MotionValue<number>
@@ -18,23 +19,7 @@ function Annotation({
   scrollRange: readonly [number, number]
   scrollYProgress: MotionValue<number>
 }) {
-  const [start, end] = scrollRange
-  const midIn = start + (end - start) * 0.25
-  const midOut = start + (end - start) * 0.75
-
-  const opacity = useTransform(scrollYProgress, (v) => {
-    if (v <= start || v >= end) return 0
-    if (v < midIn) return (v - start) / (midIn - start)
-    if (v > midOut) return 1 - (v - midOut) / (end - midOut)
-    return 1
-  })
-
-  const y = useTransform(scrollYProgress, (v) => {
-    if (v <= start || v >= end) return 20
-    if (v < midIn) return 20 - 20 * (v - start) / (midIn - start)
-    if (v > midOut) return -20 * (v - midOut) / (end - midOut)
-    return 0
-  })
+  const { opacity, y } = useAnnotationTransform({ scrollYProgress, scrollRange })
 
   return (
     <motion.div

@@ -6,5 +6,3 @@ export default function BeerPongModel() {
 
   return <primitive object={scene} />
 }
-
-useGLTF.preload(SHOWCASE_CONFIG.modelPath)

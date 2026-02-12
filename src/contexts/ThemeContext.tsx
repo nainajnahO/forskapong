@@ -1,13 +1,13 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 
 type BackgroundVariant = 'fluid' | 'framer';
-type Theme = 'light' | 'dark'; // Type preserved for backward compatibility, but always 'dark' in practice
+type Theme = 'light' | 'dark';
 
+// Light theme is intentionally disabled — always returns 'dark'
 interface ThemeContextType {
-  theme: Theme; // Always returns 'dark' but type preserved for backward compatibility
+  theme: Theme;
   backgroundVariant: BackgroundVariant;
   toggleBackground: () => void;
-  toggleTheme: () => void; // Kept for backward compatibility
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -43,7 +43,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         theme: 'dark',
         backgroundVariant,
         toggleBackground,
-        toggleTheme: toggleBackground // Alias for backward compatibility
       }}
     >
       {children}

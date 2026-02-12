@@ -12,11 +12,12 @@ export default function ExplodedViewCanvas({ scrollProgress, isVisible }: Explod
   return (
     <Canvas
       frameloop={isVisible ? 'always' : 'never'}
+      dpr={[1, 2.5]}
       gl={{ alpha: true, antialias: false, powerPreference: 'high-performance' }}
       camera={{ position: [2, 2, 4], fov: 45 }}
       style={{ background: 'transparent' }}
     >
-      <ambientLight intensity={1.5} />
+      <ambientLight intensity={0.5} />
       <directionalLight position={[5, 8, 5]} intensity={2} />
       <directionalLight position={[-3, 4, -5]} intensity={1} />
       <Environment preset="city" />

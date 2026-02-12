@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { ArrowUpRight, Flame, Waves } from 'lucide-react';
 import logo from '../../assets/logo.webp';
 import { NAV_LINKS } from '@/lib/constants';
@@ -25,37 +25,46 @@ export default function Navbar() {
   const scrollToSection = useScrollToSection();
 
   // Calculate responsive offset based on viewport width
-  const getResponsiveOffset = () => {
+  const responsiveOffset = useMemo(() => {
     if (viewportWidth >= 1024) return 9.5; // Desktop
     if (viewportWidth >= 768) return 8; // Tablet landscape
     if (viewportWidth >= 640) return 7; // Large phone landscape
     return 6.5; // Small phone portrait
-  };
+  }, [viewportWidth]);
 
   // Calculate pill position and width based on actual element positions
   useEffect(() => {
     if (isScrolled && logoRef.current && ctaRef.current && pillRef.current) {
-      const timer = setTimeout(() => {
-        if (logoRef.current && ctaRef.current && pillRef.current?.parentElement) {
-          const logoRect = logoRef.current.getBoundingClientRect();
-          const ctaRect = ctaRef.current.getBoundingClientRect();
-          const containerRect = pillRef.current.parentElement.getBoundingClientRect();
+      let rafId: number;
+      // Double-raf ensures layout is complete before measuring
+      rafId = requestAnimationFrame(() => {
+        rafId = requestAnimationFrame(() => {
+          if (logoRef.current && ctaRef.current && pillRef.current?.parentElement) {
+            const logoRect = logoRef.current.getBoundingClientRect();
+            const ctaRect = ctaRef.current.getBoundingClientRect();
+            const containerRect = pillRef.current.parentElement.getBoundingClientRect();
 
-          const pad = 10;
-          const left = logoRect.left - containerRect.left - pad;
-          const width = ctaRect.right - logoRect.left + pad * 2;
+            const pad = 10;
+            const left = logoRect.left - containerRect.left - pad;
+            const width = ctaRect.right - logoRect.left + pad * 2;
 
-          setPillMetrics({ left: left / 16, width: width / 16 });
-        }
-      }, 700);
+            setPillMetrics({ left: left / 16, width: width / 16 });
+          }
+        });
+      });
 
-      return () => clearTimeout(timer);
+      return () => cancelAnimationFrame(rafId);
     }
   }, [isScrolled, viewportWidth]);
 
-  const handleTicketClick = () => {
+  const handleTicketClick = useCallback(() => {
     scrollToSection('#tickets');
-  };
+  }, [scrollToSection]);
+
+  const handleLogoClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   return (
     <SpringProvider
@@ -100,12 +109,12 @@ export default function Navbar() {
               className="flex items-center transition-transform duration-700 ease-in-out relative z-10"
               style={{
                 transform: isScrolled
-                  ? `translateX(calc(50vw - 50% - ${getResponsiveOffset()}rem))`
+                  ? `translateX(calc(50vw - 50% - ${responsiveOffset}rem))`
                   : 'translateX(0)',
                 willChange: 'transform',
               }}
             >
-              <a href="#" draggable={false} onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+              <a href="#" draggable={false} onClick={handleLogoClick}>
                 <img
                   src={logo}
                   alt="Forsränningen Logo"
@@ -162,7 +171,7 @@ export default function Navbar() {
                 className="flex items-center justify-between gap-3 pl-6 pr-2 py-2 bg-white text-black font-semibold rounded-full hover:bg-zinc-100 absolute lg:relative right-0 lg:right-auto"
                 style={{
                   transform: isScrolled
-                    ? `translateX(calc(-50vw + 50% + ${getResponsiveOffset()}rem)) scale(1)`
+                    ? `translateX(calc(-50vw + 50% + ${responsiveOffset}rem)) scale(1)`
                     : 'translateX(0) scale(1)',
                   willChange: 'transform, opacity',
                   opacity: viewportWidth >= 1024 ? 1 : (isScrolled ? 1 : 0),
