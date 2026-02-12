@@ -65,7 +65,7 @@ export const SCHEDULE_PHASES = [
         italic: true,
         speakers: [
           { name: '(W)ebb24', title: 'CEO, Hjälpis' },
-          { name: '(W)ebb25', title: "CTO, Rolln' Solution" },
+          { name: '(W)ebb25', title: "CTO, Hjälpis" },
         ],
       },
     ],
@@ -156,7 +156,7 @@ export const SHOWCASE_CONFIG = {
     },
     {
       text: 'Redo att spela?',
-      subtext: 'Vi ses den' + '\n28 februari 2026',
+      subtext: 'Vi ses den' + '\n31 Mars 2026',
       position: ['25%', '50%'] as const,
     },
   ] as const,

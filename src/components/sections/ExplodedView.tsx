@@ -47,7 +47,7 @@ export default function ExplodedView({ id }: ExplodedViewProps) {
           style={{ opacity: titleOpacity, y: titleY }}
         >
           <Container>
-            <h1 className="text-4xl md:text-6xl font-display text-foreground hdr-white-fill transition-colors duration-500">
+            <h1 id="about-title" className="text-4xl md:text-6xl font-display text-foreground hdr-white-fill transition-colors duration-500">
               Årets Mest
               <br />
               Hypade <span className="italic text-brand-400 hdr-text-fill-400">Event</span>
