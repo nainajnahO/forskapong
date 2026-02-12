@@ -61,8 +61,8 @@ export default function Footer() {
               <Avatar key={index} className="size-12 border-3 border-background">
                 <AvatarImage src={avatar.src} />
                 <AvatarFallback>{avatar.fallback}</AvatarFallback>
-                <AvatarGroupTooltip className="bg-primary px-3 py-1.5 text-sm text-primary-foreground rounded-md">
-                  <AvatarGroupTooltipArrow className="fill-primary size-2.5" />
+                <AvatarGroupTooltip className="bg-brand-500 px-3 py-1.5 text-sm text-white rounded-md">
+                  <AvatarGroupTooltipArrow className="fill-brand-500 size-2.5" />
                   <motion.p layout="preserve-aspect">{avatar.tooltip}</motion.p>
                 </AvatarGroupTooltip>
               </Avatar>

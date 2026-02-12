@@ -197,11 +197,3 @@ export const VENUE_MAP_CONFIG = {
   ],
 } as const;
 
-// Ticket Information
-export const TICKET_INFO = {
-  sectionTitle: 'ANMÄLAN',
-  heading: 'Anmälan',
-  headingHighlight: 'NU!',
-  registrationNote: 'Anmälan sker lagvis (2 personer per lag)',
-  registrationUrl: 'https://longdogechallenge.com',
-} as const;
