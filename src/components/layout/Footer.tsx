@@ -122,18 +122,17 @@ export default function Footer() {
           </div>
 
           {/* Right: Credits + GitHub */}
-          <div className={cn('flex flex-col items-end gap-3 text-xs transition-colors duration-500', themeText(theme, 'muted'))}>
+          <div className={cn('flex flex-col items-start md:items-end gap-3 text-xs transition-colors duration-500', themeText(theme, 'muted'))}>
             <MediaBetweenText
-              firstText="Made with "
-              secondText=" by Forskå"
-              mediaUrl="https://images.unsplash.com/photo-1574096079513-d8259312b785?w=200&h=80&fit=crop"
-              mediaType="image"
-              alt="Beer pong celebration"
+              firstText="Made with ("
+              secondText=") by Forskå"
               className="items-center justify-center gap-1"
               leftTextClassName={themeText(theme, 'muted')}
               rightTextClassName={themeText(theme, 'muted')}
-              mediaContainerClassName="h-5 rounded overflow-hidden"
-            />
+              mediaContainerClassName="h-5 overflow-hidden"
+            >
+              <span className="text-base leading-none">🍯</span>
+            </MediaBetweenText>
             <a
               href="https://github.com/nainajnahO/forskapong"
               target="_blank"

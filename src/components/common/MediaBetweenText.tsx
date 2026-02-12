@@ -28,10 +28,12 @@ interface MediaBetweenTextProps {
   firstText: string;
   /** The text to display after the media. */
   secondText: string;
-  /** URL of the media (image or video) to display. */
-  mediaUrl: string;
-  /** Type of media to display. */
-  mediaType: 'image' | 'video';
+  /** URL of the media (image or video) to display. Optional if children is provided. */
+  mediaUrl?: string;
+  /** Type of media to display. Optional if children is provided. */
+  mediaType?: 'image' | 'video';
+  /** Custom content to render in the media slot instead of an image/video. */
+  children?: React.ReactNode;
   /** Alt text for image media. */
   alt?: string;
   /** Animation trigger type. @default "hover" */
@@ -77,6 +79,7 @@ export const MediaBetweenText = forwardRef<MediaBetweenTextRef, MediaBetweenText
       mediaUrl,
       mediaType,
       alt,
+      children,
       variant = 'hover',
       videoConfig,
       animationConfig,
@@ -136,24 +139,26 @@ export const MediaBetweenText = forwardRef<MediaBetweenTextRef, MediaBetweenText
           initial="initial"
           animate={shouldAnimate ? 'animate' : 'initial'}
         >
-          {mediaType === 'video' ? (
-            <video
-              className="w-full h-full object-cover"
-              autoPlay={autoPlay}
-              loop={loop}
-              muted={muted}
-              playsInline={playsInline}
-              poster={posterUrl}
-            >
-              <source src={mediaUrl} type="video/mp4" />
-            </video>
-          ) : (
-            <img
-              src={mediaUrl}
-              alt={alt || `${firstText} ${secondText}`}
-              className="w-full h-full object-cover"
-            />
-          )}
+          {children
+            ? children
+            : mediaType === 'video' ? (
+              <video
+                className="w-full h-full object-cover"
+                autoPlay={autoPlay}
+                loop={loop}
+                muted={muted}
+                playsInline={playsInline}
+                poster={posterUrl}
+              >
+                <source src={mediaUrl} type="video/mp4" />
+              </video>
+            ) : (
+              <img
+                src={mediaUrl}
+                alt={alt || `${firstText} ${secondText}`}
+                className="w-full h-full object-cover"
+              />
+            )}
         </motion.div>
         <motion.p layout className={rightTextClassName}>
           {secondText}
