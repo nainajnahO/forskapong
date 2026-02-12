@@ -30,6 +30,12 @@ export default function ExplodedView({ id }: ExplodedViewProps) {
     return yOffset - (yOffset * (v - fadeStart)) / fadeRange;
   });
 
+  const creditOpacity = useTransform(scrollYProgress, (v) => {
+    if (v < 0.7) return 1;
+    if (v > 0.8) return 0;
+    return 1 - (v - 0.7) / 0.1;
+  });
+
   return (
     <section
       ref={containerRef}
@@ -53,6 +59,32 @@ export default function ExplodedView({ id }: ExplodedViewProps) {
               Hypade <span className="italic text-brand-400 hdr-text-fill-400">Event</span>
             </h1>
           </Container>
+        </motion.div>
+
+        {/* 3D Model Credit */}
+        <motion.div
+          className="absolute bottom-2 right-3 z-10 text-[10px] font-mono text-zinc-500/60 text-right"
+          style={{ opacity: creditOpacity }}
+        >
+          <a
+            href="https://skfb.ly/oOYKB"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-zinc-400/80 transition-colors"
+          >
+            &quot;Cups Pong VR Game Assets&quot;
+          </a>
+          {' by Max Keeley'}
+          <br className="md:hidden" />
+          {' — '}
+          <a
+            href="http://creativecommons.org/licenses/by/4.0/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-zinc-400/80 transition-colors"
+          >
+            CC BY 4.0
+          </a>
         </motion.div>
       </div>
     </section>
