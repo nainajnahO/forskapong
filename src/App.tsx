@@ -5,6 +5,7 @@ import Hero from './components/sections/Hero';
 import About from './components/sections/About';
 import ScheduleVariant2 from './components/sections/schedule';
 import ExplodedView from './components/sections/ExplodedView';
+import Sponsors from './components/sections/Sponsors';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { VENUE_MAP_CONFIG } from '@/lib/constants';
 
@@ -17,6 +18,7 @@ function App() {
       <Navbar />
       <main>
         <Hero />
+        <Sponsors />
         <ErrorBoundary>
           <ExplodedView id="showcase" />
         </ErrorBoundary>

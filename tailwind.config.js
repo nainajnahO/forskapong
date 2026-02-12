@@ -81,7 +81,7 @@ module.exports = {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "text-rotate": "text-rotate 8s ease-in-out infinite",
-        "marquee": "marquee 20s linear infinite",
+        "marquee": "marquee 40s linear infinite",
       },
     },
   },

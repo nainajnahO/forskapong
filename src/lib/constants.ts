@@ -306,6 +306,14 @@ export const VENUE_MAP_CONFIG = {
   ],
 } as const;
 
+// Sponsors
+export const SPONSORS: readonly { name: string; logo?: string; text?: string; href?: string }[] = [
+  { name: 'CTF', logo: '/sponsors/logotyp_CTF_transparent_inverterad.PNG', href: 'https://www.instagram.com/tentafestivalen/' },
+  { name: 'Impact Solution', logo: '/sponsors/logo-vit-text-trans.png.webp', href: 'https://impactsolution.se' },
+  { name: 'Redbull', logo: '/sponsors/idCMb-1Vvp_1770934464677.svg', href: 'https://www.redbull.com/se-en' },
+  { name: 'Queen', text: '♛' },
+];
+
 // Navbar Responsive Offsets (rem)
 export const NAV_RESPONSIVE_OFFSETS = {
   desktop: 9.5, // >= 1024px
