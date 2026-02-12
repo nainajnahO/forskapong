@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import Container from '../common/Container';
 import MediaBetweenText from '../common/MediaBetweenText';
@@ -20,23 +20,22 @@ interface CapItem {
   status: Status;
 }
 
+function detectCapabilities(): Record<string, boolean | null> {
+  const canvas = document.createElement('canvas');
+  const webgl2Ctx = canvas.getContext('webgl2');
+  const webglCtx = webgl2Ctx || canvas.getContext('webgl');
+
+  return {
+    hdr: window.matchMedia('(dynamic-range: high)').matches || null,
+    p3: window.matchMedia('(color-gamut: p3)').matches || null,
+    webgl: !!webglCtx || null,
+    webgl2: !!webgl2Ctx || null,
+    highDpr: window.devicePixelRatio > 1 || null,
+  };
+}
+
 function useCapabilities(): Record<string, boolean | null> {
-  const [caps, setCaps] = useState<Record<string, boolean | null>>({});
-
-  useEffect(() => {
-    const canvas = document.createElement('canvas');
-    const webgl2Ctx = canvas.getContext('webgl2');
-    const webglCtx = webgl2Ctx || canvas.getContext('webgl');
-
-    setCaps({
-      hdr: window.matchMedia('(dynamic-range: high)').matches || null,
-      p3: window.matchMedia('(color-gamut: p3)').matches || null,
-      webgl: !!webglCtx || null,
-      webgl2: !!webgl2Ctx || null,
-      highDpr: window.devicePixelRatio > 1 || null,
-    });
-  }, []);
-
+  const [caps] = useState(detectCapabilities);
   return caps;
 }
 
