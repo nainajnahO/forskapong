@@ -32,7 +32,7 @@ export default function Footer() {
             <AvatarGroup className="order-1 md:order-2 h-12 -space-x-3" invertOverlap>
               {HALL_OF_FAME_AVATARS.map((avatar) => (
                 <Avatar key={avatar.tooltip} className="size-12 border-3 border-background">
-                  <AvatarImage src={avatar.src} alt={avatar.tooltip} />
+                  <AvatarImage src={avatar.src} alt={avatar.tooltip} className="scale-150 object-cover object-top" />
                   <AvatarFallback>{avatar.fallback}</AvatarFallback>
                   <AvatarGroupTooltip className="bg-brand-500 px-3 py-1.5 text-sm text-white rounded-md">
                     <AvatarGroupTooltipArrow className="fill-brand-500 size-2.5" />
