@@ -84,11 +84,13 @@ function interpolateWaypoints(progress: number) {
 
 interface VenueMapCanvasProps {
   scrollYProgress: MotionValue<number>
+  isVisible?: boolean
 }
 
-export default function VenueMapCanvas({ scrollYProgress }: VenueMapCanvasProps) {
+export default function VenueMapCanvas({ scrollYProgress, isVisible = true }: VenueMapCanvasProps) {
   const mapRef = useRef<MapRef>(null)
   const progressRef = useRef(0)
+  const lastProgressRef = useRef<number>(-1)
   const [waypoints, setWaypoints] = useState<Waypoint[]>([])
 
   useMotionValueEvent(scrollYProgress, 'change', (v) => {
@@ -98,19 +100,22 @@ export default function VenueMapCanvas({ scrollYProgress }: VenueMapCanvasProps)
   // Normal scroll-driven camera (disabled in debug mode)
   useEffect(() => {
     if (DEBUG_MODE) return
+    if (!isVisible) return
 
     let rafId: number
     const loop = () => {
       const map = mapRef.current?.getMap()
-      if (map) {
-        const { center, zoom, pitch, bearing } = interpolateWaypoints(progressRef.current)
+      const progress = progressRef.current
+      if (map && Math.abs(progress - lastProgressRef.current) > 0.0001) {
+        lastProgressRef.current = progress
+        const { center, zoom, pitch, bearing } = interpolateWaypoints(progress)
         map.jumpTo({ center, zoom, pitch, bearing })
       }
       rafId = requestAnimationFrame(loop)
     }
     rafId = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(rafId)
-  }, [])
+  }, [isVisible])
 
   // Debug: press T to snapshot, C to copy, R to reset
   const captureWaypoint = useCallback(() => {

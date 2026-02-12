@@ -2,25 +2,9 @@ import React, {
   type ComponentPropsWithoutRef,
   useEffect,
   useRef,
-  useState,
 } from "react";
 
 import { cn } from "@/lib/utils";
-
-function useMousePosition() {
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-
-  useEffect(() => {
-    const handleMouseMove = (event: MouseEvent) => {
-      setMousePosition({ x: event.clientX, y: event.clientY });
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
-
-  return mousePosition;
-}
 
 interface ParticlesProps extends ComponentPropsWithoutRef<"div"> {
   className?: string;
@@ -32,6 +16,7 @@ interface ParticlesProps extends ComponentPropsWithoutRef<"div"> {
   color?: string;
   vx?: number;
   vy?: number;
+  paused?: boolean;
 }
 
 function hexToRgb(hex: string): number[] {
@@ -69,18 +54,45 @@ export const Particles: React.FC<ParticlesProps> = ({
   color = "#ffffff",
   vx = 0,
   vy = 0,
+  paused = false,
   ...props
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const context = useRef<CanvasRenderingContext2D | null>(null);
   const circles = useRef<Circle[]>([]);
-  const mousePosition = useMousePosition();
   const mouse = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const canvasSize = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
-  const dpr = window.devicePixelRatio;
+  const dpr = typeof window !== 'undefined' ? window.devicePixelRatio : 1;
   const rafID = useRef<number | null>(null);
   const resizeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pausedRef = useRef(paused);
+
+  // Keep pausedRef in sync
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
+
+  // Ref-based mouse tracking — zero re-renders
+  useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!canvasRef.current) return;
+      const rect = canvasRef.current.getBoundingClientRect();
+      const { w, h } = canvasSize.current;
+      const x = event.clientX - rect.left - w / 2;
+      const y = event.clientY - rect.top - h / 2;
+      const inside = x < w / 2 && x > -w / 2 && y < h / 2 && y > -h / 2;
+      if (inside) {
+        mouse.current.x = x;
+        mouse.current.y = y;
+      }
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
+
+  const rgb = hexToRgb(color);
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -103,30 +115,12 @@ export const Particles: React.FC<ParticlesProps> = ({
   }, [color]);
 
   useEffect(() => {
-    onMouseMove();
-  }, [mousePosition.x, mousePosition.y]);
-
-  useEffect(() => {
     initCanvas();
   }, [refresh]);
 
   const initCanvas = () => {
     resizeCanvas();
     drawParticles();
-  };
-
-  const onMouseMove = () => {
-    if (canvasRef.current) {
-      const rect = canvasRef.current.getBoundingClientRect();
-      const { w, h } = canvasSize.current;
-      const x = mousePosition.x - rect.left - w / 2;
-      const y = mousePosition.y - rect.top - h / 2;
-      const inside = x < w / 2 && x > -w / 2 && y < h / 2 && y > -h / 2;
-      if (inside) {
-        mouse.current.x = x;
-        mouse.current.y = y;
-      }
-    }
   };
 
   const resizeCanvas = () => {
@@ -170,8 +164,6 @@ export const Particles: React.FC<ParticlesProps> = ({
       magnetism,
     };
   };
-
-  const rgb = hexToRgb(color);
 
   const drawCircle = (circle: Circle, update = false) => {
     if (context.current) {
@@ -219,8 +211,15 @@ export const Particles: React.FC<ParticlesProps> = ({
   };
 
   const animate = () => {
+    if (pausedRef.current) {
+      rafID.current = window.requestAnimationFrame(animate);
+      return;
+    }
+
     clearContext();
-    circles.current.forEach((circle: Circle, i: number) => {
+    // Reverse iteration so splice doesn't skip elements
+    for (let i = circles.current.length - 1; i >= 0; i--) {
+      const circle = circles.current[i];
       const edge = [
         circle.x + circle.translateX - circle.size,
         canvasSize.current.w - circle.x - circle.translateX - circle.size,
@@ -262,7 +261,7 @@ export const Particles: React.FC<ParticlesProps> = ({
         const newCircle = circleParams();
         drawCircle(newCircle);
       }
-    });
+    }
     rafID.current = window.requestAnimationFrame(animate);
   };
 

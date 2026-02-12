@@ -5,12 +5,14 @@ import CameraRig from '@/components/common/CameraRig'
 
 interface ExplodedViewCanvasProps {
   scrollProgress: React.RefObject<number>
+  isVisible: boolean
 }
 
-export default function ExplodedViewCanvas({ scrollProgress }: ExplodedViewCanvasProps) {
+export default function ExplodedViewCanvas({ scrollProgress, isVisible }: ExplodedViewCanvasProps) {
   return (
     <Canvas
-      gl={{ alpha: true, antialias: true }}
+      frameloop={isVisible ? 'always' : 'never'}
+      gl={{ alpha: true, antialias: false, powerPreference: 'high-performance' }}
       camera={{ position: [2, 2, 4], fov: 45 }}
       style={{ background: 'transparent' }}
     >

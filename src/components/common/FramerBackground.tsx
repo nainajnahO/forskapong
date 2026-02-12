@@ -14,7 +14,7 @@ const FramerBackground: React.FC = () => {
           left: '0%',
         }}
         title="Background Animation"
-        loading="eager"
+        loading="lazy"
         allowFullScreen
       />
     </div>

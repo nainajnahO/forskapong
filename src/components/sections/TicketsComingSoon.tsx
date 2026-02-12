@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { motion, useInView } from 'motion/react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useViewportWidth } from '@/hooks/useViewportWidth';
+import { useIsVisible } from '@/hooks/useIsVisible';
 import { cn } from '@/lib/utils';
 import { themeText, themeGradientLine } from '@/lib/theme-utils';
 import Container from '../common/Container';
@@ -15,12 +16,14 @@ interface TicketsComingSoonProps {
 export default function TicketsComingSoon({ id }: TicketsComingSoonProps) {
   const { theme } = useTheme();
   const ref = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
+  const isVisible = useIsVisible(sectionRef);
   const vw = useViewportWidth();
   const isMobile = vw < 768;
 
   return (
-    <section id={id} className="relative w-full py-16 md:py-24 overflow-hidden">
+    <section ref={sectionRef} id={id} className="relative w-full py-16 md:py-24 overflow-hidden">
       <Particles
         className="absolute inset-0"
         quantity={isMobile ? 30 : 80}
@@ -29,6 +32,7 @@ export default function TicketsComingSoon({ id }: TicketsComingSoonProps) {
         size={isMobile ? 0.3 : 0.4}
         refresh={isMobile}
         color={theme === 'dark' ? '#ffffff' : '#71717a'}
+        paused={!isVisible}
       />
 
       <Container className="relative z-10">

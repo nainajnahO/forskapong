@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { useTransform, motion } from 'motion/react'
 import { useExplodedViewScroll } from '@/hooks/useExplodedViewScroll'
+import { useIsVisible } from '@/hooks/useIsVisible'
 import ExplodedViewAnnotations from '@/components/common/ExplodedViewAnnotations'
 import ExplodedViewCanvas from '@/components/common/ExplodedViewCanvas'
 import { SHOWCASE_CONFIG } from '@/lib/constants'
@@ -12,6 +13,7 @@ interface ExplodedViewProps {
 
 export default function ExplodedView({ id }: ExplodedViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const isVisible = useIsVisible(containerRef)
   const { progressRef, scrollYProgress } = useExplodedViewScroll(containerRef)
 
   const titleOpacity = useTransform(scrollYProgress, (v) => {
@@ -33,7 +35,7 @@ export default function ExplodedView({ id }: ExplodedViewProps) {
       className="relative"
     >
       <div className="sticky top-0 h-screen w-full overflow-hidden bg-background">
-        <ExplodedViewCanvas scrollProgress={progressRef} />
+        <ExplodedViewCanvas scrollProgress={progressRef} isVisible={isVisible} />
         <ExplodedViewAnnotations scrollYProgress={scrollYProgress} />
 
         {/* Title pinned to bottom-left, fades in at end of animation */}

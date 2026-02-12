@@ -1,11 +1,13 @@
+import { lazy, Suspense } from 'react'
 import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
 import Hero from './components/sections/Hero'
-import ExplodedView from './components/sections/ExplodedView'
 import About from './components/sections/About'
 import ScheduleVariant2 from './components/sections/ScheduleVariant2'
-import VenueMap from './components/sections/VenueMap'
-import TicketsComingSoon from './components/sections/TicketsComingSoon'
+import ExplodedView from './components/sections/ExplodedView'
+
+const VenueMap = lazy(() => import('./components/sections/VenueMap'))
+const TicketsComingSoon = lazy(() => import('./components/sections/TicketsComingSoon'))
 
 function App() {
   return (
@@ -15,8 +17,12 @@ function App() {
       <ExplodedView id="showcase" />
       <About id="about" />
       <ScheduleVariant2 id="schedule-v4" />
-      <VenueMap id="venue" />
-      <TicketsComingSoon id="tickets" />
+      <Suspense fallback={<div style={{ height: '400vh' }} />}>
+        <VenueMap id="venue" />
+      </Suspense>
+      <Suspense fallback={<div className="py-16 md:py-24" />}>
+        <TicketsComingSoon id="tickets" />
+      </Suspense>
       <Footer />
     </div>
   )

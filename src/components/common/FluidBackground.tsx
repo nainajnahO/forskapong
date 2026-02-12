@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
+import { useIsVisible } from '@/hooks/useIsVisible';
 
 const VERTEX_SHADER = `#version 300 es
 layout(location = 0) in vec4 a_position;
@@ -135,38 +136,8 @@ export const PRESETS = {
   Lava: {
     color1: '#FF9F21', color2: '#FF0303', color3: '#000000',
     rotation: 114, proportion: 100, scale: 0.52, speed: 30,
-    distortion: 7, swirl: 18, swirlIterations: 20, softness: 100,
+    distortion: 13, swirl: 20, swirlIterations: 10, softness: 90,
     offset: 717, shape: 'Edge' as const, shapeSize: 12,
-  },
-  Prism: {
-    color1: '#050505', color2: '#66B3FF', color3: '#FFFFFF',
-    rotation: -50, proportion: 1, scale: 0.01, speed: 30,
-    distortion: 0, swirl: 50, swirlIterations: 16, softness: 47,
-    offset: -299, shape: 'Checks' as const, shapeSize: 45,
-  },
-  Plasma: {
-    color1: '#B566FF', color2: '#000000', color3: '#000000',
-    rotation: 0, proportion: 63, scale: 0.75, speed: 30,
-    distortion: 5, swirl: 61, swirlIterations: 5, softness: 100,
-    offset: -168, shape: 'Checks' as const, shapeSize: 28,
-  },
-  Pulse: {
-    color1: '#66FF85', color2: '#000000', color3: '#000000',
-    rotation: -167, proportion: 92, scale: 0, speed: 20,
-    distortion: 54, swirl: 75, swirlIterations: 3, softness: 28,
-    offset: -813, shape: 'Checks' as const, shapeSize: 79,
-  },
-  Vortex: {
-    color1: '#000000', color2: '#FFFFFF', color3: '#000000',
-    rotation: 50, proportion: 41, scale: 0.4, speed: 20,
-    distortion: 0, swirl: 100, swirlIterations: 3, softness: 5,
-    offset: -744, shape: 'Stripes' as const, shapeSize: 80,
-  },
-  Mist: {
-    color1: '#050505', color2: '#FF66B8', color3: '#050505',
-    rotation: 0, proportion: 33, scale: 0.48, speed: 39,
-    distortion: 4, swirl: 65, swirlIterations: 5, softness: 100,
-    offset: -235, shape: 'Edge' as const, shapeSize: 48,
   },
 } as const;
 
@@ -265,6 +236,13 @@ export default function FluidBackground({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number>(0);
   const startTimeRef = useRef<number>(0);
+  const isVisible = useIsVisible(canvasRef);
+  const isVisibleRef = useRef(isVisible);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    isVisibleRef.current = isVisible;
+  }, [isVisible]);
 
   // Resolve config: explicit props override preset
   const cfg = PRESETS[preset];
@@ -347,7 +325,10 @@ export default function FluidBackground({
     };
 
     const render = () => {
-      resize();
+      if (!isVisibleRef.current) {
+        animFrameRef.current = requestAnimationFrame(render);
+        return;
+      }
 
       const elapsed = (performance.now() - startTimeRef.current) * 0.001;
       const totalTime = elapsed * (resolved.speed / 100) * 5 + resolved.offset * 10 * 0.001;
@@ -375,6 +356,7 @@ export default function FluidBackground({
       animFrameRef.current = requestAnimationFrame(render);
     };
 
+    resize();
     render();
 
     const resizeObserver = new ResizeObserver(resize);

@@ -47,6 +47,7 @@ export default function CameraRig({ scrollProgress }: CameraRigProps) {
     const aspect = size.width / size.height
     const targetFov = aspect < 1 ? 60 : 45
     if ((camera as THREE.PerspectiveCamera).fov !== targetFov) {
+      // eslint-disable-next-line react-hooks/immutability -- standard R3F pattern for dynamic FOV
       ;(camera as THREE.PerspectiveCamera).fov = targetFov
       camera.updateProjectionMatrix()
     }
