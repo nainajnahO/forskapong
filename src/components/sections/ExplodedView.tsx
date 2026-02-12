@@ -1,31 +1,34 @@
-import { useRef } from 'react'
-import { useTransform, motion } from 'motion/react'
-import { useExplodedViewScroll } from '@/hooks/useExplodedViewScroll'
-import { useIsVisible } from '@/hooks/useIsVisible'
-import ExplodedViewAnnotations from '@/components/common/ExplodedViewAnnotations'
-import ExplodedViewCanvas from '@/components/common/ExplodedViewCanvas'
-import { SHOWCASE_CONFIG } from '@/lib/constants'
-import Container from '@/components/common/Container'
+import { useRef } from 'react';
+import { useTransform, motion } from 'motion/react';
+import { useExplodedViewScroll } from '@/hooks/useExplodedViewScroll';
+import { useIsVisible } from '@/hooks/useIsVisible';
+import ExplodedViewAnnotations from '@/components/common/ExplodedViewAnnotations';
+import ExplodedViewCanvas from '@/components/common/ExplodedViewCanvas';
+import { SHOWCASE_CONFIG, EXPLODED_VIEW_TITLE } from '@/lib/constants';
+import Container from '@/components/common/Container';
 
 interface ExplodedViewProps {
-  id?: string
+  id?: string;
 }
 
 export default function ExplodedView({ id }: ExplodedViewProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const isVisible = useIsVisible(containerRef)
-  const { progressRef, scrollYProgress } = useExplodedViewScroll(containerRef)
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isVisible = useIsVisible(containerRef);
+  const { progressRef, scrollYProgress } = useExplodedViewScroll(containerRef);
+
+  const { fadeStart, fadeEnd, yOffset } = EXPLODED_VIEW_TITLE;
+  const fadeRange = fadeEnd - fadeStart;
 
   const titleOpacity = useTransform(scrollYProgress, (v) => {
-    if (v < 0.93) return 0
-    if (v > 0.99) return 1
-    return (v - 0.93) / 0.06
-  })
+    if (v < fadeStart) return 0;
+    if (v > fadeEnd) return 1;
+    return (v - fadeStart) / fadeRange;
+  });
   const titleY = useTransform(scrollYProgress, (v) => {
-    if (v < 0.93) return 20
-    if (v > 0.99) return 0
-    return 20 - 20 * (v - 0.93) / 0.06
-  })
+    if (v < fadeStart) return yOffset;
+    if (v > fadeEnd) return 0;
+    return yOffset - (yOffset * (v - fadeStart)) / fadeRange;
+  });
 
   return (
     <section
@@ -45,12 +48,13 @@ export default function ExplodedView({ id }: ExplodedViewProps) {
         >
           <Container>
             <h1 className="text-4xl md:text-6xl font-display text-foreground transition-colors duration-500">
-              Årets Mest<br />
+              Årets Mest
+              <br />
               Hypade <span className="italic text-brand-400">Event</span>
             </h1>
           </Container>
         </motion.div>
       </div>
     </section>
-  )
+  );
 }

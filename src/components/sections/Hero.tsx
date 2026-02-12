@@ -3,7 +3,7 @@ import FluidBackground from '../common/FluidBackground';
 import StaticNoise from '../common/StaticNoise';
 import { EVENT_INFO, HERO_ROTATING_WORDS } from '@/lib/constants';
 import Container from '../common/Container';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/contexts/useTheme';
 import { useTypewriter } from '@/hooks/useTypewriter';
 
 export default function Hero() {

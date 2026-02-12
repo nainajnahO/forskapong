@@ -29,12 +29,7 @@ function AvatarContainer({
   ...props
 }: AvatarProps) {
   return (
-    <Tooltip
-      side={side}
-      sideOffset={sideOffset}
-      align={align}
-      alignOffset={alignOffset}
-    >
+    <Tooltip side={side} sideOffset={sideOffset} align={align} alignOffset={alignOffset}>
       <TooltipTrigger asChild>
         <motion.div
           data-slot="avatar-container"
@@ -102,9 +97,7 @@ function AvatarGroup({
         {children?.map((child, index) => (
           <AvatarContainer
             key={index}
-            zIndex={
-              invertOverlap ? React.Children.count(children) - index : index
-            }
+            zIndex={invertOverlap ? React.Children.count(children) - index : index}
             transition={transition}
             translate={translate}
             side={side}

@@ -24,24 +24,14 @@ function useMotionValueState(motionValue: MotionValue): number {
 function getStrictContext<T>(
   name?: string,
 ): readonly [
-  ({
-    value,
-    children,
-  }: {
-    value: T;
-    children?: React.ReactNode;
-  }) => React.JSX.Element,
+  ({ value, children }: { value: T; children?: React.ReactNode }) => React.JSX.Element,
   () => T,
 ] {
   const Context = React.createContext<T | undefined>(undefined);
 
-  const Provider = ({
-    value,
-    children,
-  }: {
-    value: T;
-    children?: React.ReactNode;
-  }) => <Context.Provider value={value}>{children}</Context.Provider>;
+  const Provider = ({ value, children }: { value: T; children?: React.ReactNode }) => (
+    <Context.Provider value={value}>{children}</Context.Provider>
+  );
 
   const useSafeContext = () => {
     const ctx = React.useContext(Context);
@@ -87,10 +77,7 @@ function generateSpringPath(
   if (dist < 2) return `M${x1},${y1}`;
   const d = dist / coilCount;
   const h = Math.max(0.8, 1 - (dist - 40) / 200);
-  const amplitude = Math.max(
-    amplitudeMin,
-    Math.min(amplitudeMax, amplitudeMax * h),
-  );
+  const amplitude = Math.max(amplitudeMin, Math.min(amplitudeMax, amplitudeMax * h));
   const curveRatio =
     dist <= 40
       ? curveRatioMax
@@ -141,8 +128,7 @@ type SpringContextType = {
   path: string;
 };
 
-const [LocalSpringProvider, useSpring] =
-  getStrictContext<SpringContextType>('SpringContext');
+const [LocalSpringProvider, useSpring] = getStrictContext<SpringContextType>('SpringContext');
 
 type SpringProviderProps = {
   children: React.ReactNode;
@@ -201,13 +187,7 @@ function SpringProvider({
     }
   }, [isDragging]);
 
-  const path = generateSpringPath(
-    center.x,
-    center.y,
-    center.x + sx,
-    center.y + sy,
-    pathConfig,
-  );
+  const path = generateSpringPath(center.x, center.y, center.x + sx, center.y + sy, pathConfig);
 
   return (
     <LocalSpringProvider
@@ -260,21 +240,8 @@ type SpringElementProps = Omit<HTMLMotionProps<'div'>, 'children'> & {
   children: React.ReactNode;
 };
 
-function SpringElement({
-  ref,
-  style,
-  ...props
-}: SpringElementProps) {
-  const {
-    childRef,
-    dragElastic,
-    isDragging,
-    setIsDragging,
-    springX,
-    springY,
-    x,
-    y,
-  } = useSpring();
+function SpringElement({ ref, style, ...props }: SpringElementProps) {
+  const { childRef, dragElastic, isDragging, setIsDragging, springX, springY, x, y } = useSpring();
 
   const wasDraggedRef = React.useRef(false);
 

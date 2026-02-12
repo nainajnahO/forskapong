@@ -18,10 +18,7 @@ export default function SectionHeader({
   return (
     <div className={cn('mb-16', className)}>
       <h1 className="text-4xl md:text-6xl font-display text-foreground transition-colors duration-500">
-        {title}{' '}
-        {titleHighlight && (
-          <span className={highlightClassName}>{titleHighlight}</span>
-        )}
+        {title} {titleHighlight && <span className={highlightClassName}>{titleHighlight}</span>}
       </h1>
     </div>
   );

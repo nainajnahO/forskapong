@@ -1,13 +1,8 @@
-import React, {
-  type ComponentPropsWithoutRef,
-  useCallback,
-  useEffect,
-  useRef,
-} from "react";
+import { type ComponentPropsWithoutRef, useCallback, useEffect, useRef } from 'react';
 
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 
-interface ParticlesProps extends ComponentPropsWithoutRef<"div"> {
+interface ParticlesProps extends ComponentPropsWithoutRef<'div'> {
   className?: string;
   quantity?: number;
   staticity?: number;
@@ -21,12 +16,12 @@ interface ParticlesProps extends ComponentPropsWithoutRef<"div"> {
 }
 
 function hexToRgb(hex: string): number[] {
-  hex = hex.replace("#", "");
+  hex = hex.replace('#', '');
   if (hex.length === 3) {
     hex = hex
-      .split("")
+      .split('')
       .map((char) => char + char)
-      .join("");
+      .join('');
   }
   const hexInt = parseInt(hex, 16);
   return [(hexInt >> 16) & 255, (hexInt >> 8) & 255, hexInt & 255];
@@ -45,19 +40,19 @@ type Circle = {
   magnetism: number;
 };
 
-export const Particles: React.FC<ParticlesProps> = ({
-  className = "",
+export default function Particles({
+  className = '',
   quantity = 100,
   staticity = 50,
   ease = 50,
   size = 0.4,
   refresh = false,
-  color = "#ffffff",
+  color = '#ffffff',
   vx = 0,
   vy = 0,
   paused = false,
   ...props
-}) => {
+}: ParticlesProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const context = useRef<CanvasRenderingContext2D | null>(null);
@@ -85,8 +80,8 @@ export const Particles: React.FC<ParticlesProps> = ({
       }
     };
 
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
   const circleParams = useCallback((): Circle => {
@@ -112,28 +107,26 @@ export const Particles: React.FC<ParticlesProps> = ({
     };
   }, [size]);
 
-  const drawCircle = useCallback((circle: Circle, update = false) => {
-    if (context.current) {
-      const { x, y, translateX, translateY, size: s, alpha } = circle;
-      context.current.translate(translateX, translateY);
-      context.current.beginPath();
-      context.current.arc(x, y, s, 0, 2 * Math.PI);
-      context.current.fillStyle = `rgba(${rgb.join(", ")}, ${alpha})`;
-      context.current.fill();
-      context.current.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const drawCircle = useCallback(
+    (circle: Circle, update = false) => {
+      if (context.current) {
+        const { x, y, translateX, translateY, size: s, alpha } = circle;
+        context.current.translate(translateX, translateY);
+        context.current.beginPath();
+        context.current.arc(x, y, s, 0, 2 * Math.PI);
+        context.current.fillStyle = `rgba(${rgb.join(', ')}, ${alpha})`;
+        context.current.fill();
+        context.current.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      if (!update) circles.current.push(circle);
-    }
-  }, [rgb, dpr]);
+        if (!update) circles.current.push(circle);
+      }
+    },
+    [rgb, dpr],
+  );
 
   const clearContext = useCallback(() => {
     if (context.current) {
-      context.current.clearRect(
-        0,
-        0,
-        canvasSize.current.w,
-        canvasSize.current.h,
-      );
+      context.current.clearRect(0, 0, canvasSize.current.w, canvasSize.current.h);
     }
   }, []);
 
@@ -176,8 +169,7 @@ export const Particles: React.FC<ParticlesProps> = ({
     start2: number,
     end2: number,
   ): number => {
-    const remapped =
-      ((value - start1) * (end2 - start2)) / (end1 - start1) + start2;
+    const remapped = ((value - start1) * (end2 - start2)) / (end1 - start1) + start2;
     return remapped > 0 ? remapped : 0;
   };
 
@@ -195,9 +187,7 @@ export const Particles: React.FC<ParticlesProps> = ({
         canvasSize.current.h - circle.y - circle.translateY - circle.size,
       ];
       const closestEdge = edge.reduce((a, b) => Math.min(a, b));
-      const remapClosestEdge = parseFloat(
-        remapValue(closestEdge, 0, 20, 0, 1).toFixed(2),
-      );
+      const remapClosestEdge = parseFloat(remapValue(closestEdge, 0, 20, 0, 1).toFixed(2));
       if (remapClosestEdge > 1) {
         circle.alpha += 0.02;
         if (circle.alpha > circle.targetAlpha) {
@@ -209,13 +199,9 @@ export const Particles: React.FC<ParticlesProps> = ({
       circle.x += circle.dx + vx;
       circle.y += circle.dy + vy;
       circle.translateX +=
-        (mouse.current.x / (staticity / circle.magnetism) -
-          circle.translateX) /
-        ease;
+        (mouse.current.x / (staticity / circle.magnetism) - circle.translateX) / ease;
       circle.translateY +=
-        (mouse.current.y / (staticity / circle.magnetism) -
-          circle.translateY) /
-        ease;
+        (mouse.current.y / (staticity / circle.magnetism) - circle.translateY) / ease;
 
       drawCircle(circle, true);
 
@@ -240,7 +226,7 @@ export const Particles: React.FC<ParticlesProps> = ({
   // Init canvas and handle resize
   useEffect(() => {
     if (canvasRef.current) {
-      context.current = canvasRef.current.getContext("2d");
+      context.current = canvasRef.current.getContext('2d');
     }
     initCanvas();
 
@@ -249,11 +235,11 @@ export const Particles: React.FC<ParticlesProps> = ({
       resizeTimeout.current = setTimeout(() => initCanvas(), 200);
     };
 
-    window.addEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize);
     return () => {
       if (rafID.current != null) window.cancelAnimationFrame(rafID.current);
       if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
-      window.removeEventListener("resize", handleResize);
+      window.removeEventListener('resize', handleResize);
     };
   }, [initCanvas]);
 
@@ -284,7 +270,7 @@ export const Particles: React.FC<ParticlesProps> = ({
 
   return (
     <div
-      className={cn("pointer-events-none", className)}
+      className={cn('pointer-events-none', className)}
       ref={canvasContainerRef}
       aria-hidden="true"
       {...props}
@@ -292,4 +278,4 @@ export const Particles: React.FC<ParticlesProps> = ({
       <canvas ref={canvasRef} className="size-full" />
     </div>
   );
-};
+}

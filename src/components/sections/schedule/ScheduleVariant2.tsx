@@ -1,21 +1,23 @@
-import { useRef } from 'react'
-import { useTheme } from '@/contexts/ThemeContext'
-import { useScheduleScroll } from './useScheduleScroll'
-import { SCROLL_PAGES } from './schedule-data'
-import ScheduleHeader from './ScheduleHeader'
-import ScheduleTimeline from './ScheduleTimeline'
+import { useRef } from 'react';
+import { useTheme } from '@/contexts/useTheme';
+import { useScheduleScroll } from './useScheduleScroll';
+import { SCROLL_PAGES } from './schedule-data';
+import ScheduleHeader from './ScheduleHeader';
+import ScheduleTimeline from './ScheduleTimeline';
 
 interface ScheduleVariant2Props {
-  id?: string
+  id?: string;
 }
 
 export default function ScheduleVariant2({ id }: ScheduleVariant2Props) {
-  const { theme } = useTheme()
-  const sectionRef = useRef<HTMLDivElement>(null)
-  const headerRef = useRef<HTMLDivElement>(null)
+  const { theme } = useTheme();
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
 
-  const { contentRef, translateY, visibleEvents, clockText, currentPhase } =
-    useScheduleScroll(sectionRef, headerRef)
+  const { contentRef, translateY, visibleEvents, clockText, currentPhase } = useScheduleScroll(
+    sectionRef,
+    headerRef,
+  );
 
   return (
     <section
@@ -36,5 +38,5 @@ export default function ScheduleVariant2({ id }: ScheduleVariant2Props) {
         />
       </div>
     </section>
-  )
+  );
 }

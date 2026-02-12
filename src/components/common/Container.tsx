@@ -17,7 +17,7 @@ export default function Container({ children, className, size = 'default' }: Con
           'max-w-[1400px]': size === 'wide',
           'max-w-none': size === 'full',
         },
-        className
+        className,
       )}
     >
       {children}

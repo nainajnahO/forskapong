@@ -1,11 +1,11 @@
-import Container from '@/components/common/Container'
-import { cn } from '@/lib/utils'
-import { themeText } from '@/lib/theme-utils'
+import Container from '@/components/common/Container';
+import { cn } from '@/lib/utils';
+import { themeText } from '@/lib/theme-utils';
 
 interface ScheduleHeaderProps {
-  clockText: string
-  currentPhase: string
-  theme: 'light' | 'dark'
+  clockText: string;
+  currentPhase: string;
+  theme: 'light' | 'dark';
 }
 
 export default function ScheduleHeader({ clockText, currentPhase, theme }: ScheduleHeaderProps) {
@@ -42,5 +42,5 @@ export default function ScheduleHeader({ clockText, currentPhase, theme }: Sched
         />
       </div>
     </Container>
-  )
+  );
 }

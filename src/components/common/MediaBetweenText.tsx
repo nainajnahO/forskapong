@@ -1,78 +1,75 @@
-import { forwardRef, useImperativeHandle, useRef, useState } from "react"
-import { motion, useInView } from "motion/react"
-import type { UseInViewOptions, Variants } from "motion/react"
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
+import { motion, useInView } from 'motion/react';
+import type { UseInViewOptions, Variants } from 'motion/react';
 
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils';
 
 /** Configuration for video playback behavior. */
 interface VideoConfig {
-  autoPlay?: boolean
-  loop?: boolean
-  muted?: boolean
-  playsInline?: boolean
-  posterUrl?: string
+  autoPlay?: boolean;
+  loop?: boolean;
+  muted?: boolean;
+  playsInline?: boolean;
+  posterUrl?: string;
 }
 
 /** Configuration for the reveal animation. */
 interface AnimationConfig {
   variants?: {
-    initial: Variants["initial"]
-    animate: Variants["animate"]
-  }
-  inViewOptions?: UseInViewOptions
-  containerRef?: React.RefObject<HTMLDivElement | null>
+    initial: Variants['initial'];
+    animate: Variants['animate'];
+  };
+  inViewOptions?: UseInViewOptions;
+  containerRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 interface MediaBetweenTextProps {
   /** The text to display before the media. */
-  firstText: string
+  firstText: string;
   /** The text to display after the media. */
-  secondText: string
+  secondText: string;
   /** URL of the media (image or video) to display. */
-  mediaUrl: string
+  mediaUrl: string;
   /** Type of media to display. */
-  mediaType: "image" | "video"
+  mediaType: 'image' | 'video';
   /** Alt text for image media. */
-  alt?: string
+  alt?: string;
   /** Animation trigger type. @default "hover" */
-  variant?: "hover" | "scroll" | "controlled"
+  variant?: 'hover' | 'scroll' | 'controlled';
   /** Video playback configuration. Only used when mediaType is "video". */
-  videoConfig?: VideoConfig
+  videoConfig?: VideoConfig;
   /** Animation configuration for advanced customization. */
-  animationConfig?: AnimationConfig
+  animationConfig?: AnimationConfig;
   /** Optional class name for the root element. */
-  className?: string
+  className?: string;
   /** Optional class name for the left text element. */
-  leftTextClassName?: string
+  leftTextClassName?: string;
   /** Optional class name for the right text element. */
-  rightTextClassName?: string
+  rightTextClassName?: string;
   /** Optional class name for the media container. */
-  mediaContainerClassName?: string
+  mediaContainerClassName?: string;
 }
 
 export type MediaBetweenTextRef = {
-  animate: () => void
-  reset: () => void
-}
+  animate: () => void;
+  reset: () => void;
+};
 
 const DEFAULT_ANIMATION_VARIANTS = {
   initial: { width: 0, opacity: 1 },
   animate: {
-    width: "auto",
+    width: 'auto',
     opacity: 1,
-    transition: { duration: 0.4, type: "spring" as const, bounce: 0 },
+    transition: { duration: 0.4, type: 'spring' as const, bounce: 0 },
   },
-}
+};
 
 const DEFAULT_IN_VIEW_OPTIONS: UseInViewOptions = {
   once: true,
   amount: 0.5,
-}
+};
 
-export const MediaBetweenText = forwardRef<
-  MediaBetweenTextRef,
-  MediaBetweenTextProps
->(
+export const MediaBetweenText = forwardRef<MediaBetweenTextRef, MediaBetweenTextProps>(
   (
     {
       firstText,
@@ -80,7 +77,7 @@ export const MediaBetweenText = forwardRef<
       mediaUrl,
       mediaType,
       alt,
-      variant = "hover",
+      variant = 'hover',
       videoConfig,
       animationConfig,
       className,
@@ -88,32 +85,32 @@ export const MediaBetweenText = forwardRef<
       rightTextClassName,
       mediaContainerClassName,
     },
-    ref
+    ref,
   ) => {
-    const componentRef = useRef<HTMLDivElement>(null)
-    const [isAnimating, setIsAnimating] = useState(false)
-    const [isHovered, setIsHovered] = useState(false)
+    const componentRef = useRef<HTMLDivElement>(null);
+    const [isAnimating, setIsAnimating] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
 
-    const inViewRef = animationConfig?.containerRef || componentRef
-    const inViewOptions = animationConfig?.inViewOptions ?? DEFAULT_IN_VIEW_OPTIONS
-    const inViewResult = useInView(inViewRef, inViewOptions)
-    const isInView = variant === "scroll" ? inViewResult : false
+    const inViewRef = animationConfig?.containerRef || componentRef;
+    const inViewOptions = animationConfig?.inViewOptions ?? DEFAULT_IN_VIEW_OPTIONS;
+    const inViewResult = useInView(inViewRef, inViewOptions);
+    const isInView = variant === 'scroll' ? inViewResult : false;
 
     useImperativeHandle(ref, () => ({
       animate: () => setIsAnimating(true),
       reset: () => setIsAnimating(false),
-    }))
+    }));
 
     const shouldAnimate =
-      variant === "hover"
+      variant === 'hover'
         ? isHovered
-        : variant === "scroll"
+        : variant === 'scroll'
           ? isInView
-          : variant === "controlled"
+          : variant === 'controlled'
             ? isAnimating
-            : false
+            : false;
 
-    const variants = animationConfig?.variants ?? DEFAULT_ANIMATION_VARIANTS
+    const variants = animationConfig?.variants ?? DEFAULT_ANIMATION_VARIANTS;
 
     const {
       autoPlay = true,
@@ -121,14 +118,14 @@ export const MediaBetweenText = forwardRef<
       muted = true,
       playsInline = true,
       posterUrl,
-    } = videoConfig ?? {}
+    } = videoConfig ?? {};
 
     return (
       <div
-        className={cn("flex", className)}
+        className={cn('flex', className)}
         ref={componentRef}
-        onMouseEnter={() => variant === "hover" && setIsHovered(true)}
-        onMouseLeave={() => variant === "hover" && setIsHovered(false)}
+        onMouseEnter={() => variant === 'hover' && setIsHovered(true)}
+        onMouseLeave={() => variant === 'hover' && setIsHovered(false)}
       >
         <motion.p layout className={leftTextClassName}>
           {firstText}
@@ -137,9 +134,9 @@ export const MediaBetweenText = forwardRef<
           className={mediaContainerClassName}
           variants={variants}
           initial="initial"
-          animate={shouldAnimate ? "animate" : "initial"}
+          animate={shouldAnimate ? 'animate' : 'initial'}
         >
-          {mediaType === "video" ? (
+          {mediaType === 'video' ? (
             <video
               className="w-full h-full object-cover"
               autoPlay={autoPlay}
@@ -162,10 +159,10 @@ export const MediaBetweenText = forwardRef<
           {secondText}
         </motion.p>
       </div>
-    )
-  }
-)
+    );
+  },
+);
 
-MediaBetweenText.displayName = "MediaBetweenText"
+MediaBetweenText.displayName = 'MediaBetweenText';
 
-export default MediaBetweenText
+export default MediaBetweenText;

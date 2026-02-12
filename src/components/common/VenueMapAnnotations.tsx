@@ -1,11 +1,11 @@
-import { motion } from 'motion/react'
-import type { MotionValue } from 'motion/react'
-import { VENUE_MAP_CONFIG } from '@/lib/constants'
-import { cn } from '@/lib/utils'
-import { useAnnotationTransform } from '@/hooks/useAnnotationTransform'
+import { motion } from 'motion/react';
+import type { MotionValue } from 'motion/react';
+import { VENUE_MAP_CONFIG } from '@/lib/constants';
+import { cn } from '@/lib/utils';
+import { useAnnotationTransform } from '@/hooks/useAnnotationTransform';
 
 interface VenueMapAnnotationsProps {
-  scrollYProgress: MotionValue<number>
+  scrollYProgress: MotionValue<number>;
 }
 
 function Annotation({
@@ -14,12 +14,12 @@ function Annotation({
   scrollRange,
   scrollYProgress,
 }: {
-  text: string
-  subtext: string
-  scrollRange: readonly [number, number]
-  scrollYProgress: MotionValue<number>
+  text: string;
+  subtext: string;
+  scrollRange: readonly [number, number];
+  scrollYProgress: MotionValue<number>;
 }) {
-  const { opacity, y } = useAnnotationTransform({ scrollYProgress, scrollRange })
+  const { opacity, y } = useAnnotationTransform({ scrollYProgress, scrollRange });
 
   return (
     <motion.div
@@ -44,7 +44,7 @@ function Annotation({
         {subtext}
       </p>
     </motion.div>
-  )
+  );
 }
 
 export default function VenueMapAnnotations({ scrollYProgress }: VenueMapAnnotationsProps) {
@@ -60,5 +60,5 @@ export default function VenueMapAnnotations({ scrollYProgress }: VenueMapAnnotat
         />
       ))}
     </div>
-  )
+  );
 }

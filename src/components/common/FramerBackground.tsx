@@ -1,7 +1,8 @@
-import React, { useRef } from 'react';
+import { useRef } from 'react';
 import { useIsVisible } from '@/hooks/useIsVisible';
+import { FRAMER_BACKGROUND_URL } from '@/lib/constants';
 
-const FramerBackground: React.FC = () => {
+export default function FramerBackground() {
   const containerRef = useRef<HTMLDivElement>(null);
   const isVisible = useIsVisible(containerRef, { rootMargin: '200px 0px' });
 
@@ -9,7 +10,7 @@ const FramerBackground: React.FC = () => {
     <div ref={containerRef} className="absolute inset-0 overflow-hidden">
       {isVisible && (
         <iframe
-          src="https://incomplete-listening-378233.framer.app"
+          src={FRAMER_BACKGROUND_URL}
           className="absolute"
           style={{
             border: 'none',
@@ -26,6 +27,4 @@ const FramerBackground: React.FC = () => {
       )}
     </div>
   );
-};
-
-export default FramerBackground;
+}

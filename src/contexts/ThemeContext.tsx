@@ -1,16 +1,5 @@
-import { createContext, useContext, useEffect, useState } from 'react';
-
-type BackgroundVariant = 'fluid' | 'framer';
-type Theme = 'light' | 'dark';
-
-// Light theme is intentionally disabled — always returns 'dark'
-interface ThemeContextType {
-  theme: Theme;
-  backgroundVariant: BackgroundVariant;
-  toggleBackground: () => void;
-}
-
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ThemeContext, type BackgroundVariant } from './ThemeContextDef';
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [backgroundVariant, setBackgroundVariant] = useState<BackgroundVariant>(() => {
@@ -25,7 +14,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     // Check for new backgroundVariant localStorage
     const stored = localStorage.getItem('backgroundVariant');
-    return (stored === 'fluid' || stored === 'framer') ? stored : 'framer';
+    return stored === 'fluid' || stored === 'framer' ? stored : 'framer';
   });
 
   useEffect(() => {
@@ -33,27 +22,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.classList.toggle('framer', backgroundVariant === 'framer');
   }, [backgroundVariant]);
 
-  const toggleBackground = () => {
-    setBackgroundVariant(prev => prev === 'fluid' ? 'framer' : 'fluid');
-  };
+  const toggleBackground = useCallback(() => {
+    setBackgroundVariant((prev) => (prev === 'fluid' ? 'framer' : 'fluid'));
+  }, []);
 
-  return (
-    <ThemeContext.Provider
-      value={{
-        theme: 'dark',
-        backgroundVariant,
-        toggleBackground,
-      }}
-    >
-      {children}
-    </ThemeContext.Provider>
+  const value = useMemo(
+    () => ({
+      theme: 'dark' as const,
+      backgroundVariant,
+      toggleBackground,
+    }),
+    [backgroundVariant, toggleBackground],
   );
-}
 
-export function useTheme() {
-  const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error('useTheme must be used within ThemeProvider');
-  }
-  return context;
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { ArrowUpRight, Flame, Waves } from 'lucide-react';
 import logo from '../../assets/logo.webp';
-import { NAV_LINKS } from '@/lib/constants';
+import { NAV_LINKS, NAV_RESPONSIVE_OFFSETS } from '@/lib/constants';
 import Container from '../common/Container';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/contexts/useTheme';
 import { useScrollState } from '@/hooks/useScrollState';
 import { useScrollToSection } from '@/hooks/useScrollToSection';
 import { useViewportWidth } from '@/hooks/useViewportWidth';
@@ -26,10 +26,10 @@ export default function Navbar() {
 
   // Calculate responsive offset based on viewport width
   const responsiveOffset = useMemo(() => {
-    if (viewportWidth >= 1024) return 9.5; // Desktop
-    if (viewportWidth >= 768) return 8; // Tablet landscape
-    if (viewportWidth >= 640) return 7; // Large phone landscape
-    return 6.5; // Small phone portrait
+    if (viewportWidth >= 1024) return NAV_RESPONSIVE_OFFSETS.desktop;
+    if (viewportWidth >= 768) return NAV_RESPONSIVE_OFFSETS.tablet;
+    if (viewportWidth >= 640) return NAV_RESPONSIVE_OFFSETS.phoneLg;
+    return NAV_RESPONSIVE_OFFSETS.phoneSm;
   }, [viewportWidth]);
 
   // Calculate pill position and width based on actual element positions
@@ -67,15 +67,12 @@ export default function Navbar() {
   }, []);
 
   return (
-    <SpringProvider
-      dragElastic={0.15}
-      transition={{ stiffness: 300, damping: 25 }}
-    >
+    <SpringProvider dragElastic={0.15} transition={{ stiffness: 300, damping: 25 }}>
       {isScrolled && <Spring className="z-[60] text-white/20" />}
       <nav
         className={cn(
           'fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-in-out',
-          isScrolled ? 'py-3' : 'py-5'
+          isScrolled ? 'py-3' : 'py-5',
         )}
         style={{ willChange: isScrolled ? 'auto' : 'transform' }}
       >
@@ -92,9 +89,7 @@ export default function Navbar() {
               style={{
                 transitionProperty: 'opacity, transform, height',
                 opacity: isScrolled ? 1 : 0,
-                transform: isScrolled
-                  ? 'translateY(-50%) scale(1)'
-                  : 'translateY(-50%) scale(0.9)',
+                transform: isScrolled ? 'translateY(-50%) scale(1)' : 'translateY(-50%) scale(0.9)',
                 pointerEvents: 'none',
                 zIndex: 0,
                 height: isScrolled ? '3.75rem' : '0',
@@ -174,13 +169,14 @@ export default function Navbar() {
                     ? `translateX(calc(-50vw + 50% + ${responsiveOffset}rem)) scale(1)`
                     : 'translateX(0) scale(1)',
                   willChange: 'transform, opacity',
-                  opacity: viewportWidth >= 1024 ? 1 : (isScrolled ? 1 : 0),
-                  pointerEvents: viewportWidth >= 1024 ? 'auto' : (isScrolled ? 'auto' : 'none'),
-                  transition: viewportWidth >= 1024
-                    ? 'all 0.7s ease-in-out'
-                    : isScrolled
-                      ? 'opacity 0.3s ease-in-out 0.2s, transform 0.7s ease-in-out'
-                      : 'opacity 0.4s ease-in-out, transform 0s 0.4s',
+                  opacity: viewportWidth >= 1024 ? 1 : isScrolled ? 1 : 0,
+                  pointerEvents: viewportWidth >= 1024 ? 'auto' : isScrolled ? 'auto' : 'none',
+                  transition:
+                    viewportWidth >= 1024
+                      ? 'all 0.7s ease-in-out'
+                      : isScrolled
+                        ? 'opacity 0.3s ease-in-out 0.2s, transform 0.7s ease-in-out'
+                        : 'opacity 0.4s ease-in-out, transform 0s 0.4s',
                 }}
               >
                 <span className="hidden lg:inline">Anmälan</span>

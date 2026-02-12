@@ -1,11 +1,11 @@
-import { Canvas } from '@react-three/fiber'
-import { AdaptiveDpr, AdaptiveEvents, Environment } from '@react-three/drei'
-import BeerPongModel from '@/components/common/BeerPongModel'
-import CameraRig from '@/components/common/CameraRig'
+import { Canvas } from '@react-three/fiber';
+import { AdaptiveDpr, AdaptiveEvents, Environment } from '@react-three/drei';
+import BeerPongModel from '@/components/common/BeerPongModel';
+import CameraRig from '@/components/common/CameraRig';
 
 interface ExplodedViewCanvasProps {
-  scrollProgress: React.RefObject<number>
-  isVisible: boolean
+  scrollProgress: React.RefObject<number>;
+  isVisible: boolean;
 }
 
 export default function ExplodedViewCanvas({ scrollProgress, isVisible }: ExplodedViewCanvasProps) {
@@ -26,5 +26,5 @@ export default function ExplodedViewCanvas({ scrollProgress, isVisible }: Explod
       <AdaptiveDpr pixelated />
       <AdaptiveEvents />
     </Canvas>
-  )
+  );
 }

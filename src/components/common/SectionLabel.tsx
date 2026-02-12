@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/contexts/useTheme';
 import { themeLine } from '@/lib/theme-utils';
 
 interface SectionLabelProps {
@@ -8,7 +8,11 @@ interface SectionLabelProps {
   className?: string;
 }
 
-export default function SectionLabel({ children, variant = 'default', className }: SectionLabelProps) {
+export default function SectionLabel({
+  children,
+  variant = 'default',
+  className,
+}: SectionLabelProps) {
   const { theme } = useTheme();
 
   if (variant === 'gradient') {

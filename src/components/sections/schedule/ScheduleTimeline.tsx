@@ -1,17 +1,22 @@
-import { motion, AnimatePresence } from 'motion/react'
-import Container from '@/components/common/Container'
-import { cn } from '@/lib/utils'
-import EventEntry from './EventEntry'
-import type { EnrichedEvent } from './types'
+import { motion, AnimatePresence } from 'motion/react';
+import Container from '@/components/common/Container';
+import { cn } from '@/lib/utils';
+import EventEntry from './EventEntry';
+import type { EnrichedEvent } from './types';
 
 interface ScheduleTimelineProps {
-  contentRef: React.RefObject<HTMLDivElement | null>
-  translateY: number
-  visibleEvents: EnrichedEvent[]
-  theme: 'light' | 'dark'
+  contentRef: React.RefObject<HTMLDivElement | null>;
+  translateY: number;
+  visibleEvents: EnrichedEvent[];
+  theme: 'light' | 'dark';
 }
 
-export default function ScheduleTimeline({ contentRef, translateY, visibleEvents, theme }: ScheduleTimelineProps) {
+export default function ScheduleTimeline({
+  contentRef,
+  translateY,
+  visibleEvents,
+  theme,
+}: ScheduleTimelineProps) {
   return (
     <div className="flex-1 min-h-0">
       <Container className="h-full overflow-hidden">
@@ -24,11 +29,10 @@ export default function ScheduleTimeline({ contentRef, translateY, visibleEvents
           <div className="relative">
             <AnimatePresence initial={false}>
               {visibleEvents.map((ev, i) => {
-                const isLeft = i % 2 === 0
-                const isLast = i === visibleEvents.length - 1
-                const isPast = !isLast
-                const isPhaseStart =
-                  i === 0 || ev.phase !== visibleEvents[i - 1].phase
+                const isLeft = i % 2 === 0;
+                const isLast = i === visibleEvents.length - 1;
+                const isPast = !isLast;
+                const isPhaseStart = i === 0 || ev.phase !== visibleEvents[i - 1].phase;
 
                 return (
                   <motion.div
@@ -80,7 +84,13 @@ export default function ScheduleTimeline({ contentRef, translateY, visibleEvents
                       {/* Desktop left column */}
                       <div className="hidden md:flex items-start justify-end">
                         {isLeft ? (
-                          <EventEntry ev={ev} isLast={isLast} isPast={isPast} theme={theme} side="left" />
+                          <EventEntry
+                            ev={ev}
+                            isLast={isLast}
+                            isPast={isPast}
+                            theme={theme}
+                            side="left"
+                          />
                         ) : (
                           <div />
                         )}
@@ -94,7 +104,9 @@ export default function ScheduleTimeline({ contentRef, translateY, visibleEvents
                               'h-px flex-1',
                               isLeft
                                 ? isPast
-                                  ? theme === 'light' ? 'bg-zinc-300' : 'bg-zinc-700'
+                                  ? theme === 'light'
+                                    ? 'bg-zinc-300'
+                                    : 'bg-zinc-700'
                                   : 'bg-brand-500/50'
                                 : 'bg-transparent',
                             )}
@@ -119,7 +131,9 @@ export default function ScheduleTimeline({ contentRef, translateY, visibleEvents
                               'h-px flex-1',
                               !isLeft
                                 ? isPast
-                                  ? theme === 'light' ? 'bg-zinc-300' : 'bg-zinc-700'
+                                  ? theme === 'light'
+                                    ? 'bg-zinc-300'
+                                    : 'bg-zinc-700'
                                   : 'bg-brand-500/50'
                                 : 'bg-transparent',
                             )}
@@ -129,9 +143,11 @@ export default function ScheduleTimeline({ contentRef, translateY, visibleEvents
                           className={cn(
                             'w-px flex-1',
                             isLast
-                              ? 'border-l border-dashed'
-                                + (theme === 'light' ? ' border-zinc-300' : ' border-zinc-800')
-                              : theme === 'light' ? 'bg-zinc-300' : 'bg-zinc-700',
+                              ? 'border-l border-dashed' +
+                                  (theme === 'light' ? ' border-zinc-300' : ' border-zinc-800')
+                              : theme === 'light'
+                                ? 'bg-zinc-300'
+                                : 'bg-zinc-700',
                           )}
                         />
                       </div>
@@ -139,7 +155,13 @@ export default function ScheduleTimeline({ contentRef, translateY, visibleEvents
                       {/* Desktop right column */}
                       <div className="hidden md:flex items-start">
                         {!isLeft ? (
-                          <EventEntry ev={ev} isLast={isLast} isPast={isPast} theme={theme} side="right" />
+                          <EventEntry
+                            ev={ev}
+                            isLast={isLast}
+                            isPast={isPast}
+                            theme={theme}
+                            side="right"
+                          />
                         ) : (
                           <div />
                         )}
@@ -168,25 +190,33 @@ export default function ScheduleTimeline({ contentRef, translateY, visibleEvents
                           className={cn(
                             'w-px flex-1',
                             isLast
-                              ? 'border-l border-dashed'
-                                + (theme === 'light' ? ' border-zinc-300' : ' border-zinc-800')
-                              : theme === 'light' ? 'bg-zinc-300' : 'bg-zinc-700',
+                              ? 'border-l border-dashed' +
+                                  (theme === 'light' ? ' border-zinc-300' : ' border-zinc-800')
+                              : theme === 'light'
+                                ? 'bg-zinc-300'
+                                : 'bg-zinc-700',
                           )}
                         />
                       </div>
 
                       {/* Mobile card column */}
                       <div className="md:hidden pl-3">
-                        <EventEntry ev={ev} isLast={isLast} isPast={isPast} theme={theme} side="right" />
+                        <EventEntry
+                          ev={ev}
+                          isLast={isLast}
+                          isPast={isPast}
+                          theme={theme}
+                          side="right"
+                        />
                       </div>
                     </div>
                   </motion.div>
-                )
+                );
               })}
             </AnimatePresence>
           </div>
         </motion.div>
       </Container>
     </div>
-  )
+  );
 }

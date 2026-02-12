@@ -1,13 +1,13 @@
 import { useRef } from 'react';
 import { motion, useInView } from 'motion/react';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/contexts/useTheme';
 import { useViewportWidth } from '@/hooks/useViewportWidth';
 import { useIsVisible } from '@/hooks/useIsVisible';
 import { cn } from '@/lib/utils';
 import { themeText, themeGradientLine } from '@/lib/theme-utils';
 import Container from '../common/Container';
 import SectionLabel from '../common/SectionLabel';
-import { Particles } from '../ui/Particles';
+import Particles from '../ui/Particles';
 
 interface TicketsComingSoonProps {
   id?: string;
@@ -49,10 +49,7 @@ export default function TicketsComingSoon({ id }: TicketsComingSoonProps) {
           </motion.h2>
 
           <motion.p
-            className={cn(
-              'mt-6 max-w-md text-lg md:text-xl',
-              themeText(theme, 'secondary'),
-            )}
+            className={cn('mt-6 max-w-md text-lg md:text-xl', themeText(theme, 'secondary'))}
             initial={{ opacity: 0, y: 12 }}
             animate={isInView ? { opacity: 1, y: 0 } : undefined}
             transition={{ duration: 0.8, delay: 0.2, ease: 'easeOut' }}

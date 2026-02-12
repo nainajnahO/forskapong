@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { useScroll, useTransform, motion } from 'motion/react';
 import { ABOUT_CONTENT } from '@/lib/constants';
 import Container from '../common/Container';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/contexts/useTheme';
 import { cn } from '@/lib/utils';
 import { themeText } from '@/lib/theme-utils';
 
@@ -24,10 +24,20 @@ export default function About({ id }: AboutProps) {
       <Container>
         {/* Description Text */}
         <div className="space-y-4 mb-16 max-w-3xl">
-          <p className={cn('font-sans leading-relaxed text-base transition-colors duration-500', themeText(theme, 'secondary'))}>
+          <p
+            className={cn(
+              'font-sans leading-relaxed text-base transition-colors duration-500',
+              themeText(theme, 'secondary'),
+            )}
+          >
             {ABOUT_CONTENT.description1}
           </p>
-          <p className={cn('font-sans leading-relaxed text-base transition-colors duration-500', themeText(theme, 'secondary'))}>
+          <p
+            className={cn(
+              'font-sans leading-relaxed text-base transition-colors duration-500',
+              themeText(theme, 'secondary'),
+            )}
+          >
             {ABOUT_CONTENT.description2}
           </p>
         </div>

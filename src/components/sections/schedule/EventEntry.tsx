@@ -1,13 +1,13 @@
-import { cn } from '@/lib/utils'
-import { themeText } from '@/lib/theme-utils'
-import type { EnrichedEvent } from './types'
+import { cn } from '@/lib/utils';
+import { themeText } from '@/lib/theme-utils';
+import type { EnrichedEvent } from './types';
 
 interface EventEntryProps {
-  ev: EnrichedEvent
-  isLast: boolean
-  isPast: boolean
-  theme: 'light' | 'dark'
-  side: 'left' | 'right'
+  ev: EnrichedEvent;
+  isLast: boolean;
+  isPast: boolean;
+  theme: 'light' | 'dark';
+  side: 'left' | 'right';
 }
 
 export default function EventEntry({ ev, isLast, isPast, theme, side }: EventEntryProps) {
@@ -54,8 +54,8 @@ export default function EventEntry({ ev, isLast, isPast, theme, side }: EventEnt
       {/* Speakers */}
       {ev.speakers && ev.speakers.length > 0 && (
         <div className="mt-2 space-y-0.5">
-          {ev.speakers.map((speaker, si) => (
-            <p key={si} className="transition-colors duration-500">
+          {ev.speakers.map((speaker) => (
+            <p key={speaker.name} className="transition-colors duration-500">
               <span className="text-sm text-foreground transition-colors duration-500">
                 {speaker.name}
               </span>
@@ -72,5 +72,5 @@ export default function EventEntry({ ev, isLast, isPast, theme, side }: EventEnt
         </div>
       )}
     </div>
-  )
+  );
 }

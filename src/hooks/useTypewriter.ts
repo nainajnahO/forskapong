@@ -23,7 +23,13 @@ export function useTypewriter({
     const word = words[wordIdx];
     const atEnd = !deleting && text === word;
     const atStart = deleting && text === '';
-    const delay = atEnd ? pauseAfterType : atStart ? pauseAfterDelete : deleting ? deleteSpeed : typeSpeed;
+    const delay = atEnd
+      ? pauseAfterType
+      : atStart
+        ? pauseAfterDelete
+        : deleting
+          ? deleteSpeed
+          : typeSpeed;
 
     const timeout = setTimeout(() => {
       const { wordIdx, deleting } = ref.current;

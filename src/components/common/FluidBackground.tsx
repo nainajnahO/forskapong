@@ -134,10 +134,20 @@ const SHAPE_MAP: Record<string, number> = { Checks: 0, Stripes: 1, Edge: 2 };
 // ---- Presets ----
 export const PRESETS = {
   Lava: {
-    color1: '#FF9F21', color2: '#FF0303', color3: '#000000',
-    rotation: 114, proportion: 100, scale: 0.52, speed: 30,
-    distortion: 13, swirl: 20, swirlIterations: 10, softness: 90,
-    offset: 717, shape: 'Edge' as const, shapeSize: 12,
+    color1: '#FF9F21',
+    color2: '#FF0303',
+    color3: '#000000',
+    rotation: 114,
+    proportion: 100,
+    scale: 0.52,
+    speed: 30,
+    distortion: 13,
+    swirl: 20,
+    swirlIterations: 10,
+    softness: 90,
+    offset: 717,
+    shape: 'Edge' as const,
+    shapeSize: 12,
   },
 } as const;
 
@@ -151,7 +161,11 @@ function hexToVec4(hex: string): [number, number, number, number] {
   return [r, g, b, 1.0];
 }
 
-function createShader(gl: WebGL2RenderingContext, type: number, source: string): WebGLShader | null {
+function createShader(
+  gl: WebGL2RenderingContext,
+  type: number,
+  source: string,
+): WebGLShader | null {
   const shader = gl.createShader(type);
   if (!shader) return null;
   gl.shaderSource(shader, source);
@@ -164,7 +178,11 @@ function createShader(gl: WebGL2RenderingContext, type: number, source: string):
   return shader;
 }
 
-function createProgram(gl: WebGL2RenderingContext, vs: WebGLShader, fs: WebGLShader): WebGLProgram | null {
+function createProgram(
+  gl: WebGL2RenderingContext,
+  vs: WebGLShader,
+  fs: WebGLShader,
+): WebGLProgram | null {
   const program = gl.createProgram();
   if (!program) return null;
   gl.attachShader(program, vs);
@@ -265,7 +283,10 @@ export default function FluidBackground({
     if (!canvas) return null;
 
     const gl = canvas.getContext('webgl2', { premultipliedAlpha: true, alpha: true });
-    if (!gl) { console.error('WebGL2 not supported'); return null; }
+    if (!gl) {
+      console.error('WebGL2 not supported');
+      return null;
+    }
 
     const vs = createShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER);
     const fs = createShader(gl, gl.FRAGMENT_SHADER, FRAGMENT_SHADER);
@@ -278,12 +299,11 @@ export default function FluidBackground({
     const posAttr = gl.getAttribLocation(program, 'a_position');
     const buf = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-      -1, -1, 0, 1,
-       1, -1, 0, 1,
-      -1,  1, 0, 1,
-       1,  1, 0, 1,
-    ]), gl.STATIC_DRAW);
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array([-1, -1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, 1, 1, 0, 1]),
+      gl.STATIC_DRAW,
+    );
     gl.enableVertexAttribArray(posAttr);
     gl.vertexAttribPointer(posAttr, 4, gl.FLOAT, false, 0, 0);
 
@@ -291,13 +311,24 @@ export default function FluidBackground({
 
     // Gather uniform locations
     const uniformNames = [
-      'u_time', 'u_pixelRatio', 'u_resolution',
-      'u_scale', 'u_rotation', 'u_color1', 'u_color2', 'u_color3',
-      'u_proportion', 'u_softness', 'u_shape', 'u_shapeScale',
-      'u_distortion', 'u_swirl', 'u_swirlIterations',
+      'u_time',
+      'u_pixelRatio',
+      'u_resolution',
+      'u_scale',
+      'u_rotation',
+      'u_color1',
+      'u_color2',
+      'u_color3',
+      'u_proportion',
+      'u_softness',
+      'u_shape',
+      'u_shapeScale',
+      'u_distortion',
+      'u_swirl',
+      'u_swirlIterations',
     ];
     const uniforms: Record<string, WebGLUniformLocation | null> = {};
-    uniformNames.forEach(name => {
+    uniformNames.forEach((name) => {
       uniforms[name] = gl.getUniformLocation(program, name);
     });
 
@@ -333,7 +364,7 @@ export default function FluidBackground({
     return () => {
       resizeObserver.disconnect();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Animation loop — only runs when visible
@@ -358,7 +389,7 @@ export default function FluidBackground({
       gl.uniform4fv(uniforms.u_color2, hexToVec4(resolved.color2));
       gl.uniform4fv(uniforms.u_color3, hexToVec4(resolved.color3));
       gl.uniform1f(uniforms.u_scale, resolved.scale);
-      gl.uniform1f(uniforms.u_rotation, resolved.rotation * Math.PI / 180);
+      gl.uniform1f(uniforms.u_rotation, (resolved.rotation * Math.PI) / 180);
       gl.uniform1f(uniforms.u_proportion, resolved.proportion / 100);
       gl.uniform1f(uniforms.u_distortion, resolved.distortion / 50);
       gl.uniform1f(uniforms.u_swirl, resolved.swirl / 100);
@@ -377,12 +408,22 @@ export default function FluidBackground({
       cancelAnimationFrame(animFrameRef.current);
     };
   }, [
-    isVisible, glReady,
-    resolved.color1, resolved.color2, resolved.color3,
-    resolved.rotation, resolved.proportion, resolved.scale,
-    resolved.speed, resolved.distortion, resolved.swirl,
-    resolved.swirlIterations, resolved.softness, resolved.offset,
-    resolved.shape, resolved.shapeSize,
+    isVisible,
+    glReady,
+    resolved.color1,
+    resolved.color2,
+    resolved.color3,
+    resolved.rotation,
+    resolved.proportion,
+    resolved.scale,
+    resolved.speed,
+    resolved.distortion,
+    resolved.swirl,
+    resolved.swirlIterations,
+    resolved.softness,
+    resolved.offset,
+    resolved.shape,
+    resolved.shapeSize,
   ]);
 
   return (

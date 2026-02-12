@@ -1,1 +1,1 @@
-export { default } from './ScheduleVariant2'
+export { default } from './ScheduleVariant2';
