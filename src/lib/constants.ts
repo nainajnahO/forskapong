@@ -75,7 +75,7 @@ export const SCHEDULE_PHASES = [
     events: [
       {
         time: '19:50',
-        title: 'Skotten i Bridgens Hus',
+        title: 'Skotten i Mikrorummet',
         description: 'Forskåpongen går av stapeln för 76:e gången.',
         bold: true,
       },
@@ -102,7 +102,7 @@ export const SCHEDULE_PHASES = [
       {
         time: '22:30',
         title: 'Utvisning',
-        description: 'Förbud att stanna kvar i Bridgens. Vi drar till gähda istället.',
+        description: 'Förbud att stanna kvar. Vi drar till gähda istället.',
         italic: true,
       },
     ],

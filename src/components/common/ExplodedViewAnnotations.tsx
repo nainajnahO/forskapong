@@ -54,7 +54,7 @@ function Annotation({
     >
       <p
         className={cn(
-          'font-display text-3xl md:text-5xl lg:text-6xl text-white',
+          'font-display text-3xl md:text-5xl lg:text-6xl text-white hdr-white-fill',
           'drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]',
           'text-center',
         )}

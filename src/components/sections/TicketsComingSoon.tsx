@@ -40,7 +40,7 @@ export default function TicketsComingSoon({ id }: TicketsComingSoonProps) {
 
         <div ref={ref} className="flex flex-col items-center text-center">
           <motion.h2
-            className="font-display text-5xl md:text-7xl lg:text-8xl text-brand-500 tracking-wider"
+            className="font-display text-5xl md:text-7xl lg:text-8xl text-brand-500 tracking-wider hdr-text-fill"
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : undefined}
             transition={{ duration: 0.8, ease: 'easeOut' }}

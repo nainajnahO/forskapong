@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { ArrowUpRight, Flame, Waves } from 'lucide-react';
 import logo from '../../assets/logo.webp';
+import logoHdr from '../../assets/hdr/logo.avif';
 import { NAV_LINKS, NAV_RESPONSIVE_OFFSETS } from '@/lib/constants';
 import Container from '../common/Container';
 import { useTheme } from '@/contexts/useTheme';
@@ -109,12 +110,15 @@ export default function Navbar() {
               }}
             >
               <a href="#" draggable={false} onClick={handleLogoClick}>
-                <img
-                  src={logo}
-                  alt="Forsränningen Logo"
-                  draggable={false}
-                  className="h-9 lg:h-10 w-auto cursor-pointer"
-                />
+                <picture>
+                  <source srcSet={logoHdr} media="(dynamic-range: high)" type="image/avif" />
+                  <img
+                    src={logo}
+                    alt="Forsränningen Logo"
+                    draggable={false}
+                    className="h-9 lg:h-10 w-auto cursor-pointer"
+                  />
+                </picture>
               </a>
             </div>
 
@@ -134,7 +138,7 @@ export default function Navbar() {
                     onClick={() => scrollToSection(link.href)}
                     className="px-4 py-2.5 text-white bg-white/20 rounded-full text-sm hover:bg-white/30 transition-colors backdrop-blur-sm"
                   >
-                    {link.label}
+                    <span className="hdr-white-fill">{link.label}</span>
                   </button>
                 ))}
               </div>
@@ -152,9 +156,9 @@ export default function Navbar() {
                 aria-label="Toggle background style"
               >
                 {backgroundVariant === 'framer' ? (
-                  <Flame className="w-5 h-5" />
+                  <Flame className="w-5 h-5 hdr-white-icon" />
                 ) : (
-                  <Waves className="w-5 h-5" />
+                  <Waves className="w-5 h-5 hdr-white-icon" />
                 )}
               </button>
 
@@ -162,7 +166,7 @@ export default function Navbar() {
               <button
                 ref={ctaRef}
                 onClick={handleTicketClick}
-                className="flex items-center justify-between gap-3 pl-6 pr-2 py-2 bg-white text-black font-semibold rounded-full hover:bg-zinc-100 absolute lg:relative right-0 lg:right-auto"
+                className="flex items-center justify-between gap-3 pl-6 pr-2 py-2 bg-white hdr-bg-white text-black font-semibold rounded-full hover:bg-zinc-100 absolute lg:relative right-0 lg:right-auto"
                 style={{
                   transform: isScrolled
                     ? `translateX(calc(-50vw + 50% + ${responsiveOffset}rem)) scale(1)`
@@ -180,8 +184,8 @@ export default function Navbar() {
               >
                 <span className="hidden lg:inline">Anmälan</span>
                 <span className="lg:hidden">Anmäl</span>
-                <div className="w-10 h-10 -my-1 -mr-1 bg-brand-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <ArrowUpRight className="w-6 h-6 text-white" />
+                <div className="w-10 h-10 -my-1 -mr-1 bg-brand-500 rounded-full flex items-center justify-center flex-shrink-0 hdr-dot-fill">
+                  <ArrowUpRight className="w-6 h-6 text-white hdr-white-icon" />
                 </div>
               </button>
             </div>

@@ -114,7 +114,7 @@ export default function ScheduleTimeline({
                           {isLast ? (
                             <div className="relative flex items-center justify-center">
                               <span className="absolute w-8 h-8 rounded-full bg-brand-500/20 animate-ping" />
-                              <span className="relative w-4 h-4 rounded-full bg-brand-500 border-2 border-brand-500/30" />
+                              <span className="relative w-4 h-4 rounded-full bg-brand-500 border-2 border-brand-500/30 hdr-dot-fill" />
                             </div>
                           ) : (
                             <div
@@ -173,7 +173,7 @@ export default function ScheduleTimeline({
                           {isLast ? (
                             <div className="relative flex items-center justify-center">
                               <span className="absolute w-6 h-6 rounded-full bg-brand-500/20 animate-ping" />
-                              <span className="relative w-3 h-3 rounded-full bg-brand-500 border-2 border-brand-500/30" />
+                              <span className="relative w-3 h-3 rounded-full bg-brand-500 border-2 border-brand-500/30 hdr-dot-fill" />
                             </div>
                           ) : (
                             <div

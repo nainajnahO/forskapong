@@ -27,15 +27,15 @@ export default function Hero() {
       {/* Content Container */}
       <div className="relative z-10 h-screen flex flex-col items-center justify-center px-6">
         {/* Main Title */}
-        <h1 className="text-5xl md:text-[6.5rem] font-display text-white uppercase tracking-wider text-center mb-4 px-1">
+        <h1 className="text-5xl md:text-[6.5rem] font-display text-white hdr-white-fill uppercase tracking-wider text-center mb-4 px-1">
           {EVENT_INFO.name}
         </h1>
 
         {/* Typewriter Section */}
         <div className="text-center mb-20">
-          <div className="text-2xl md:text-4xl text-white flex items-baseline justify-center gap-3">
+          <div className="text-2xl md:text-4xl text-white hdr-white-fill flex items-baseline justify-center gap-3">
             <span>Ta med dig</span>
-            <span className="font-display text-brand-500">
+            <span className="font-display text-brand-500 hdr-text-fill">
               {displayText}
               <span className="typewriter-cursor">|</span>
             </span>
@@ -46,7 +46,7 @@ export default function Hero() {
         <Container className="absolute bottom-20 left-0 right-0">
           <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6 max-w-full">
             {/* Date */}
-            <span className="text-white text-lg md:text-2xl font-light whitespace-nowrap">
+            <span className="text-white hdr-white-fill text-lg md:text-2xl font-light whitespace-nowrap">
               {EVENT_INFO.date}
             </span>
 
@@ -54,7 +54,7 @@ export default function Hero() {
             <div className="w-32 h-0.5 md:w-auto md:flex-1 bg-gradient-to-r from-transparent via-white to-transparent" />
 
             {/* Location */}
-            <span className="text-white text-lg md:text-2xl font-light whitespace-nowrap">
+            <span className="text-white hdr-white-fill text-lg md:text-2xl font-light whitespace-nowrap">
               {EVENT_INFO.location}
             </span>
           </div>

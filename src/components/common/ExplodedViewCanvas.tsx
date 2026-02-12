@@ -12,7 +12,7 @@ export default function ExplodedViewCanvas({ scrollProgress, isVisible }: Explod
   return (
     <Canvas
       frameloop={isVisible ? 'always' : 'never'}
-      dpr={[1, 2.5]}
+      dpr={[1, 3]}
       gl={{ alpha: true, antialias: false, powerPreference: 'high-performance' }}
       camera={{ position: [2, 2, 4], fov: 45 }}
       style={{ background: 'transparent' }}

@@ -15,7 +15,7 @@ export default function ScheduleHeader({ clockText, currentPhase, theme }: Sched
       <div className="text-center mb-2">
         <span
           className={cn(
-            'text-6xl md:text-8xl lg:text-9xl font-display tabular-nums transition-colors duration-500',
+            'text-6xl md:text-8xl lg:text-9xl font-display tabular-nums hdr-white-fill transition-colors duration-500',
             themeText(theme, 'primary'),
           )}
         >

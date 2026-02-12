@@ -6,9 +6,9 @@
 
 @layer base {
   :root {
-    --brand-400: 248 113 113;
-    --brand-500: 239 68 68;
-    --brand-600: 220 38 38;
+    --brand-400: 0.704 0.191 22.2;
+    --brand-500: 0.637 0.237 25.3;
+    --brand-600: 0.577 0.245 27.3;
     --background: 0 0% 0%;
     --foreground: 0 0% 98%;
     --card: 0 0% 7%;
@@ -65,10 +65,27 @@
   }
 }
 
+/* Wide-gamut upgrade for P3 displays — higher chroma = more vivid */
+@media (color-gamut: p3) {
+  :root {
+    --brand-400: 0.704 0.29 22.2;
+    --brand-500: 0.637 0.34 25.3;
+    --brand-600: 0.577 0.31 27.3;
+  }
+}
+
+@media (dynamic-range: high) and (color-gamut: p3) {
+  :root {
+    --brand-400: 0.73 0.29 22.2;
+    --brand-500: 0.66 0.34 25.3;
+    --brand-600: 0.60 0.31 27.3;
+  }
+}
+
 .framer {
-  --brand-400: 81 160 212;
-  --brand-500: 46 140 199;
-  --brand-600: 37 116 166;
+  --brand-400: 0.685 0.1 230;
+  --brand-500: 0.621 0.12 235;
+  --brand-600: 0.542 0.11 237;
 }
 
 html {
@@ -89,3 +106,67 @@ html {
   animation: blink 0.7s step-end infinite;
   margin-left: 1px;
 }
+
+/* HDR image-based brand fills — true HDR via PQ-encoded AVIF */
+@media (dynamic-range: high) {
+  .hdr-text-fill {
+    background-image: url('./assets/hdr/brand-500-red.avif');
+    background-size: 8px 8px;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hdr-text-fill-400 {
+    background-image: url('./assets/hdr/brand-400-red.avif');
+    background-size: 8px 8px;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hdr-bg-fill {
+    background-image: url('./assets/hdr/brand-600-red.avif') !important;
+    background-size: 8px 8px;
+  }
+  .hdr-dot-fill {
+    background-image: url('./assets/hdr/brand-500-red.avif') !important;
+    background-size: 8px 8px;
+  }
+
+  .hdr-white-fill {
+    background-image: url('./assets/hdr/white.avif');
+    background-size: 8px 8px;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hdr-white-icon {
+    filter: brightness(2.5);
+  }
+
+  .hdr-bg-white {
+    background-image: url('./assets/hdr/white.avif') !important;
+    background-size: 8px 8px;
+  }
+
+  .light .hdr-white-fill {
+    background-image: none;
+    -webkit-background-clip: border-box;
+    background-clip: border-box;
+    -webkit-text-fill-color: inherit;
+  }
+
+  /* .framer blue variant overrides */
+  .framer .hdr-text-fill {
+    background-image: url('./assets/hdr/brand-500-blue.avif');
+  }
+  .framer .hdr-text-fill-400 {
+    background-image: url('./assets/hdr/brand-400-blue.avif');
+  }
+  .framer .hdr-bg-fill {
+    background-image: url('./assets/hdr/brand-600-blue.avif') !important;
+  }
+  .framer .hdr-dot-fill {
+    background-image: url('./assets/hdr/brand-500-blue.avif') !important;
+  }
+}
+

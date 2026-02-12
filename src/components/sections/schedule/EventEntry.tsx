@@ -32,7 +32,7 @@ export default function EventEntry({ ev, isLast, isPast, theme, side }: EventEnt
       {/* Title */}
       <h4
         className={cn(
-          'text-xl md:text-2xl font-display transition-colors duration-500',
+          'text-xl md:text-2xl font-display hdr-white-fill transition-colors duration-500',
           themeText(theme, 'primary'),
           ev.bold ? 'font-bold' : 'font-semibold',
           ev.italic ? 'italic' : '',

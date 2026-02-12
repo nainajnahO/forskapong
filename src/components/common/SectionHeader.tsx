@@ -12,12 +12,12 @@ interface SectionHeaderProps {
 export default function SectionHeader({
   title,
   titleHighlight,
-  highlightClassName = 'italic text-brand-400',
+  highlightClassName = 'italic text-brand-400 hdr-text-fill-400',
   className,
 }: SectionHeaderProps) {
   return (
     <div className={cn('mb-16', className)}>
-      <h1 className="text-4xl md:text-6xl font-display text-foreground transition-colors duration-500">
+      <h1 className="text-4xl md:text-6xl font-display text-foreground hdr-white-fill transition-colors duration-500">
         {title} {titleHighlight && <span className={highlightClassName}>{titleHighlight}</span>}
       </h1>
     </div>
