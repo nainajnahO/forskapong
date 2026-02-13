@@ -18,8 +18,8 @@ export default function ExplodedViewCanvas({ scrollProgress, isVisible }: Explod
       style={{ background: 'transparent' }}
     >
       <ambientLight intensity={0.5} />
-      <directionalLight position={[5, 8, 5]} intensity={0} />
-      <directionalLight position={[-3, 4, -5]} intensity={0} />
+      <directionalLight position={[5, 8, 5]} intensity={1} />
+      <directionalLight position={[-3, 4, -5]} intensity={1} />
       <Environment preset="city" />
       <BeerPongModel />
       <CameraRig scrollProgress={scrollProgress} />
