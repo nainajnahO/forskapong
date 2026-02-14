@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect } from 'react';
 import { SPONSORS } from '@/lib/constants';
 
 function SponsorItem({ sponsor }: { sponsor: (typeof SPONSORS)[number] }) {
@@ -35,34 +35,35 @@ const SPEED = 0.06;
 
 export default function Sponsors() {
   const trackRef = useRef<HTMLDivElement>(null);
-  const rafRef = useRef(0);
-  const posRef = useRef(0);
-  const lastRef = useRef(0);
-
-  const tick = useCallback((ts: number) => {
-    const track = trackRef.current;
-    if (!track) return;
-
-    const delta = lastRef.current ? ts - lastRef.current : 0;
-    lastRef.current = ts;
-
-    // Cap delta at 100ms to prevent jumps after tab switch / background
-    posRef.current -= Math.min(delta, 100) * SPEED;
-
-    // Reset when we've scrolled one full set (first half)
-    const halfWidth = track.scrollWidth / 2;
-    if (halfWidth > 0 && Math.abs(posRef.current) >= halfWidth) {
-      posRef.current += halfWidth;
-    }
-
-    track.style.transform = `translate3d(${posRef.current}px,0,0)`;
-    rafRef.current = requestAnimationFrame(tick);
-  }, []);
 
   useEffect(() => {
-    rafRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [tick]);
+    let raf = 0;
+    let pos = 0;
+    let last = 0;
+
+    function tick(ts: number) {
+      const track = trackRef.current;
+      if (!track) return;
+
+      const delta = last ? ts - last : 0;
+      last = ts;
+
+      // Cap delta at 100ms to prevent jumps after tab switch / background
+      pos -= Math.min(delta, 100) * SPEED;
+
+      // Reset when we've scrolled one full set (first half)
+      const halfWidth = track.scrollWidth / 2;
+      if (halfWidth > 0 && Math.abs(pos) >= halfWidth) {
+        pos += halfWidth;
+      }
+
+      track.style.transform = `translate3d(${pos}px,0,0)`;
+      raf = requestAnimationFrame(tick);
+    }
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   // 4 copies per half → enough to fill ultra-wide screens
   const half = Array.from({ length: 4 }, (_, i) =>
