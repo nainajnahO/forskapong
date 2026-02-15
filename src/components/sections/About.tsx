@@ -17,7 +17,7 @@ export default function About({ id }: AboutProps) {
     target: imgRef,
     offset: ['start end', 'end start'],
   });
-  const imgY = useTransform(scrollYProgress, (v) => (v - 0.5) * -160);
+  const imgY = useTransform(scrollYProgress, [0, 1], ['0%', '-30%']);
 
   return (
     <section id={id} className="w-full pt-0 pb-16 md:pb-24">

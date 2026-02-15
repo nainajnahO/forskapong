@@ -13,7 +13,47 @@ import {
   SpringProvider,
   Spring,
   SpringElement,
+  useSpring,
 } from '@/components/animate-ui/primitives/animate/spring';
+
+function NavbarEasterEgg({
+  isScrolled,
+  responsiveOffset,
+}: {
+  isScrolled: boolean;
+  responsiveOffset: number;
+}) {
+  const { isDragging } = useSpring();
+  const show = isDragging && isScrolled;
+
+  return (
+    <div
+      className="absolute right-6 md:right-12 top-1/2 z-0 pointer-events-none flex items-center justify-between gap-3 pl-6 pr-2 py-2 rounded-full overflow-hidden"
+      style={{
+        transform: isScrolled
+          ? `translateY(-50%) translateX(calc(-50vw + 50% + ${responsiveOffset}rem))`
+          : 'translateY(-50%) translateX(0)',
+        opacity: show ? 1 : 0,
+        visibility: show ? 'visible' : 'hidden',
+        willChange: 'transform, opacity, visibility',
+        transition: show
+          ? 'opacity 0.15s ease-out, visibility 0s, transform 0.7s ease-in-out'
+          : 'opacity 0.4s ease-in, visibility 0s 0.4s, transform 0.7s ease-in-out',
+      }}
+    >
+      <img
+        src="/IMG_3365.jpeg"
+        alt=""
+        draggable={false}
+        className="absolute inset-0 w-full h-full object-cover object-[center_34%]"
+      />
+      {/* Invisible CTA replica to match exact dimensions */}
+      <span className="invisible hidden lg:inline">Anmälan</span>
+      <span className="invisible lg:hidden">Anmäl</span>
+      <div className="w-10 h-10 -my-1 -mr-1 invisible flex-shrink-0" />
+    </div>
+  );
+}
 
 export default function Navbar() {
   const isScrolled = useScrollState(50);
@@ -77,6 +117,11 @@ export default function Navbar() {
         style={{ willChange: isScrolled ? 'auto' : 'transform' }}
       >
         <Container size="full" className="relative">
+          {/* Hidden photo easter egg — revealed when the pill is dragged away */}
+          <NavbarEasterEgg
+            isScrolled={isScrolled}
+            responsiveOffset={responsiveOffset}
+          />
           <SpringElement
             drag={isScrolled}
             style={!isScrolled ? { cursor: 'default' } : undefined}
