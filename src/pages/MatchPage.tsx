@@ -101,11 +101,13 @@ function ScorePicker({
   value,
   onChange,
   label,
+  max = 6,
 }: {
   theme: ReturnType<typeof useTheme>['theme'];
   value: number;
   onChange: (v: number) => void;
   label: string;
+  max?: number;
 }) {
   return (
     <div className="flex flex-col items-center gap-2">
@@ -128,8 +130,8 @@ function ScorePicker({
           {value}
         </span>
         <button
-          onClick={() => onChange(Math.min(10, value + 1))}
-          disabled={value >= 10}
+          onClick={() => onChange(Math.min(max, value + 1))}
+          disabled={value >= max}
           className={cn(
             'w-9 h-9 rounded-lg flex items-center justify-center text-lg font-bold transition-all',
             'disabled:opacity-20',
@@ -162,8 +164,7 @@ export default function MatchPage() {
   // Reporting state
   const [step, setStep] = useState<'idle' | 'won' | 'lost' | 'done'>('idle');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [ourScore, setOurScore] = useState(0);
-  const [theirScore, setTheirScore] = useState(0);
+  const [loserCups, setLoserCups] = useState(0); // cups hit by the losing team (0–5)
   const [submitError, setSubmitError] = useState('');
 
   // Redirect if not logged in
@@ -242,8 +243,8 @@ export default function MatchPage() {
   const cardBorder = theme === 'dark' ? 'border-white/[0.06]' : 'border-zinc-200';
 
   // ── Report result ──────────────────────────────
-  // Winner reports: ourScore = our cups remaining, theirScore = their cups remaining
-  // We store as score_team1 / score_team2 (always relative to team1/team2 in match)
+  // Cups hit: winner always = 6, loser = loserCups (0–5)
+  // score_team1/score_team2 = cups HIT by that team
   const handleReport = async (weAreWinner: boolean) => {
     if (!match || !teamId) return;
     setIsSubmitting(true);
@@ -252,9 +253,20 @@ export default function MatchPage() {
     const winnerId = weAreWinner ? teamId : isTeam1 ? match.team2_id : match.team1_id;
     const loserId = weAreWinner ? (isTeam1 ? match.team2_id : match.team1_id) : teamId;
 
-    // Map our/their score to team1/team2 positions
-    const scoreTeam1 = isTeam1 ? ourScore : theirScore;
-    const scoreTeam2 = isTeam1 ? theirScore : ourScore;
+    // Winner hit 6, loser hit loserCups
+    const winnerScore = 6;
+    const ourIsTeam1 = match.team1_id === teamId;
+
+    let scoreTeam1: number;
+    let scoreTeam2: number;
+
+    if (weAreWinner) {
+      scoreTeam1 = ourIsTeam1 ? winnerScore : loserCups;
+      scoreTeam2 = ourIsTeam1 ? loserCups : winnerScore;
+    } else {
+      scoreTeam1 = ourIsTeam1 ? loserCups : winnerScore;
+      scoreTeam2 = ourIsTeam1 ? winnerScore : loserCups;
+    }
 
     const { error: updateError } = await supabase
       .from('matches')
@@ -552,8 +564,7 @@ export default function MatchPage() {
                   <button
                     onClick={() => {
                       setStep('won');
-                      setOurScore(3);
-                      setTheirScore(0);
+                      setLoserCups(0);
                     }}
                     className="px-6 py-3 rounded-xl text-sm font-semibold bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:brightness-110 transition-all"
                   >
@@ -562,8 +573,7 @@ export default function MatchPage() {
                   <button
                     onClick={() => {
                       setStep('lost');
-                      setOurScore(0);
-                      setTheirScore(3);
+                      setLoserCups(0);
                     }}
                     className={cn(
                       'px-6 py-3 rounded-xl text-sm font-semibold border transition-all hover:opacity-80',
@@ -578,34 +588,40 @@ export default function MatchPage() {
               </div>
             )}
 
-            {/* ─── STATE: Score picker (won) ──────────── */}
+            {/* ─── STATE: Score picker (won — how many did THEY hit?) ── */}
             {!isPlayed && step === 'won' && (
               <div>
+                <p className={cn('text-sm text-center mb-2 font-semibold text-emerald-400')}>
+                  Ni vann!
+                </p>
                 <p className={cn('text-sm text-center mb-6', themeText(theme, 'secondary'))}>
-                  Ange slutresultatet (koppar kvar)
+                  Hur många koppar träffade motståndaren?
                 </p>
 
-                <div className="flex items-center justify-center gap-8 sm:gap-12 mb-8">
-                  <ScorePicker
-                    theme={theme}
-                    value={ourScore}
-                    onChange={setOurScore}
-                    label={ourTeam.name}
-                  />
-                  <span
-                    className={cn(
-                      'text-xl font-display',
-                      theme === 'dark' ? 'text-zinc-600' : 'text-zinc-300',
-                    )}
-                  >
-                    –
-                  </span>
-                  <ScorePicker
-                    theme={theme}
-                    value={theirScore}
-                    onChange={setTheirScore}
-                    label={theirTeam.name}
-                  />
+                <div className="flex flex-col items-center gap-4 mb-8">
+                  <div className="flex items-center gap-6">
+                    <div className="text-center">
+                      <p className={cn('text-xs mb-1 font-medium', themeText(theme, 'secondary'))}>
+                        {ourTeam.name}
+                      </p>
+                      <span className="text-3xl font-mono font-bold text-emerald-400">6</span>
+                    </div>
+                    <span
+                      className={cn(
+                        'text-xl font-display',
+                        theme === 'dark' ? 'text-zinc-600' : 'text-zinc-300',
+                      )}
+                    >
+                      –
+                    </span>
+                    <ScorePicker
+                      theme={theme}
+                      value={loserCups}
+                      onChange={setLoserCups}
+                      label={theirTeam.name}
+                      max={5}
+                    />
+                  </div>
                 </div>
 
                 {submitError && (
@@ -635,34 +651,40 @@ export default function MatchPage() {
               </div>
             )}
 
-            {/* ─── STATE: Score picker (lost) ─────────── */}
+            {/* ─── STATE: Score picker (lost — how many did WE hit?) ── */}
             {!isPlayed && step === 'lost' && (
               <div>
+                <p className={cn('text-sm text-center mb-2 font-semibold text-red-400')}>
+                  Ni förlorade
+                </p>
                 <p className={cn('text-sm text-center mb-6', themeText(theme, 'secondary'))}>
-                  Ange slutresultatet (koppar kvar)
+                  Hur många koppar träffade ni?
                 </p>
 
-                <div className="flex items-center justify-center gap-8 sm:gap-12 mb-8">
-                  <ScorePicker
-                    theme={theme}
-                    value={ourScore}
-                    onChange={setOurScore}
-                    label={ourTeam.name}
-                  />
-                  <span
-                    className={cn(
-                      'text-xl font-display',
-                      theme === 'dark' ? 'text-zinc-600' : 'text-zinc-300',
-                    )}
-                  >
-                    –
-                  </span>
-                  <ScorePicker
-                    theme={theme}
-                    value={theirScore}
-                    onChange={setTheirScore}
-                    label={theirTeam.name}
-                  />
+                <div className="flex flex-col items-center gap-4 mb-8">
+                  <div className="flex items-center gap-6">
+                    <ScorePicker
+                      theme={theme}
+                      value={loserCups}
+                      onChange={setLoserCups}
+                      label={ourTeam.name}
+                      max={5}
+                    />
+                    <span
+                      className={cn(
+                        'text-xl font-display',
+                        theme === 'dark' ? 'text-zinc-600' : 'text-zinc-300',
+                      )}
+                    >
+                      –
+                    </span>
+                    <div className="text-center">
+                      <p className={cn('text-xs mb-1 font-medium', themeText(theme, 'secondary'))}>
+                        {theirTeam.name}
+                      </p>
+                      <span className="text-3xl font-mono font-bold text-red-400">6</span>
+                    </div>
+                  </div>
                 </div>
 
                 {submitError && (

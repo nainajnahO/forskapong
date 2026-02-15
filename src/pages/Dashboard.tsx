@@ -205,13 +205,13 @@ export default function Dashboard() {
 
   if (!teamId || !code) return null;
 
-  // Derived state
+  // Derived state — calculate from match data (source of truth)
   const currentRoundIdx = rounds.findIndex((r) => r.canReport || r.needsConfirmation);
   const nextMatch = currentRoundIdx !== -1 ? rounds[currentRoundIdx] : null;
-  const winRate =
-    team && team.wins + team.losses > 0
-      ? Math.round((team.wins / (team.wins + team.losses)) * 100)
-      : 0;
+  const wins = rounds.filter((r) => r.result === 'win').length;
+  const losses = rounds.filter((r) => r.result === 'loss').length;
+  const totalPlayed = wins + losses;
+  const winRate = totalPlayed > 0 ? Math.round((wins / totalPlayed) * 100) : 0;
 
   const cardBg = theme === 'dark' ? 'bg-white/[0.03]' : 'bg-zinc-50';
   const cardBorder = theme === 'dark' ? 'border-white/[0.06]' : 'border-zinc-200';
@@ -357,27 +357,40 @@ export default function Dashboard() {
                 {team.player1} & {team.player2}
               </p>
             </div>
-            <button
-              onClick={() => {
-                sessionStorage.clear();
-                navigate('/play', { replace: true });
-              }}
-              className={cn(
-                'self-start text-xs px-4 py-2 rounded-lg font-medium transition-all duration-200 border hover:opacity-80',
-                theme === 'dark'
-                  ? 'bg-white/[0.04] border-white/10 text-zinc-400'
-                  : 'bg-zinc-100 border-zinc-200 text-zinc-500',
-              )}
-            >
-              Logga ut
-            </button>
+            <div className="flex items-center gap-2 self-start">
+              <button
+                onClick={() => navigate('/scoreboard')}
+                className={cn(
+                  'text-xs px-4 py-2 rounded-lg font-medium transition-all duration-200 border hover:opacity-80',
+                  theme === 'dark'
+                    ? 'bg-brand-500/10 border-brand-500/20 text-brand-400'
+                    : 'bg-brand-50 border-brand-200 text-brand-600',
+                )}
+              >
+                Scoreboard
+              </button>
+              <button
+                onClick={() => {
+                  sessionStorage.clear();
+                  navigate('/play', { replace: true });
+                }}
+                className={cn(
+                  'text-xs px-4 py-2 rounded-lg font-medium transition-all duration-200 border hover:opacity-80',
+                  theme === 'dark'
+                    ? 'bg-white/[0.04] border-white/10 text-zinc-400'
+                    : 'bg-zinc-100 border-zinc-200 text-zinc-500',
+                )}
+              >
+                Logga ut
+              </button>
+            </div>
           </motion.div>
 
           {/* ── Stats Row ───────────────────────────────── */}
           <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-4">
             {[
-              { label: 'Vinster', value: String(team.wins), accent: 'text-emerald-400' },
-              { label: 'Förluster', value: String(team.losses), accent: 'text-red-400' },
+              { label: 'Vinster', value: String(wins), accent: 'text-emerald-400' },
+              { label: 'Förluster', value: String(losses), accent: 'text-red-400' },
               { label: 'Ranking', value: `—`, sub: '' },
             ].map((stat, i) => (
               <motion.div
@@ -417,7 +430,7 @@ export default function Dashboard() {
           </div>
 
           {/* ── Win rate bar ─────────────────────────────── */}
-          {team.wins + team.losses > 0 && (
+          {totalPlayed > 0 && (
             <motion.div
               className={cn(
                 'rounded-2xl p-4 sm:p-5 border mb-10 transition-colors duration-500',
@@ -605,7 +618,7 @@ export default function Dashboard() {
                           {isPlayed ? (
                             <span
                               className={cn(
-                                'inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold border',
+                                'inline-flex items-center justify-center w-8 h-7 rounded-lg text-xs font-bold border',
                                 isWin
                                   ? theme === 'dark'
                                     ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20'
@@ -615,8 +628,7 @@ export default function Dashboard() {
                                     : 'bg-red-50 text-red-600 border-red-200',
                               )}
                             >
-                              {isWin ? 'Vinst' : 'Förlust'}
-                              {!round.confirmed && <span className="ml-1 opacity-60">⏳</span>}
+                              {isWin ? 'W' : 'L'}
                             </span>
                           ) : round.needsConfirmation ? (
                             <span

@@ -14,6 +14,7 @@ const TicketsComingSoon = lazy(() => import('./components/sections/TicketsComing
 const Play = lazy(() => import('./pages/Play'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const MatchPage = lazy(() => import('./pages/MatchPage'));
+const Scoreboard = lazy(() => import('./pages/Scoreboard'));
 
 function HomePage() {
   return (
@@ -50,6 +51,7 @@ function App() {
               <Route path="/play" element={<Play />} />
               <Route path="/play/dashboard" element={<Dashboard />} />
               <Route path="/play/match/:matchId" element={<MatchPage />} />
+              <Route path="/scoreboard" element={<Scoreboard />} />
             </Routes>
           </Suspense>
         </main>
