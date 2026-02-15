@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import Hero from './components/sections/Hero';
@@ -10,33 +11,51 @@ import { VENUE_MAP_CONFIG } from '@/lib/constants';
 
 const VenueMap = lazy(() => import('./components/sections/VenueMap'));
 const TicketsComingSoon = lazy(() => import('./components/sections/TicketsComingSoon'));
+const Play = lazy(() => import('./pages/Play'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const MatchPage = lazy(() => import('./pages/MatchPage'));
+
+function HomePage() {
+  return (
+    <>
+      <Hero />
+      <ErrorBoundary>
+        <ExplodedView id="showcase" />
+      </ErrorBoundary>
+      <About id="about" />
+      <ScheduleVariant2 id="schedule-v4" />
+      <ErrorBoundary>
+        <Suspense fallback={<div style={{ height: `${VENUE_MAP_CONFIG.scrollPages * 100}vh` }} />}>
+          <VenueMap id="venue" />
+        </Suspense>
+      </ErrorBoundary>
+      <ErrorBoundary>
+        <Suspense fallback={<div className="py-16 md:py-24" />}>
+          <TicketsComingSoon id="tickets" />
+        </Suspense>
+      </ErrorBoundary>
+    </>
+  );
+}
 
 function App() {
   return (
-    <div className="min-h-screen bg-background text-foreground transition-colors duration-500">
-      <Navbar />
-      <main>
-        <Hero />
-        <ErrorBoundary>
-          <ExplodedView id="showcase" />
-        </ErrorBoundary>
-        <About id="about" />
-        <ScheduleVariant2 id="schedule-v4" />
-        <ErrorBoundary>
-          <Suspense
-            fallback={<div style={{ height: `${VENUE_MAP_CONFIG.scrollPages * 100}vh` }} />}
-          >
-            <VenueMap id="venue" />
+    <BrowserRouter>
+      <div className="min-h-screen bg-background text-foreground transition-colors duration-500">
+        <Navbar />
+        <main>
+          <Suspense fallback={<div className="min-h-screen" />}>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/play" element={<Play />} />
+              <Route path="/play/dashboard" element={<Dashboard />} />
+              <Route path="/play/match/:matchId" element={<MatchPage />} />
+            </Routes>
           </Suspense>
-        </ErrorBoundary>
-        <ErrorBoundary>
-          <Suspense fallback={<div className="py-16 md:py-24" />}>
-            <TicketsComingSoon id="tickets" />
-          </Suspense>
-        </ErrorBoundary>
-      </main>
-      <Footer />
-    </div>
+        </main>
+        <Footer />
+      </div>
+    </BrowserRouter>
   );
 }
 
