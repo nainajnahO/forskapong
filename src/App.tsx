@@ -45,15 +45,13 @@ function App() {
       <div className="min-h-screen bg-background text-foreground transition-colors duration-500">
         <Navbar />
         <main>
-          <Suspense fallback={<div className="min-h-screen" />}>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/play" element={<Play />} />
-              <Route path="/play/dashboard" element={<Dashboard />} />
-              <Route path="/play/match/:matchId" element={<MatchPage />} />
-              <Route path="/scoreboard" element={<Scoreboard />} />
-            </Routes>
-          </Suspense>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/play" element={<Suspense fallback={<div className="min-h-screen" />}><Play /></Suspense>} />
+            <Route path="/play/dashboard" element={<Suspense fallback={<div className="min-h-screen" />}><Dashboard /></Suspense>} />
+            <Route path="/play/match/:matchId" element={<Suspense fallback={<div className="min-h-screen" />}><MatchPage /></Suspense>} />
+            <Route path="/scoreboard" element={<Suspense fallback={<div className="min-h-screen" />}><Scoreboard /></Suspense>} />
+          </Routes>
         </main>
         <Footer />
       </div>
