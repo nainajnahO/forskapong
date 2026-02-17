@@ -79,17 +79,18 @@ export class WarpSpeed {
     canvas.width = 1;
     canvas.height = 1;
 
-    this.SPEED = config.speed == null || config.speed < 0 ? 0.7 : config.speed;
-    this._targetSpeed = config.targetSpeed == null || config.targetSpeed < 0 ? this.SPEED : config.targetSpeed;
-    this.rampStartSpeed = this.SPEED;
+    const speed = config.speed != null && config.speed >= 0 ? config.speed : 0.7;
+    this.SPEED = speed;
+    this._targetSpeed = config.targetSpeed != null && config.targetSpeed >= 0 ? config.targetSpeed : speed;
+    this.rampStartSpeed = speed;
     this.rampDuration = config.rampDuration ?? 1500;
-    this.SPEED_ADJ_FACTOR = config.speedAdjFactor == null ? 0.03 : Math.max(0, Math.min(1, config.speedAdjFactor));
-    this.DENSITY = config.density == null || config.density <= 0 ? 0.7 : config.density;
-    this.USE_CIRCLES = config.shape == null ? true : config.shape === 'circle';
-    this.DEPTH_ALPHA = config.depthFade == null ? true : config.depthFade;
-    this.WARP_EFFECT = config.warpEffect == null ? true : config.warpEffect;
-    this.WARP_EFFECT_LENGTH = config.warpEffectLength == null ? 5 : Math.max(0, config.warpEffectLength);
-    this.STAR_SCALE = config.starSize == null || config.starSize <= 0 ? 3 : config.starSize;
+    this.SPEED_ADJ_FACTOR = Math.max(0, Math.min(1, config.speedAdjFactor ?? 0.03));
+    this.DENSITY = config.density != null && config.density > 0 ? config.density : 0.7;
+    this.USE_CIRCLES = config.shape !== 'square';
+    this.DEPTH_ALPHA = config.depthFade ?? true;
+    this.WARP_EFFECT = config.warpEffect ?? true;
+    this.WARP_EFFECT_LENGTH = Math.max(0, config.warpEffectLength ?? 5);
+    this.STAR_SCALE = config.starSize != null && config.starSize > 0 ? config.starSize : 3;
     this.BACKGROUND_COLOR = config.backgroundColor ?? 'hsl(263,45%,7%)';
     this.STAR_COLOR = config.starColor ?? '#FFFFFF';
 
@@ -104,67 +105,76 @@ export class WarpSpeed {
 
   private draw = (): void => {
     this.move();
-    const canvas = this.canvas;
 
     if (!this.PAUSED) {
-      if (this.prevW !== canvas.clientWidth || this.prevH !== canvas.clientHeight) {
-        const dpr = window.devicePixelRatio || 1;
-        canvas.width = (canvas.clientWidth < 10 ? 10 : canvas.clientWidth) * dpr;
-        canvas.height = (canvas.clientHeight < 10 ? 10 : canvas.clientHeight) * dpr;
-      }
-
-      this.size = (canvas.height < canvas.width ? canvas.height : canvas.width) / (10 / (this.STAR_SCALE <= 0 ? 0 : this.STAR_SCALE));
-      if (this.WARP_EFFECT) this.maxLineWidth = this.size / 30;
-
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.globalAlpha = 1.0;
-        ctx.fillStyle = this.BACKGROUND_COLOR;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = this.STAR_COLOR;
-
-        for (let i = 0; i < this.stars.length; i++) {
-          const s = this.stars[i];
-          const xOnDisplay = s.x / s.z;
-          const yOnDisplay = s.y / s.z;
-
-          if (!this.WARP_EFFECT && (xOnDisplay < -0.5 || xOnDisplay > 0.5 || yOnDisplay < -0.5 || yOnDisplay > 0.5)) continue;
-
-          const size = s.size * this.size / s.z;
-          if (size < 0.3) continue;
-
-          if (this.DEPTH_ALPHA) {
-            const alpha = (1000 - s.z) / 1000;
-            ctx.globalAlpha = alpha < 0 ? 0 : alpha > 1 ? 1 : alpha;
-          }
-
-          if (this.WARP_EFFECT) {
-            ctx.beginPath();
-            const x2OnDisplay = s.x / (s.z + this.WARP_EFFECT_LENGTH * this.SPEED);
-            const y2OnDisplay = s.y / (s.z + this.WARP_EFFECT_LENGTH * this.SPEED);
-            if (x2OnDisplay < -0.5 || x2OnDisplay > 0.5 || y2OnDisplay < -0.5 || y2OnDisplay > 0.5) continue;
-            ctx.moveTo(canvas.width * (xOnDisplay + 0.5) - size / 2, canvas.height * (yOnDisplay + 0.5) - size / 2);
-            ctx.lineTo(canvas.width * (x2OnDisplay + 0.5) - size / 2, canvas.height * (y2OnDisplay + 0.5) - size / 2);
-            ctx.lineWidth = size > this.maxLineWidth ? this.maxLineWidth : size;
-            ctx.lineCap = this.USE_CIRCLES ? 'round' : 'butt';
-            ctx.strokeStyle = ctx.fillStyle;
-            ctx.stroke();
-          } else if (this.USE_CIRCLES) {
-            ctx.beginPath();
-            ctx.arc(canvas.width * (xOnDisplay + 0.5) - size / 2, canvas.height * (yOnDisplay + 0.5) - size / 2, size / 2, 0, 2 * Math.PI);
-            ctx.fill();
-          } else {
-            ctx.fillRect(canvas.width * (xOnDisplay + 0.5) - size / 2, canvas.height * (yOnDisplay + 0.5) - size / 2, size, size);
-          }
-        }
-
-        this.prevW = canvas.clientWidth;
-        this.prevH = canvas.clientHeight;
-      }
+      this.render();
     }
 
     this.drawRequest = requestAnimationFrame(this.draw);
   };
+
+  private render(): void {
+    const canvas = this.canvas;
+
+    if (this.prevW !== canvas.clientWidth || this.prevH !== canvas.clientHeight) {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.max(10, canvas.clientWidth) * dpr;
+      canvas.height = Math.max(10, canvas.clientHeight) * dpr;
+    }
+
+    const scale = Math.max(this.STAR_SCALE, 0);
+    this.size = Math.min(canvas.height, canvas.width) / (10 / scale);
+    if (this.WARP_EFFECT) this.maxLineWidth = this.size / 30;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.globalAlpha = 1.0;
+    ctx.fillStyle = this.BACKGROUND_COLOR;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = this.STAR_COLOR;
+
+    for (let i = 0; i < this.stars.length; i++) {
+      const s = this.stars[i];
+      const xOnDisplay = s.x / s.z;
+      const yOnDisplay = s.y / s.z;
+
+      if (!this.WARP_EFFECT && (xOnDisplay < -0.5 || xOnDisplay > 0.5 || yOnDisplay < -0.5 || yOnDisplay > 0.5)) continue;
+
+      const size = s.size * this.size / s.z;
+      if (size < 0.3) continue;
+
+      if (this.DEPTH_ALPHA) {
+        const alpha = (1000 - s.z) / 1000;
+        ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+      }
+
+      const sx = canvas.width * (xOnDisplay + 0.5) - size / 2;
+      const sy = canvas.height * (yOnDisplay + 0.5) - size / 2;
+
+      if (this.WARP_EFFECT) {
+        const x2OnDisplay = s.x / (s.z + this.WARP_EFFECT_LENGTH * this.SPEED);
+        const y2OnDisplay = s.y / (s.z + this.WARP_EFFECT_LENGTH * this.SPEED);
+        if (x2OnDisplay < -0.5 || x2OnDisplay > 0.5 || y2OnDisplay < -0.5 || y2OnDisplay > 0.5) continue;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(canvas.width * (x2OnDisplay + 0.5) - size / 2, canvas.height * (y2OnDisplay + 0.5) - size / 2);
+        ctx.lineWidth = Math.min(size, this.maxLineWidth);
+        ctx.lineCap = this.USE_CIRCLES ? 'round' : 'butt';
+        ctx.strokeStyle = ctx.fillStyle;
+        ctx.stroke();
+      } else if (this.USE_CIRCLES) {
+        ctx.beginPath();
+        ctx.arc(sx, sy, size / 2, 0, 2 * Math.PI);
+        ctx.fill();
+      } else {
+        ctx.fillRect(sx, sy, size, size);
+      }
+    }
+
+    this.prevW = canvas.clientWidth;
+    this.prevH = canvas.clientHeight;
+  }
 
   private move(): void {
     const now = performance.now();

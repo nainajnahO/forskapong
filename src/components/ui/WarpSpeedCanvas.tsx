@@ -29,7 +29,6 @@ export default function WarpSpeedCanvas({
       instanceRef.current = null;
     };
     // Only recreate when config identity changes (caller should memoize)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config]);
 
   // Sync speed

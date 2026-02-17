@@ -118,20 +118,14 @@ export default function TicketsComingSoon({ id }: TicketsComingSoonProps) {
                     type="text"
                     value={teamName}
                     onChange={(e) => setTeamName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        (document.activeElement as HTMLElement)?.blur();
-                        scrollToSection('#tickets');
-                      }
-                    }}
                     placeholder="Lagnamn"
                     className={cn(
                       'flex-1 min-w-0 rounded-xl px-5 h-12 text-center text-lg font-medium',
                       'bg-transparent border outline-none transition-colors',
-                      'placeholder:opacity-40',
+                      'placeholder:opacity-40 focus:border-brand-500',
                       theme === 'dark'
-                        ? 'border-zinc-700 text-zinc-100 focus:border-brand-500'
-                        : 'border-zinc-300 text-zinc-900 focus:border-brand-500'
+                        ? 'border-zinc-700 text-zinc-100'
+                        : 'border-zinc-300 text-zinc-900'
                     )}
                   />
                   <button

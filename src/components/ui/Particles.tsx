@@ -17,6 +17,17 @@ interface ParticlesProps extends ComponentPropsWithoutRef<'div'> {
   onWarpComplete?: () => void;
 }
 
+function remapValue(
+  value: number,
+  start1: number,
+  end1: number,
+  start2: number,
+  end2: number,
+): number {
+  const remapped = ((value - start1) * (end2 - start2)) / (end1 - start1) + start2;
+  return remapped > 0 ? remapped : 0;
+}
+
 function hexToRgb(hex: string): number[] {
   hex = hex.replace('#', '');
   if (hex.length === 3) {
@@ -87,7 +98,9 @@ export default function Particles({
   const warpStartRef = useRef<number>(0);
   const warpActiveRef = useRef(false);
   const onWarpCompleteRef = useRef(onWarpComplete);
-  onWarpCompleteRef.current = onWarpComplete;
+  useEffect(() => {
+    onWarpCompleteRef.current = onWarpComplete;
+  }, [onWarpComplete]);
 
   const rgb = hexToRgb(color);
 
@@ -110,28 +123,18 @@ export default function Particles({
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  const circleParams = useCallback((): Circle => {
-    const x = Math.floor(Math.random() * canvasSize.current.w);
-    const y = Math.floor(Math.random() * canvasSize.current.h);
-    const pSize = Math.floor(Math.random() * 2) + size;
-    const alpha = 0;
-    const targetAlpha = parseFloat((Math.random() * 0.6 + 0.1).toFixed(1));
-    const dx = (Math.random() - 0.5) * 0.1;
-    const dy = (Math.random() - 0.5) * 0.1;
-    const magnetism = 0.1 + Math.random() * 4;
-    return {
-      x,
-      y,
-      translateX: 0,
-      translateY: 0,
-      size: pSize,
-      alpha,
-      targetAlpha,
-      dx,
-      dy,
-      magnetism,
-    };
-  }, [size]);
+  const circleParams = useCallback((): Circle => ({
+    x: Math.floor(Math.random() * canvasSize.current.w),
+    y: Math.floor(Math.random() * canvasSize.current.h),
+    translateX: 0,
+    translateY: 0,
+    size: Math.floor(Math.random() * 2) + size,
+    alpha: 0,
+    targetAlpha: parseFloat((Math.random() * 0.6 + 0.1).toFixed(1)),
+    dx: (Math.random() - 0.5) * 0.1,
+    dy: (Math.random() - 0.5) * 0.1,
+    magnetism: 0.1 + Math.random() * 4,
+  }), [size]);
 
   const drawCircle = useCallback(
     (circle: Circle, update = false) => {
@@ -175,30 +178,6 @@ export default function Particles({
     }
   }, [dpr, quantity, circleParams, drawCircle]);
 
-  const drawParticles = useCallback(() => {
-    clearContext();
-    for (let i = 0; i < quantity; i++) {
-      const circle = circleParams();
-      drawCircle(circle);
-    }
-  }, [clearContext, quantity, circleParams, drawCircle]);
-
-  const initCanvas = useCallback(() => {
-    resizeCanvas();
-    drawParticles();
-  }, [resizeCanvas, drawParticles]);
-
-  const remapValue = (
-    value: number,
-    start1: number,
-    end1: number,
-    start2: number,
-    end2: number,
-  ): number => {
-    const remapped = ((value - start1) * (end2 - start2)) / (end1 - start1) + start2;
-    return remapped > 0 ? remapped : 0;
-  };
-
   const animateRef = useRef<() => void>(() => {});
 
   const animate = useCallback(() => {
@@ -212,7 +191,7 @@ export default function Particles({
         circle.y + circle.translateY - circle.size,
         canvasSize.current.h - circle.y - circle.translateY - circle.size,
       ];
-      const closestEdge = edge.reduce((a, b) => Math.min(a, b));
+      const closestEdge = Math.min(...edge);
       const remapClosestEdge = parseFloat(remapValue(closestEdge, 0, 20, 0, 1).toFixed(2));
       if (remapClosestEdge > 1) {
         circle.alpha += 0.02;
@@ -272,16 +251,16 @@ export default function Particles({
     animateRef.current = animate;
   }, [animate]);
 
-  // Init canvas and handle resize
+  // Initialize canvas and handle resize
   useEffect(() => {
     if (canvasRef.current) {
       context.current = canvasRef.current.getContext('2d');
     }
-    initCanvas();
+    resizeCanvas();
 
     const handleResize = () => {
       if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
-      resizeTimeout.current = setTimeout(() => initCanvas(), 200);
+      resizeTimeout.current = setTimeout(() => resizeCanvas(), 200);
     };
 
     window.addEventListener('resize', handleResize);
@@ -290,11 +269,11 @@ export default function Particles({
       if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
       window.removeEventListener('resize', handleResize);
     };
-  }, [initCanvas]);
+  }, [resizeCanvas]);
 
   useEffect(() => {
-    initCanvas();
-  }, [refresh, initCanvas]);
+    resizeCanvas();
+  }, [refresh, resizeCanvas]);
 
   // Start warp burst when prop transitions to true
   useEffect(() => {
