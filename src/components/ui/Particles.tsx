@@ -13,6 +13,8 @@ interface ParticlesProps extends ComponentPropsWithoutRef<'div'> {
   vx?: number;
   vy?: number;
   paused?: boolean;
+  warp?: boolean;
+  onWarpComplete?: () => void;
 }
 
 function hexToRgb(hex: string): number[] {
@@ -40,6 +42,24 @@ type Circle = {
   magnetism: number;
 };
 
+const WARP_DURATION = 2500;
+const WARP_RAMP_UP = 1000;
+const WARP_HOLD_END = 1500;
+const WARP_MAX_PUSH = 6;
+
+function getWarpPush(elapsed: number): number {
+  if (elapsed < WARP_RAMP_UP) {
+    const t = elapsed / WARP_RAMP_UP;
+    return t * t * WARP_MAX_PUSH;
+  } else if (elapsed < WARP_HOLD_END) {
+    return WARP_MAX_PUSH;
+  } else if (elapsed < WARP_DURATION) {
+    const t = (elapsed - WARP_HOLD_END) / (WARP_DURATION - WARP_HOLD_END);
+    return (1 - t * t) * WARP_MAX_PUSH;
+  }
+  return 0;
+}
+
 export default function Particles({
   className = '',
   quantity = 100,
@@ -51,6 +71,8 @@ export default function Particles({
   vx = 0,
   vy = 0,
   paused = false,
+  warp = false,
+  onWarpComplete,
   ...props
 }: ParticlesProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -62,6 +84,10 @@ export default function Particles({
   const dpr = typeof window !== 'undefined' ? Math.min(window.devicePixelRatio, 2) : 1;
   const rafID = useRef<number | null>(null);
   const resizeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const warpStartRef = useRef<number>(0);
+  const warpActiveRef = useRef(false);
+  const onWarpCompleteRef = useRef(onWarpComplete);
+  onWarpCompleteRef.current = onWarpComplete;
 
   const rgb = hexToRgb(color);
 
@@ -203,6 +229,24 @@ export default function Particles({
       circle.translateY +=
         (mouse.current.y / (staticity / circle.magnetism) - circle.translateY) / ease;
 
+      // Warp: radial push from center
+      if (warpActiveRef.current) {
+        const elapsed = performance.now() - warpStartRef.current;
+        const push = getWarpPush(elapsed);
+        const cx = canvasSize.current.w / 2;
+        const cy = canvasSize.current.h / 2;
+        const dx = circle.x - cx;
+        const dy = circle.y - cy;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        circle.x += (dx / dist) * push;
+        circle.y += (dy / dist) * push;
+
+        if (elapsed >= WARP_DURATION) {
+          warpActiveRef.current = false;
+          onWarpCompleteRef.current?.();
+        }
+      }
+
       drawCircle(circle, true);
 
       if (
@@ -213,6 +257,11 @@ export default function Particles({
       ) {
         circles.current.splice(i, 1);
         const newCircle = circleParams();
+        // During warp, respawn near center so particles stream outward
+        if (warpActiveRef.current) {
+          newCircle.x = canvasSize.current.w / 2 + (Math.random() - 0.5) * 30;
+          newCircle.y = canvasSize.current.h / 2 + (Math.random() - 0.5) * 30;
+        }
         drawCircle(newCircle);
       }
     }
@@ -246,6 +295,14 @@ export default function Particles({
   useEffect(() => {
     initCanvas();
   }, [refresh, initCanvas]);
+
+  // Start warp burst when prop transitions to true
+  useEffect(() => {
+    if (warp) {
+      warpStartRef.current = performance.now();
+      warpActiveRef.current = true;
+    }
+  }, [warp]);
 
   // Start/stop animation based on paused prop
   useEffect(() => {
