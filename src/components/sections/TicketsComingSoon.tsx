@@ -5,7 +5,7 @@ import { useTheme } from '@/contexts/useTheme';
 import { useIsVisible } from '@/hooks/useIsVisible';
 import { useScrollToSection } from '@/hooks/useScrollToSection';
 import { cn } from '@/lib/utils';
-import { themeText, themeGradientLine } from '@/lib/theme-utils';
+import { themeText } from '@/lib/theme-utils';
 import type { WarpSpeedConfig } from '@/lib/warpspeed';
 import Container from '../common/Container';
 import SectionLabel from '../common/SectionLabel';
@@ -183,17 +183,6 @@ export default function TicketsComingSoon({ id }: TicketsComingSoonProps) {
               </motion.div>
             )}
           </AnimatePresence>
-
-          <motion.div
-            className={cn('mt-10 h-px w-48', themeGradientLine(theme))}
-            initial={{ opacity: 0 }}
-            animate={isInView ? { opacity: [0.4, 0.8, 0.4] } : undefined}
-            transition={{
-              duration: 3,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            }}
-          />
         </div>
       </Container>
     </section>
