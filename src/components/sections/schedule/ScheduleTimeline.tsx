@@ -84,13 +84,7 @@ export default function ScheduleTimeline({
                       {/* Desktop left column */}
                       <div className="hidden md:flex items-start justify-end">
                         {isLeft ? (
-                          <EventEntry
-                            ev={ev}
-                            isLast={isLast}
-                            isPast={isPast}
-                            theme={theme}
-                            side="left"
-                          />
+                          <EventEntry ev={ev} isLast={isLast} isPast={isPast} theme={theme} side="left" />
                         ) : (
                           <div />
                         )}
@@ -155,13 +149,7 @@ export default function ScheduleTimeline({
                       {/* Desktop right column */}
                       <div className="hidden md:flex items-start">
                         {!isLeft ? (
-                          <EventEntry
-                            ev={ev}
-                            isLast={isLast}
-                            isPast={isPast}
-                            theme={theme}
-                            side="right"
-                          />
+                          <EventEntry ev={ev} isLast={isLast} isPast={isPast} theme={theme} side="right" />
                         ) : (
                           <div />
                         )}
@@ -201,13 +189,7 @@ export default function ScheduleTimeline({
 
                       {/* Mobile card column */}
                       <div className="md:hidden pl-3">
-                        <EventEntry
-                          ev={ev}
-                          isLast={isLast}
-                          isPast={isPast}
-                          theme={theme}
-                          side="right"
-                        />
+                        <EventEntry ev={ev} isLast={isLast} isPast={isPast} theme={theme} side="right" />
                       </div>
                     </div>
                   </motion.div>

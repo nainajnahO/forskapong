@@ -84,8 +84,9 @@ export const SCHEDULE_PHASES = [
         time: '19:05-21:30',
         title: 'Spelchemat',
         description:
-          'Schemat för era matcher hittar ni här: https://longdogechallenge.com\nKommentatorn för kvällen är ingen mindre än vår kära Aria Assadi.',
+          'Skriv in din 6-teckens kod för att se era matcher.',
         bold: true,
+        type: 'login' as const,
         speakers: [{ name: 'Aria Assadi', title: 'Sportkommentator' }],
       },
     ],

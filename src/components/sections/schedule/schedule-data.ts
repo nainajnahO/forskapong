@@ -23,6 +23,7 @@ export const EVENTS: EnrichedEvent[] = SCHEDULE_PHASES.flatMap((phase) =>
     italic: 'italic' in ev ? ev.italic : undefined,
     bold: 'bold' in ev ? ev.bold : undefined,
     speakers: 'speakers' in ev ? ev.speakers : undefined,
+    type: 'type' in ev ? (ev.type as 'event' | 'login') : undefined,
     phase: phase.name,
     phaseStartMinute: parseTimeToMinutes(phase.startTime),
     startMinute: parseTimeToMinutes(ev.time),

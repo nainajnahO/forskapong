@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { themeText } from '@/lib/theme-utils';
+import LoginForm from './LoginForm';
 import type { EnrichedEvent } from './types';
 
 const URL_RE = /(https?:\/\/[^\s]+)/g;
@@ -93,6 +94,9 @@ export default function EventEntry({ ev, isLast, isPast, theme, side }: EventEnt
           ))}
         </div>
       )}
+
+      {/* Inline login form */}
+      {ev.type === 'login' && <LoginForm theme={theme} side={side} />}
     </div>
   );
 }
