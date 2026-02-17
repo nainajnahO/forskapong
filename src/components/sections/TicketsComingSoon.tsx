@@ -35,9 +35,17 @@ export default function TicketsComingSoon({ id }: TicketsComingSoonProps) {
   const isVisible = useIsVisible(sectionRef);
   const scrollToSection = useScrollToSection();
 
-  const [teamName, setTeamName] = useState('');
-  const [generatedCode, setGeneratedCode] = useState('');
-  const [phase, setPhase] = useState<Phase>('form');
+  const stored = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('forskopong_registered');
+      if (raw) return JSON.parse(raw) as { teamName: string; code: string };
+    } catch { /* ignore */ }
+    return null;
+  }, []);
+
+  const [teamName, setTeamName] = useState(stored?.teamName ?? '');
+  const [generatedCode, setGeneratedCode] = useState(stored?.code ?? '');
+  const [phase, setPhase] = useState<Phase>(stored ? 'result' : 'form');
 
   const warpConfig = useMemo<WarpSpeedConfig>(
     () => ({
@@ -63,9 +71,14 @@ export default function TicketsComingSoon({ id }: TicketsComingSoonProps) {
     (document.activeElement as HTMLElement)?.blur();
     scrollToSection('#tickets');
 
-    setGeneratedCode(generateCode());
+    const code = generateCode();
+    setGeneratedCode(code);
     setPhase('warping');
     setTimeout(() => setPhase('result'), 2500);
+
+    try {
+      localStorage.setItem('forskopong_registered', JSON.stringify({ teamName: teamName.trim(), code }));
+    } catch { /* storage full or unavailable */ }
   }
 
   return (
