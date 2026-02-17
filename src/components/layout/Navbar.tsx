@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowUpRight, Flame, Waves } from 'lucide-react';
 import logo from '../../assets/logo.webp';
 import logoHdr from '../../assets/hdr/logo.avif';
@@ -64,6 +65,9 @@ export default function Navbar() {
   const pillRef = useRef<HTMLDivElement>(null);
   const { backgroundVariant, toggleBackground } = useTheme();
   const scrollToSection = useScrollToSection();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isHome = location.pathname === '/';
 
   // Calculate responsive offset based on viewport width
   const responsiveOffset = useMemo(() => {
@@ -97,14 +101,29 @@ export default function Navbar() {
     }
   }, [isScrolled, viewportWidth]);
 
-  const handleTicketClick = useCallback(() => {
-    scrollToSection('#tickets');
-  }, [scrollToSection]);
+  const handleNavClick = useCallback(
+    (href: string) => {
+      if (isHome) {
+        scrollToSection(href);
+      } else {
+        navigate('/');
+        // Scroll to section after home page mounts
+        requestAnimationFrame(() => {
+          setTimeout(() => scrollToSection(href), 100);
+        });
+      }
+    },
+    [isHome, scrollToSection, navigate],
+  );
 
   const handleLogoClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+    if (isHome) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      navigate('/');
+    }
+  }, [isHome, navigate]);
 
   return (
     <SpringProvider dragElastic={0.15} transition={{ stiffness: 300, damping: 25 }}>
@@ -180,7 +199,7 @@ export default function Navbar() {
                 {NAV_LINKS.map((link) => (
                   <button
                     key={link.label}
-                    onClick={() => scrollToSection(link.href)}
+                    onClick={() => handleNavClick(link.href)}
                     className="px-4 py-2.5 text-white bg-white/20 rounded-full text-sm hover:bg-white/30 transition-colors backdrop-blur-sm"
                   >
                     <span className="hdr-white-fill">{link.label}</span>
@@ -210,7 +229,7 @@ export default function Navbar() {
               {/* CTA Button - mobile: only when scrolled, desktop: always visible */}
               <button
                 ref={ctaRef}
-                onClick={handleTicketClick}
+                onClick={() => handleNavClick('#tickets')}
                 className="flex items-center justify-between gap-3 pl-6 pr-2 py-2 bg-white hdr-bg-white text-black font-semibold rounded-full hover:bg-zinc-100 absolute lg:relative right-0 lg:right-auto"
                 style={{
                   transform: isScrolled
