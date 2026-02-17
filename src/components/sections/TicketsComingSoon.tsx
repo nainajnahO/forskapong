@@ -78,7 +78,9 @@ export default function TicketsComingSoon({ id }: TicketsComingSoonProps) {
       />
 
       <Container className="relative z-10">
-        <SectionLabel variant="gradient">ANMÄLAN</SectionLabel>
+        {phase === 'form' && (
+          <SectionLabel variant="gradient">ANMÄLAN</SectionLabel>
+        )}
 
         <div ref={ref} className="flex flex-col items-center text-center">
           <AnimatePresence mode="wait">
@@ -148,33 +150,33 @@ export default function TicketsComingSoon({ id }: TicketsComingSoonProps) {
               <motion.div
                 key="result"
                 className="flex flex-col items-center"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
               >
                 <motion.h2
                   className={cn('text-2xl md:text-3xl font-medium', themeText(theme, 'secondary'))}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, ease: 'easeOut' }}
+                  initial={{ opacity: 0, scale: 0.3 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 1, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
                 >
                   {teamName}
                 </motion.h2>
 
                 <motion.p
                   className="mt-8 font-display text-5xl md:text-7xl lg:text-8xl tracking-widest text-white hdr-white-fill"
-                  initial={{ opacity: 0, scale: 0.9 }}
+                  initial={{ opacity: 0, scale: 0 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }}
+                  transition={{ duration: 1.4, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
                 >
                   {generatedCode}
                 </motion.p>
 
                 <motion.p
                   className={cn('mt-6 max-w-md text-lg md:text-xl', themeText(theme, 'secondary'))}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.4, ease: 'easeOut' }}
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 1, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
                 >
                   Spara koden — ni behöver den för att logga in
                 </motion.p>
