@@ -7,7 +7,6 @@ import {
   progressToMinute,
   formatMinutesToClock,
 } from './schedule-data';
-
 export function useScheduleScroll(
   sectionRef: React.RefObject<HTMLDivElement | null>,
   headerRef: React.RefObject<HTMLDivElement | null>,

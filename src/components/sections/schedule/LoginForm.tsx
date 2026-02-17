@@ -1,8 +1,7 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
-import { scheduleScrollLock } from './schedule-scroll-lock';
 
 const TOTAL_LENGTH = 6;
 const LETTER_COUNT = 3;
@@ -25,25 +24,6 @@ export default function LoginForm({ theme, side }: LoginFormProps) {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const formRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-
-  const handleInputFocus = useCallback(() => {
-    scheduleScrollLock.current = true;
-  }, []);
-
-  const handleInputBlur = useCallback(() => {
-    requestAnimationFrame(() => {
-      const active = document.activeElement;
-      if (active instanceof HTMLInputElement && formRef.current?.contains(active)) return;
-      scheduleScrollLock.current = false;
-    });
-  }, []);
-
-  // Ensure lock is released if component unmounts while focused
-  useEffect(() => {
-    return () => {
-      scheduleScrollLock.current = false;
-    };
-  }, []);
 
   const handleChange = useCallback(
     (index: number, rawValue: string) => {
@@ -186,8 +166,8 @@ export default function LoginForm({ theme, side }: LoginFormProps) {
               onChange={(e) => handleChange(i, e.target.value)}
               onKeyDown={(e) => handleKeyDown(i, e)}
               onPaste={i === 0 ? handlePaste : undefined}
-              onFocus={() => { setFocusedIndex(i); handleInputFocus(); }}
-              onBlur={() => { setFocusedIndex(-1); handleInputBlur(); }}
+              onFocus={() => setFocusedIndex(i)}
+              onBlur={() => setFocusedIndex(-1)}
               aria-label={`Tecken ${i + 1} — ${i < LETTER_COUNT ? 'bokstav' : 'siffra'}`}
               className={cn(
                 'w-9 h-11 sm:w-10 sm:h-12 text-center text-lg sm:text-xl font-mono font-bold rounded-lg border-2 outline-none transition-all duration-300',
