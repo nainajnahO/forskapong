@@ -8,7 +8,6 @@ import {
   generateKnockoutBracket,
   advanceKnockoutRound,
   calculateRankings,
-  type TournamentTeam,
   type MatchResult,
   type TeamStanding,
   type KnockoutBracket as KnockoutBracketType,
@@ -20,29 +19,8 @@ import MatchResultEditor from '../components/MatchResultEditor';
 import TournamentMapView from '../components/TournamentMapView';
 import TournamentFlowCard from '../components/TournamentFlowCard';
 import DangerZone from '../components/DangerZone';
+import { dbMatchToResult, teamsToEngine } from '../lib/match-utils';
 import type { AdminTab } from '@/contexts/AdminTabContextDef';
-
-/* ─── Helpers ─────────────────────────────────────────────────── */
-
-function dbMatchToResult(m: Match): MatchResult | null {
-  if (!m.winner_id || !m.loser_id) return null;
-  return {
-    team1Id: m.team1_id,
-    team2Id: m.team2_id,
-    winnerId: m.winner_id,
-    loserId: m.loser_id,
-    scoreTeam1: m.score_team1 ?? 0,
-    scoreTeam2: m.score_team2 ?? 0,
-  };
-}
-
-function teamsToEngine(teams: Team[], results: MatchResult[]): TournamentTeam[] {
-  return teams.map((t) => {
-    const wins = results.filter((r) => r.winnerId === t.id).length;
-    const losses = results.filter((r) => r.loserId === t.id).length;
-    return { id: t.id, name: t.name, wins, losses };
-  });
-}
 
 /* ─── Component ───────────────────────────────────────────────── */
 
@@ -349,6 +327,16 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   }
 
   const championName = champion ? teamNameMap.get(champion) ?? null : null;
+  const disputed = matches.filter((m) => m.confirmed_by === 'disputed' && !m.confirmed);
+
+  function handleMatchSaved(): void {
+    setEditingMatchId(null);
+    loadData();
+  }
+
+  function handleMatchCancelled(): void {
+    setEditingMatchId(null);
+  }
 
   return (
     <div className="space-y-6">
@@ -417,53 +405,41 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       />
 
       {/* Disputed matches */}
-      {(() => {
-        const disputed = matches.filter(
-          (m) => m.confirmed_by === 'disputed' && !m.confirmed,
-        );
-        if (disputed.length === 0) return null;
-        return (
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium text-amber-400">
-              Disputerade matcher ({disputed.length})
-            </h3>
-            <div className="space-y-2">
-              {disputed.map((m) => (
-                <div key={m.id}>
-                  {editingMatchId === m.id ? (
-                    <MatchResultEditor
-                      match={m}
-                      team1Name={teamNameMap.get(m.team1_id) ?? m.team1_id}
-                      team2Name={teamNameMap.get(m.team2_id) ?? m.team2_id}
-                      onSaved={() => {
-                        setEditingMatchId(null);
-                        loadData();
-                      }}
-                      onCancel={() => setEditingMatchId(null)}
-                    />
-                  ) : (
-                    <button
-                      onClick={() => setEditingMatchId(m.id)}
-                      className={cn(
-                        'w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all',
-                        'bg-amber-500/[0.06] border-amber-500/20 hover:bg-amber-500/[0.1]',
-                      )}
-                    >
-                      <span className="text-sm text-white">
-                        {teamNameMap.get(m.team1_id) ?? '?'} vs{' '}
-                        {teamNameMap.get(m.team2_id) ?? '?'}
-                      </span>
-                      <span className="text-xs text-amber-400">
-                        R{m.round} · {m.score_team1}–{m.score_team2} · Klicka för att avgöra
-                      </span>
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
+      {disputed.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium text-amber-400">
+            Disputerade matcher ({disputed.length})
+          </h3>
+          <div className="space-y-2">
+            {disputed.map((m) => (
+              <div key={m.id}>
+                {editingMatchId === m.id ? (
+                  <MatchResultEditor
+                    match={m}
+                    team1Name={teamNameMap.get(m.team1_id) ?? m.team1_id}
+                    team2Name={teamNameMap.get(m.team2_id) ?? m.team2_id}
+                    onSaved={handleMatchSaved}
+                    onCancel={handleMatchCancelled}
+                  />
+                ) : (
+                  <button
+                    onClick={() => setEditingMatchId(m.id)}
+                    className="w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all bg-amber-500/[0.06] border-amber-500/20 hover:bg-amber-500/[0.1]"
+                  >
+                    <span className="text-sm text-white">
+                      {teamNameMap.get(m.team1_id) ?? '?'} vs{' '}
+                      {teamNameMap.get(m.team2_id) ?? '?'}
+                    </span>
+                    <span className="text-xs text-amber-400">
+                      R{m.round} · {m.score_team1}–{m.score_team2} · Klicka för att avgöra
+                    </span>
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
-        );
-      })()}
+        </div>
+      )}
 
       {/* View content */}
       {view === 'map' ? (
@@ -489,11 +465,8 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
                 match={m}
                 team1Name={teamNameMap.get(m.team1_id) ?? m.team1_id}
                 team2Name={teamNameMap.get(m.team2_id) ?? m.team2_id}
-                onSaved={() => {
-                  setEditingMatchId(null);
-                  loadData();
-                }}
-                onCancel={() => setEditingMatchId(null)}
+                onSaved={handleMatchSaved}
+                onCancel={handleMatchCancelled}
               />
             );
           })()}
@@ -538,11 +511,8 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
                                 match={m}
                                 team1Name={teamNameMap.get(m.team1_id) ?? m.team1_id}
                                 team2Name={teamNameMap.get(m.team2_id) ?? m.team2_id}
-                                onSaved={() => {
-                                  setEditingMatchId(null);
-                                  loadData();
-                                }}
-                                onCancel={() => setEditingMatchId(null)}
+                                onSaved={handleMatchSaved}
+                                onCancel={handleMatchCancelled}
                               />
                             </div>
                           ) : (
@@ -622,11 +592,8 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
                           match={m}
                           team1Name={teamNameMap.get(m.team1_id) ?? m.team1_id}
                           team2Name={teamNameMap.get(m.team2_id) ?? m.team2_id}
-                          onSaved={() => {
-                            setEditingMatchId(null);
-                            loadData();
-                          }}
-                          onCancel={() => setEditingMatchId(null)}
+                          onSaved={handleMatchSaved}
+                          onCancel={handleMatchCancelled}
                         />
                       ) : null,
                     )}
@@ -634,8 +601,6 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
                 ))}
             </div>
           )}
-
-
         </>
       )}
 

@@ -55,57 +55,57 @@ export default function SwissRoundCard({
       {pairings.map((p, i) => {
         const result = getResult(p);
         const revealed = i < showCount && result;
-
-        const Wrapper = animated ? motion.div : 'div';
-        const animProps = animated
-          ? {
-              initial: { opacity: 0, x: -12 },
-              animate: revealed ? { opacity: 1, x: 0 } : { opacity: 0.4, x: 0 },
-              transition: { duration: 0.3 },
-            }
-          : {};
-
         const t1Won = revealed && result!.winnerId === p.team1Id;
         const t2Won = revealed && result!.winnerId === p.team2Id;
 
-        const rowContent = (
+        function teamColor(won: boolean | undefined): string {
+          if (won) return 'text-emerald-400 font-medium';
+          if (revealed) return 'text-zinc-500';
+          return 'text-white';
+        }
+
+        const rowClass = cn(
+          'grid grid-cols-[1fr_4.5rem_1fr] gap-2 px-4 py-2 border-b border-white/[0.04] last:border-0 text-sm',
+          onMatchClick && 'cursor-pointer hover:bg-white/[0.03] transition-colors',
+        );
+
+        const clickProps = onMatchClick
+          ? { onClick: () => onMatchClick(p.team1Id, p.team2Id), role: 'button' as const }
+          : {};
+
+        const children = (
           <>
-            <span
-              className={cn(
-                'truncate',
-                t1Won ? 'text-emerald-400 font-medium' : revealed ? 'text-zinc-500' : 'text-white',
-              )}
-            >
+            <span className={cn('truncate', teamColor(t1Won))}>
               {teamNameMap.get(p.team1Id) ?? p.team1Id}
             </span>
             <span className="text-center font-mono text-zinc-400">
-              {revealed
-                ? `${result!.scoreTeam1}–${result!.scoreTeam2}`
-                : '–'}
+              {revealed ? `${result!.scoreTeam1}–${result!.scoreTeam2}` : '–'}
             </span>
-            <span
-              className={cn(
-                'truncate text-right',
-                t2Won ? 'text-emerald-400 font-medium' : revealed ? 'text-zinc-500' : 'text-white',
-              )}
-            >
+            <span className={cn('truncate text-right', teamColor(t2Won))}>
               {teamNameMap.get(p.team2Id) ?? p.team2Id}
             </span>
           </>
         );
 
+        if (animated) {
+          return (
+            <motion.div
+              key={`${p.team1Id}-${p.team2Id}`}
+              initial={{ opacity: 0, x: -12 }}
+              animate={revealed ? { opacity: 1, x: 0 } : { opacity: 0.4, x: 0 }}
+              transition={{ duration: 0.3 }}
+              className={rowClass}
+              {...clickProps}
+            >
+              {children}
+            </motion.div>
+          );
+        }
+
         return (
-          <Wrapper
-            key={`${p.team1Id}-${p.team2Id}`}
-            {...animProps}
-            className={cn(
-              'grid grid-cols-[1fr_4.5rem_1fr] gap-2 px-4 py-2 border-b border-white/[0.04] last:border-0 text-sm',
-              onMatchClick && 'cursor-pointer hover:bg-white/[0.03] transition-colors',
-            )}
-            {...(onMatchClick ? { onClick: () => onMatchClick(p.team1Id, p.team2Id), role: 'button' } : {})}
-          >
-            {rowContent}
-          </Wrapper>
+          <div key={`${p.team1Id}-${p.team2Id}`} className={rowClass} {...clickProps}>
+            {children}
+          </div>
         );
       })}
     </div>

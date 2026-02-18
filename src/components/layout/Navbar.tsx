@@ -268,14 +268,13 @@ export default function Navbar() {
                     ? `translateX(calc(-50vw + 50% + ${responsiveOffset}rem)) scale(1)`
                     : 'translateX(0) scale(1)',
                   willChange: 'transform, opacity',
-                  opacity: viewportWidth >= 1024 ? 1 : isScrolled ? 1 : 0,
-                  pointerEvents: viewportWidth >= 1024 ? 'auto' : isScrolled ? 'auto' : 'none',
-                  transition:
-                    viewportWidth >= 1024
-                      ? 'all 0.7s ease-in-out'
-                      : isScrolled
-                        ? 'opacity 0.3s ease-in-out 0.2s, transform 0.7s ease-in-out'
-                        : 'opacity 0.4s ease-in-out, transform 0s 0.4s',
+                  opacity: viewportWidth >= 1024 || isScrolled ? 1 : 0,
+                  pointerEvents: viewportWidth >= 1024 || isScrolled ? 'auto' : 'none',
+                  transition: viewportWidth >= 1024
+                    ? 'all 0.7s ease-in-out'
+                    : isScrolled
+                      ? 'opacity 0.3s ease-in-out 0.2s, transform 0.7s ease-in-out'
+                      : 'opacity 0.4s ease-in-out, transform 0s 0.4s',
                 }}
               >
                 {isLoggedIn ? (

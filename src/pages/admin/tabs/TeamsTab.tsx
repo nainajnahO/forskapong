@@ -3,26 +3,10 @@ import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import type { Team, Match } from '@/lib/database.types';
-import {
-  calculateRankings,
-  type TournamentTeam,
-  type MatchResult,
-  type TeamStanding,
-} from '@/lib/tournament-engine';
+import { calculateRankings, type MatchResult } from '@/lib/tournament-engine';
+import { dbMatchToResult, teamsToEngine } from '../lib/match-utils';
 import TeamFormModal from '../components/TeamFormModal';
 import DeleteConfirmModal from '../components/DeleteConfirmModal';
-
-function dbMatchToResult(m: Match): MatchResult | null {
-  if (!m.winner_id || !m.loser_id) return null;
-  return {
-    team1Id: m.team1_id,
-    team2Id: m.team2_id,
-    winnerId: m.winner_id,
-    loserId: m.loser_id,
-    scoreTeam1: m.score_team1 ?? 0,
-    scoreTeam2: m.score_team2 ?? 0,
-  };
-}
 
 export default function TeamsTab() {
   const [teams, setTeams] = useState<Team[]>([]);
@@ -58,12 +42,7 @@ export default function TeamsTab() {
   // Compute standings for sorting & stats
   const standings = useMemo(() => {
     const results = matches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
-    const engineTeams: TournamentTeam[] = teams.map((t) => {
-      const wins = results.filter((r) => r.winnerId === t.id).length;
-      const losses = results.filter((r) => r.loserId === t.id).length;
-      return { id: t.id, name: t.name, wins, losses };
-    });
-    return calculateRankings(engineTeams, results);
+    return calculateRankings(teamsToEngine(teams, results), results);
   }, [teams, matches]);
 
   // Map team id → standing for quick lookup

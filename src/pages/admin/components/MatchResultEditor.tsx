@@ -29,13 +29,12 @@ export default function MatchResultEditor({
     : score1 > score2
       ? match.team1_id
       : match.team2_id;
-  const loserId = winnerId === match.team1_id
-    ? match.team2_id
-    : winnerId === match.team2_id
-      ? match.team1_id
-      : null;
+  const loserId =
+    winnerId === match.team1_id ? match.team2_id :
+    winnerId === match.team2_id ? match.team1_id :
+    null;
 
-  const canSave = !!winnerId && !!loserId;
+  const canSave = winnerId !== null && loserId !== null;
 
   async function handleSave() {
     if (!winnerId || !loserId) return;

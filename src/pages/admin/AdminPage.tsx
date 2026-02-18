@@ -22,17 +22,12 @@ export default function AdminPage() {
   }
 
   return (
-    <section className="min-h-screen pt-24 pb-16">
+    <section className="min-h-screen pt-32 pb-16">
       <Container>
-        <div className="space-y-8">
-          {/* Content */}
-          <div>
-            {activeTab === 'live' && <LiveTab onTabChange={setActiveTab} />}
-            {activeTab === 'teams' && <TeamsTab />}
-            {activeTab === 'tournament' && <TournamentTab onTabChange={setActiveTab} />}
-            {activeTab === 'simulator' && <SimulatorTab />}
-          </div>
-        </div>
+        {activeTab === 'live' && <LiveTab onTabChange={setActiveTab} />}
+        {activeTab === 'teams' && <TeamsTab />}
+        {activeTab === 'tournament' && <TournamentTab onTabChange={setActiveTab} />}
+        {activeTab === 'simulator' && <SimulatorTab />}
       </Container>
     </section>
   );

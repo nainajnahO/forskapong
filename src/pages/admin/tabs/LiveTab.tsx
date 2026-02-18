@@ -6,6 +6,84 @@ import type { Team, Match, Tournament } from '@/lib/database.types';
 import MatchResultEditor from '../components/MatchResultEditor';
 import type { AdminTab } from '@/contexts/AdminTabContextDef';
 
+/* ─── Match Row ──────────────────────────────────────────────── */
+
+interface MatchRowProps {
+  match: Match;
+  teamNameMap: Map<string, string>;
+  editingMatchId: string | null;
+  onEdit: (id: string | null) => void;
+  onSaved: () => void;
+}
+
+function matchRowStyle(match: Match): string {
+  if (match.confirmed_by === 'disputed' && !match.confirmed) {
+    return 'bg-amber-500/[0.06] border-amber-500/20 hover:bg-amber-500/[0.1]';
+  }
+  if (match.confirmed) {
+    return 'bg-emerald-500/[0.04] border-emerald-500/15 hover:bg-emerald-500/[0.08]';
+  }
+  return 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04]';
+}
+
+function matchStatusBadge(match: Match): React.ReactNode {
+  const isDisputed = match.confirmed_by === 'disputed' && !match.confirmed;
+  const badgeBase = 'text-xs font-medium px-2 py-0.5 rounded-full';
+
+  if (isDisputed) {
+    return <span className={cn(badgeBase, 'text-amber-400 bg-amber-500/10')}>Disputerad</span>;
+  }
+  if (match.confirmed) {
+    return <span className={cn(badgeBase, 'text-emerald-400 bg-emerald-500/10')}>Klar</span>;
+  }
+  if (match.winner_id) {
+    return <span className={cn(badgeBase, 'text-zinc-400 bg-white/[0.06]')}>Obekräftad</span>;
+  }
+  return null;
+}
+
+function MatchRow({ match, teamNameMap, editingMatchId, onEdit, onSaved }: MatchRowProps) {
+  const t1 = teamNameMap.get(match.team1_id) ?? '?';
+  const t2 = teamNameMap.get(match.team2_id) ?? '?';
+
+  if (editingMatchId === match.id) {
+    return (
+      <MatchResultEditor
+        match={match}
+        team1Name={t1}
+        team2Name={t2}
+        onSaved={() => { onEdit(null); onSaved(); }}
+        onCancel={() => onEdit(null)}
+      />
+    );
+  }
+
+  return (
+    <button
+      onClick={() => onEdit(match.id)}
+      className={cn(
+        'w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all',
+        matchRowStyle(match),
+      )}
+    >
+      <div className="flex items-center gap-3">
+        <span className="text-xs text-zinc-600 font-mono">R{match.round}</span>
+        <span className="text-sm text-white">{t1} vs {t2}</span>
+      </div>
+      <div className="flex items-center gap-3">
+        {match.winner_id && (
+          <span className="text-xs font-mono text-zinc-400">
+            {match.score_team1}–{match.score_team2}
+          </span>
+        )}
+        {matchStatusBadge(match)}
+      </div>
+    </button>
+  );
+}
+
+/* ─── Live Tab ───────────────────────────────────────────────── */
+
 interface LiveTabProps {
   onTabChange: (tab: AdminTab) => void;
 }
@@ -59,70 +137,6 @@ export default function LiveTab({ onTabChange }: LiveTabProps) {
   const confirmedCurrent = currentRoundMatches.filter((m) => m.confirmed).length;
   const totalCurrent = currentRoundMatches.length;
   const progressPct = totalCurrent > 0 ? (confirmedCurrent / totalCurrent) * 100 : 0;
-
-  function MatchRow({ match }: { match: Match }) {
-    const t1 = teamNameMap.get(match.team1_id) ?? '?';
-    const t2 = teamNameMap.get(match.team2_id) ?? '?';
-    const isDisputed = match.confirmed_by === 'disputed' && !match.confirmed;
-    const isConfirmed = match.confirmed;
-    const hasResult = !!match.winner_id;
-
-    if (editingMatchId === match.id) {
-      return (
-        <MatchResultEditor
-          match={match}
-          team1Name={t1}
-          team2Name={t2}
-          onSaved={() => {
-            setEditingMatchId(null);
-            loadData();
-          }}
-          onCancel={() => setEditingMatchId(null)}
-        />
-      );
-    }
-
-    return (
-      <button
-        onClick={() => setEditingMatchId(match.id)}
-        className={cn(
-          'w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all',
-          isDisputed
-            ? 'bg-amber-500/[0.06] border-amber-500/20 hover:bg-amber-500/[0.1]'
-            : isConfirmed
-              ? 'bg-emerald-500/[0.04] border-emerald-500/15 hover:bg-emerald-500/[0.08]'
-              : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04]',
-        )}
-      >
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-zinc-600 font-mono">R{match.round}</span>
-          <span className="text-sm text-white">{t1} vs {t2}</span>
-        </div>
-        <div className="flex items-center gap-3">
-          {hasResult && (
-            <span className="text-xs font-mono text-zinc-400">
-              {match.score_team1}–{match.score_team2}
-            </span>
-          )}
-          {isDisputed && (
-            <span className="text-xs font-medium text-amber-400 px-2 py-0.5 rounded-full bg-amber-500/10">
-              Disputerad
-            </span>
-          )}
-          {isConfirmed && (
-            <span className="text-xs font-medium text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-500/10">
-              Klar
-            </span>
-          )}
-          {hasResult && !isConfirmed && !isDisputed && (
-            <span className="text-xs font-medium text-zinc-400 px-2 py-0.5 rounded-full bg-white/[0.06]">
-              Obekräftad
-            </span>
-          )}
-        </div>
-      </button>
-    );
-  }
 
   if (loading) {
     return (
@@ -197,7 +211,9 @@ export default function LiveTab({ onTabChange }: LiveTabProps) {
           <h3 className="text-sm font-medium text-amber-400">
             Disputerade ({disputed.length})
           </h3>
-          {disputed.map((m) => <MatchRow key={m.id} match={m} />)}
+          {disputed.map((m) => (
+            <MatchRow key={m.id} match={m} teamNameMap={teamNameMap} editingMatchId={editingMatchId} onEdit={setEditingMatchId} onSaved={loadData} />
+          ))}
         </div>
       )}
 
@@ -207,7 +223,9 @@ export default function LiveTab({ onTabChange }: LiveTabProps) {
           <h3 className="text-sm font-medium text-zinc-400">
             Obekräftade ({unconfirmed.length})
           </h3>
-          {unconfirmed.map((m) => <MatchRow key={m.id} match={m} />)}
+          {unconfirmed.map((m) => (
+            <MatchRow key={m.id} match={m} teamNameMap={teamNameMap} editingMatchId={editingMatchId} onEdit={setEditingMatchId} onSaved={loadData} />
+          ))}
         </div>
       )}
 
@@ -221,7 +239,9 @@ export default function LiveTab({ onTabChange }: LiveTabProps) {
             <span className={cn('transition-transform', completedOpen && 'rotate-90')}>&#9654;</span>
             Klara ({completed.length})
           </button>
-          {completedOpen && completed.map((m) => <MatchRow key={m.id} match={m} />)}
+          {completedOpen && completed.map((m) => (
+            <MatchRow key={m.id} match={m} teamNameMap={teamNameMap} editingMatchId={editingMatchId} onEdit={setEditingMatchId} onSaved={loadData} />
+          ))}
         </div>
       )}
 
