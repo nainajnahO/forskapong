@@ -184,19 +184,22 @@ export default function Dashboard() {
     loadData();
   }, [loadData]);
 
-  async function savePlayerNames() {
+  async function savePlayerNames(): Promise<void> {
     if (!teamId || savingNamesRef.current) return;
+
+    const trimmed = { player1: player1.trim() || null, player2: player2.trim() || null };
     savingNamesRef.current = true;
-    const { error } = await supabase
-      .from('teams')
-      .update({ player1: player1.trim() || null, player2: player2.trim() || null })
-      .eq('id', teamId);
-    if (!error) {
-      setTeam((prev) =>
-        prev ? { ...prev, player1: player1.trim() || null, player2: player2.trim() || null } : prev,
-      );
+    try {
+      const { error: saveError } = await supabase
+        .from('teams')
+        .update(trimmed)
+        .eq('id', teamId);
+      if (!saveError) {
+        setTeam((prev) => (prev ? { ...prev, ...trimmed } : prev));
+      }
+    } finally {
+      savingNamesRef.current = false;
     }
-    savingNamesRef.current = false;
   }
 
   // Real-time subscription — re-fetch when matches change
@@ -235,6 +238,11 @@ export default function Dashboard() {
 
   const cardBg = theme === 'dark' ? 'bg-white/[0.03]' : 'bg-zinc-50';
   const cardBorder = theme === 'dark' ? 'border-white/[0.06]' : 'border-zinc-200';
+  const nameInputClass = cn(
+    'w-28 rounded-lg px-2.5 py-1 text-sm bg-transparent border outline-none transition-colors',
+    'placeholder:opacity-40 focus:border-brand-500',
+    theme === 'dark' ? 'border-zinc-700 text-zinc-100' : 'border-zinc-300 text-zinc-900',
+  );
 
   /* ── Loading state ──────────────────────────────── */
   if (loading) {
@@ -381,11 +389,7 @@ export default function Dashboard() {
                   onBlur={savePlayerNames}
                   onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
                   placeholder="Spelare 1"
-                  className={cn(
-                    'w-28 rounded-lg px-2.5 py-1 text-sm bg-transparent border outline-none transition-colors',
-                    'placeholder:opacity-40 focus:border-brand-500',
-                    theme === 'dark' ? 'border-zinc-700 text-zinc-100' : 'border-zinc-300 text-zinc-900',
-                  )}
+                  className={nameInputClass}
                 />
                 <span className={cn('text-sm', themeText(theme, 'secondary'))}>&</span>
                 <input
@@ -395,11 +399,7 @@ export default function Dashboard() {
                   onBlur={savePlayerNames}
                   onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
                   placeholder="Spelare 2"
-                  className={cn(
-                    'w-28 rounded-lg px-2.5 py-1 text-sm bg-transparent border outline-none transition-colors',
-                    'placeholder:opacity-40 focus:border-brand-500',
-                    theme === 'dark' ? 'border-zinc-700 text-zinc-100' : 'border-zinc-300 text-zinc-900',
-                  )}
+                  className={nameInputClass}
                 />
               </div>
             </div>
