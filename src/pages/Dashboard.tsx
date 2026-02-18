@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { useTheme } from '@/contexts/useTheme';
@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import type { Team, Match } from '@/lib/database.types';
 import Container from '../components/common/Container';
 import SectionLabel from '../components/common/SectionLabel';
+import Bracket from '../components/Bracket';
 
 /* ─── Types ───────────────────────────────────────────────────── */
 
@@ -24,10 +25,12 @@ interface RoundDisplay {
   opponent: string | null;
   opponentId: string | null;
   result: 'win' | 'loss' | null;
-  scoreDisplay: string | null; // e.g. "3–1" formatted for display
+  scoreDisplay: string | null; // e.g. "6–3" formatted for display
   confirmed: boolean;
   needsConfirmation: boolean;
   canReport: boolean;
+  isPlayoff: boolean;
+  bracketStage: string | null;
 }
 
 /* ─── Data fetching ───────────────────────────────────────────── */
@@ -105,6 +108,8 @@ function matchToRound(match: MatchWithTeams, teamId: string): RoundDisplay {
     confirmed: match.confirmed,
     needsConfirmation,
     canReport,
+    isPlayoff: match.is_playoff,
+    bracketStage: match.bracket_stage,
   };
 }
 
@@ -150,11 +155,10 @@ export default function Dashboard() {
 
   const [team, setTeam] = useState<Team | null>(null);
   const [rounds, setRounds] = useState<RoundDisplay[]>([]);
+  const [allTeams, setAllTeams] = useState<Team[]>([]);
+  const [allMatches, setAllMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [player1, setPlayer1] = useState('');
-  const [player2, setPlayer2] = useState('');
-  const savingNamesRef = useRef(false);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -167,11 +171,16 @@ export default function Dashboard() {
   const loadData = useCallback(async () => {
     if (!teamId) return;
     try {
-      const [teamData, matchData] = await Promise.all([fetchTeam(teamId), fetchMatches(teamId)]);
+      const [teamData, matchData, teamsRes, matchesRes] = await Promise.all([
+        fetchTeam(teamId),
+        fetchMatches(teamId),
+        supabase.from('teams').select('*'),
+        supabase.from('matches').select('*').order('round'),
+      ]);
       setTeam(teamData);
-      setPlayer1(teamData.player1 ?? '');
-      setPlayer2(teamData.player2 ?? '');
       setRounds(matchData.map((m) => matchToRound(m, teamId)));
+      setAllTeams(teamsRes.data ?? []);
+      setAllMatches(matchesRes.data ?? []);
       setError('');
     } catch {
       setError('Kunde inte ladda data. Försök igen.');
@@ -183,24 +192,6 @@ export default function Dashboard() {
   useEffect(() => {
     loadData();
   }, [loadData]);
-
-  async function savePlayerNames(): Promise<void> {
-    if (!teamId || savingNamesRef.current) return;
-
-    const trimmed = { player1: player1.trim() || null, player2: player2.trim() || null };
-    savingNamesRef.current = true;
-    try {
-      const { error: saveError } = await supabase
-        .from('teams')
-        .update(trimmed)
-        .eq('id', teamId);
-      if (!saveError) {
-        setTeam((prev) => (prev ? { ...prev, ...trimmed } : prev));
-      }
-    } finally {
-      savingNamesRef.current = false;
-    }
-  }
 
   // Real-time subscription — re-fetch when matches change
   useEffect(() => {
@@ -216,7 +207,7 @@ export default function Dashboard() {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'teams', filter: `id=eq.${teamId}` },
         () => {
-          if (!savingNamesRef.current) loadData();
+          loadData();
         },
       )
       .subscribe();
@@ -238,11 +229,6 @@ export default function Dashboard() {
 
   const cardBg = theme === 'dark' ? 'bg-white/[0.03]' : 'bg-zinc-50';
   const cardBorder = theme === 'dark' ? 'border-white/[0.06]' : 'border-zinc-200';
-  const nameInputClass = cn(
-    'w-28 bg-transparent border-0 border-b rounded-none px-0 py-0.5 text-sm outline-none transition-colors',
-    'placeholder:opacity-40 focus:border-brand-500',
-    theme === 'dark' ? 'border-zinc-600 text-zinc-100' : 'border-zinc-300 text-zinc-900',
-  );
 
   /* ── Loading state ──────────────────────────────── */
   if (loading) {
@@ -381,27 +367,9 @@ export default function Dashboard() {
                   {code}
                 </span>
               </div>
-              <div className="mt-2 flex items-center gap-2 flex-wrap">
-                <input
-                  type="text"
-                  value={player1}
-                  onChange={(e) => setPlayer1(e.target.value)}
-                  onBlur={savePlayerNames}
-                  onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                  placeholder="Spelare 1"
-                  className={nameInputClass}
-                />
-                <span className={cn('text-sm', themeText(theme, 'secondary'))}>&</span>
-                <input
-                  type="text"
-                  value={player2}
-                  onChange={(e) => setPlayer2(e.target.value)}
-                  onBlur={savePlayerNames}
-                  onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                  placeholder="Spelare 2"
-                  className={nameInputClass}
-                />
-              </div>
+              <p className={cn('mt-2 text-sm', themeText(theme, 'secondary'))}>
+                {team.player1} & {team.player2}
+              </p>
             </div>
             <div className="flex items-center gap-2 self-start">
               <button
@@ -579,7 +547,15 @@ export default function Dashboard() {
                                   : 'bg-zinc-200 text-zinc-500',
                             )}
                           >
-                            R{round.round}
+                            {round.isPlayoff
+                              ? round.bracketStage === 'quarterfinal'
+                                ? 'KF'
+                                : round.bracketStage === 'semifinal'
+                                  ? 'SF'
+                                  : round.bracketStage === 'final'
+                                    ? '🏆'
+                                    : 'B'
+                              : `R${round.round}`}
                           </span>
                           <p className="sm:hidden text-sm font-medium text-foreground">
                             {isTbd ? (
@@ -707,6 +683,29 @@ export default function Dashboard() {
               </div>
             )}
           </motion.div>
+
+          {/* ── Playoff Bracket ─────────────────────────── */}
+          {allMatches.some((m) => m.is_playoff) && (
+            <motion.div
+              className="mt-10"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.5 }}
+            >
+              <h2 className={cn('text-sm font-semibold mb-4', themeText(theme, 'secondary'))}>
+                Slutspel
+              </h2>
+              <div className={cn('rounded-2xl p-5 border', cardBg, cardBorder)}>
+                <Bracket
+                  matches={allMatches}
+                  teams={allTeams}
+                  currentTeamId={teamId}
+                  onMatchClick={(matchId) => navigate(`/play/match/${matchId}`)}
+                  compact
+                />
+              </div>
+            </motion.div>
+          )}
 
           {/* ── Footer ───────────────────────────────────── */}
           <motion.div

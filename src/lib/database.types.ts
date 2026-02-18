@@ -8,8 +8,8 @@ export interface Database {
           id: string;
           code: string;
           name: string;
-          player1: string | null;
-          player2: string | null;
+          player1: string;
+          player2: string;
           wins: number;
           losses: number;
           created_at: string;
@@ -18,8 +18,8 @@ export interface Database {
           id?: string;
           code: string;
           name: string;
-          player1?: string | null;
-          player2?: string | null;
+          player1: string;
+          player2: string;
           wins?: number;
           losses?: number;
           created_at?: string;
@@ -28,8 +28,8 @@ export interface Database {
           id?: string;
           code?: string;
           name?: string;
-          player1?: string | null;
-          player2?: string | null;
+          player1?: string;
+          player2?: string;
           wins?: number;
           losses?: number;
           created_at?: string;
@@ -51,6 +51,9 @@ export interface Database {
           reported_by: string | null;
           confirmed: boolean;
           confirmed_by: string | null;
+          is_playoff: boolean;
+          bracket_stage: string | null;
+          bracket_position: number | null;
           created_at: string;
         };
         Insert: {
@@ -67,6 +70,9 @@ export interface Database {
           reported_by?: string | null;
           confirmed?: boolean;
           confirmed_by?: string | null;
+          is_playoff?: boolean;
+          bracket_stage?: string | null;
+          bracket_position?: number | null;
           created_at?: string;
         };
         Update: {
@@ -83,6 +89,9 @@ export interface Database {
           reported_by?: string | null;
           confirmed?: boolean;
           confirmed_by?: string | null;
+          is_playoff?: boolean;
+          bracket_stage?: string | null;
+          bracket_position?: number | null;
           created_at?: string;
         };
         Relationships: [
@@ -128,19 +137,28 @@ export interface Database {
           id: number;
           current_round: number;
           total_rounds: number;
+          num_tables: number;
           status: string;
+          admin_code: string;
+          playoff_started: boolean;
         };
         Insert: {
           id?: number;
           current_round?: number;
           total_rounds?: number;
+          num_tables?: number;
           status?: string;
+          admin_code?: string;
+          playoff_started?: boolean;
         };
         Update: {
           id?: number;
           current_round?: number;
           total_rounds?: number;
+          num_tables?: number;
           status?: string;
+          admin_code?: string;
+          playoff_started?: boolean;
         };
         Relationships: [];
       };
@@ -149,10 +167,7 @@ export interface Database {
       [_ in never]: never;
     };
     Functions: {
-      register_team: {
-        Args: { team_name: string };
-        Returns: { id: string; code: string; name: string }[];
-      };
+      [_ in never]: never;
     };
     Enums: {
       [_ in never]: never;

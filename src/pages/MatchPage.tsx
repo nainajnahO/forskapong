@@ -386,7 +386,19 @@ export default function MatchPage() {
             animate={isInView ? { opacity: 1, y: 0 } : undefined}
             transition={{ duration: 0.6, ease: 'easeOut' }}
           >
-            <SectionLabel variant="gradient">RUNDA {match.round}</SectionLabel>
+            <SectionLabel variant="gradient">
+              {match.is_playoff
+                ? match.bracket_stage === 'quarterfinal'
+                  ? 'KVARTSFINAL'
+                  : match.bracket_stage === 'semifinal'
+                    ? 'SEMIFINAL'
+                    : match.bracket_stage === 'final'
+                      ? 'FINAL'
+                      : match.bracket_stage === 'third_place'
+                        ? 'BRONSMATCH'
+                        : 'SLUTSPEL'
+                : `RUNDA ${match.round}`}
+            </SectionLabel>
 
             {/* VS display */}
             <div className="flex items-center justify-center gap-4 sm:gap-8 mt-4 mb-6">
