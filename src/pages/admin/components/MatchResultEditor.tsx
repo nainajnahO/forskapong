@@ -20,10 +20,22 @@ export default function MatchResultEditor({
 }: Props) {
   const [score1, setScore1] = useState(match.score_team1 ?? 0);
   const [score2, setScore2] = useState(match.score_team2 ?? 0);
+  const [tiebreakWinner, setTiebreakWinner] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const winnerId = score1 > score2 ? match.team1_id : score2 > score1 ? match.team2_id : null;
-  const loserId = winnerId === match.team1_id ? match.team2_id : winnerId === match.team2_id ? match.team1_id : null;
+  const tied = score1 === score2;
+  const winnerId = tied
+    ? tiebreakWinner
+    : score1 > score2
+      ? match.team1_id
+      : match.team2_id;
+  const loserId = winnerId === match.team1_id
+    ? match.team2_id
+    : winnerId === match.team2_id
+      ? match.team1_id
+      : null;
+
+  const canSave = !!winnerId && !!loserId;
 
   async function handleSave() {
     if (!winnerId || !loserId) return;
@@ -59,16 +71,22 @@ export default function MatchResultEditor({
           min={0}
           max={6}
           value={score1}
-          onChange={(e) => setScore1(Number(e.target.value))}
+          onChange={(e) => {
+            setScore1(Number(e.target.value));
+            setTiebreakWinner(null);
+          }}
           className="w-12 h-8 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white text-center text-sm outline-none focus:border-brand-500"
         />
-        <span className="text-zinc-600">–</span>
+        <span className="text-zinc-600">&ndash;</span>
         <input
           type="number"
           min={0}
           max={6}
           value={score2}
-          onChange={(e) => setScore2(Number(e.target.value))}
+          onChange={(e) => {
+            setScore2(Number(e.target.value));
+            setTiebreakWinner(null);
+          }}
           className="w-12 h-8 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white text-center text-sm outline-none focus:border-brand-500"
         />
       </div>
@@ -76,6 +94,35 @@ export default function MatchResultEditor({
       <span className={cn('text-sm', winnerId === match.team2_id ? 'text-emerald-400 font-medium' : 'text-white')}>
         {team2Name}
       </span>
+
+      {/* Tied-score winner selector */}
+      {tied && (
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-zinc-500">Vinnare:</span>
+          <button
+            onClick={() => setTiebreakWinner(match.team1_id)}
+            className={cn(
+              'px-2 py-1 text-xs rounded-md border transition-all',
+              tiebreakWinner === match.team1_id
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                : 'text-zinc-400 border-white/[0.08] hover:border-white/[0.15]',
+            )}
+          >
+            {team1Name}
+          </button>
+          <button
+            onClick={() => setTiebreakWinner(match.team2_id)}
+            className={cn(
+              'px-2 py-1 text-xs rounded-md border transition-all',
+              tiebreakWinner === match.team2_id
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                : 'text-zinc-400 border-white/[0.08] hover:border-white/[0.15]',
+            )}
+          >
+            {team2Name}
+          </button>
+        </div>
+      )}
 
       <div className="flex gap-2 ml-auto">
         <button
@@ -86,14 +133,14 @@ export default function MatchResultEditor({
         </button>
         <button
           onClick={handleSave}
-          disabled={!winnerId || saving}
+          disabled={!canSave || saving}
           className={cn(
             'px-3 py-1.5 text-xs font-medium rounded-lg transition-all',
             'bg-brand-500 text-white',
             'disabled:opacity-50 disabled:pointer-events-none',
           )}
         >
-          {saving ? '…' : 'Spara'}
+          {saving ? '...' : 'Spara'}
         </button>
       </div>
     </div>
