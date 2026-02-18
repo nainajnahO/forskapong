@@ -239,9 +239,9 @@ export default function Dashboard() {
   const cardBg = theme === 'dark' ? 'bg-white/[0.03]' : 'bg-zinc-50';
   const cardBorder = theme === 'dark' ? 'border-white/[0.06]' : 'border-zinc-200';
   const nameInputClass = cn(
-    'w-28 rounded-lg px-2.5 py-1 text-sm bg-transparent border outline-none transition-colors',
+    'w-28 bg-transparent border-0 border-b rounded-none px-0 py-0.5 text-sm outline-none transition-colors',
     'placeholder:opacity-40 focus:border-brand-500',
-    theme === 'dark' ? 'border-zinc-700 text-zinc-100' : 'border-zinc-300 text-zinc-900',
+    theme === 'dark' ? 'border-zinc-600 text-zinc-100' : 'border-zinc-300 text-zinc-900',
   );
 
   /* ── Loading state ──────────────────────────────── */
