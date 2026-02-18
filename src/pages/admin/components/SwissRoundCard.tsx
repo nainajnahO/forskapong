@@ -10,6 +10,7 @@ interface Props {
   bye?: string | null;
   revealedCount?: number;
   animated?: boolean;
+  onMatchClick?: (team1Id: string, team2Id: string) => void;
 }
 
 export default function SwissRoundCard({
@@ -20,6 +21,7 @@ export default function SwissRoundCard({
   bye,
   revealedCount,
   animated = false,
+  onMatchClick,
 }: Props) {
   const showCount = revealedCount ?? results.length;
 
@@ -66,12 +68,8 @@ export default function SwissRoundCard({
         const t1Won = revealed && result!.winnerId === p.team1Id;
         const t2Won = revealed && result!.winnerId === p.team2Id;
 
-        return (
-          <Wrapper
-            key={`${p.team1Id}-${p.team2Id}`}
-            {...animProps}
-            className="grid grid-cols-[1fr_4.5rem_1fr] gap-2 px-4 py-2 border-b border-white/[0.04] last:border-0 text-sm"
-          >
+        const rowContent = (
+          <>
             <span
               className={cn(
                 'truncate',
@@ -93,6 +91,20 @@ export default function SwissRoundCard({
             >
               {teamNameMap.get(p.team2Id) ?? p.team2Id}
             </span>
+          </>
+        );
+
+        return (
+          <Wrapper
+            key={`${p.team1Id}-${p.team2Id}`}
+            {...animProps}
+            className={cn(
+              'grid grid-cols-[1fr_4.5rem_1fr] gap-2 px-4 py-2 border-b border-white/[0.04] last:border-0 text-sm',
+              onMatchClick && 'cursor-pointer hover:bg-white/[0.03] transition-colors',
+            )}
+            {...(onMatchClick ? { onClick: () => onMatchClick(p.team1Id, p.team2Id), role: 'button' } : {})}
+          >
+            {rowContent}
           </Wrapper>
         );
       })}
