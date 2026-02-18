@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 
-const PASSPHRASE = import.meta.env.VITE_ADMIN_PASSPHRASE ?? 'forskopong2026';
+const PASSPHRASE = import.meta.env.VITE_ADMIN_PASSPHRASE ?? 'ADMIN2026';
 
 interface Props {
   onAuthenticated: () => void;
