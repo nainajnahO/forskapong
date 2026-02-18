@@ -138,6 +138,66 @@ function TableIcon() {
   );
 }
 
+/* ─── Player Name Input ──────────────────────────────────────── */
+
+interface PlayerNameInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  onSave: () => void;
+  placeholder: string;
+  focused: boolean;
+  onFocus: () => void;
+  onBlur: () => void;
+  theme: 'light' | 'dark';
+}
+
+function PlayerNameInput({
+  value,
+  onChange,
+  onSave,
+  placeholder,
+  focused,
+  onFocus,
+  onBlur,
+  theme,
+}: PlayerNameInputProps): React.JSX.Element {
+  const showOverlay = !value && !focused;
+
+  return (
+    <span className="inline-grid items-center">
+      <span className="invisible text-sm col-start-1 row-start-1 whitespace-pre" aria-hidden>
+        {value || placeholder + '|'}
+      </span>
+      <input
+        type="text"
+        size={1}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={onFocus}
+        onBlur={() => { onBlur(); onSave(); }}
+        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+        placeholder={placeholder}
+        className={cn(
+          'min-w-0 bg-transparent border-none px-0 py-0 text-sm outline-none placeholder:opacity-0 col-start-1 row-start-1',
+          showOverlay && 'caret-transparent',
+          themeText(theme, 'secondary'),
+        )}
+      />
+      {showOverlay && (
+        <span
+          className={cn(
+            'pointer-events-none col-start-1 row-start-1 flex items-center text-sm opacity-40',
+            themeText(theme, 'secondary'),
+          )}
+          aria-hidden
+        >
+          {placeholder}<span className="animate-blink">|</span>
+        </span>
+      )}
+    </span>
+  );
+}
+
 /* ─── Dashboard Component ────────────────────────────────────── */
 
 export default function Dashboard() {
@@ -239,12 +299,6 @@ export default function Dashboard() {
 
   const cardBg = theme === 'dark' ? 'bg-white/[0.03]' : 'bg-zinc-50';
   const cardBorder = theme === 'dark' ? 'border-white/[0.06]' : 'border-zinc-200';
-  const nameInputClass = (hideCaret: boolean) =>
-    cn(
-      'min-w-0 bg-transparent border-none px-0 py-0 text-sm outline-none placeholder:opacity-0 col-start-1 row-start-1',
-      hideCaret && 'caret-transparent',
-      themeText(theme, 'secondary'),
-    );
 
   /* ── Loading state ──────────────────────────────── */
   if (loading) {
@@ -384,43 +438,27 @@ export default function Dashboard() {
                 </span>
               </div>
               <div className="mt-2 flex items-center gap-2 flex-wrap">
-                {[
-                  { value: player1, set: setPlayer1, placeholder: 'Spelare 1', idx: 0 },
-                  null,
-                  { value: player2, set: setPlayer2, placeholder: 'Spelare 2', idx: 1 },
-                ].map((field, i) =>
-                  field === null ? (
-                    <span key="amp" className={cn('text-sm', themeText(theme, 'secondary'))}>&</span>
-                  ) : (
-                    <span key={field.idx} className="inline-grid items-center">
-                      <span className="invisible text-sm col-start-1 row-start-1 whitespace-pre" aria-hidden>
-                        {field.value || field.placeholder + '|'}
-                      </span>
-                      <input
-                        type="text"
-                        size={1}
-                        value={field.value}
-                        onChange={(e) => field.set(e.target.value)}
-                        onFocus={() => setFocusedField(field.idx)}
-                        onBlur={(e) => { setFocusedField(null); savePlayerNames(e); }}
-                        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                        placeholder={field.placeholder}
-                        className={nameInputClass(!field.value && focusedField !== field.idx)}
-                      />
-                      {!field.value && focusedField !== field.idx && (
-                        <span
-                          className={cn(
-                            'pointer-events-none col-start-1 row-start-1 flex items-center text-sm opacity-40',
-                            themeText(theme, 'secondary'),
-                          )}
-                          aria-hidden
-                        >
-                          {field.placeholder}<span className="animate-blink">|</span>
-                        </span>
-                      )}
-                    </span>
-                  ),
-                )}
+                <PlayerNameInput
+                  value={player1}
+                  onChange={setPlayer1}
+                  onSave={savePlayerNames}
+                  placeholder="Spelare 1"
+                  focused={focusedField === 0}
+                  onFocus={() => setFocusedField(0)}
+                  onBlur={() => setFocusedField(null)}
+                  theme={theme}
+                />
+                <span className={cn('text-sm', themeText(theme, 'secondary'))}>&</span>
+                <PlayerNameInput
+                  value={player2}
+                  onChange={setPlayer2}
+                  onSave={savePlayerNames}
+                  placeholder="Spelare 2"
+                  focused={focusedField === 1}
+                  onFocus={() => setFocusedField(1)}
+                  onBlur={() => setFocusedField(null)}
+                  theme={theme}
+                />
               </div>
             </div>
             <div className="flex items-center gap-2 self-start">
