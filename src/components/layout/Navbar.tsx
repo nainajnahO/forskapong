@@ -4,6 +4,8 @@ import { ArrowUpRight, Flame, LogOut, Waves } from 'lucide-react';
 import logo from '../../assets/logo.webp';
 import logoHdr from '../../assets/hdr/logo.avif';
 import { NAV_LINKS, NAV_RESPONSIVE_OFFSETS } from '@/lib/constants';
+import { useAdminTab } from '@/contexts/useAdminTab';
+import { ADMIN_TABS } from '@/contexts/AdminTabContextDef';
 import Container from '../common/Container';
 import { useTheme } from '@/contexts/useTheme';
 import { useScrollState } from '@/hooks/useScrollState';
@@ -68,7 +70,9 @@ export default function Navbar() {
   const scrollToSection = useScrollToSection();
   const location = useLocation();
   const navigate = useNavigate();
+  const adminTab = useAdminTab();
   const isHome = location.pathname === '/';
+  const isAdmin = location.pathname === '/admin';
   const isLoggedIn =
     location.pathname.startsWith('/play/dashboard') ||
     location.pathname.startsWith('/play/match') ||
@@ -199,7 +203,7 @@ export default function Navbar() {
 
             {/* Right: Nav Links and CTA Button */}
             <div className="flex items-center gap-4 relative z-10">
-              {/* Nav Links (Desktop) */}
+              {/* Nav Links (Desktop) / Admin Tabs */}
               <div
                 className="hidden lg:flex items-center gap-2 transition-opacity duration-500 ease-in-out"
                 style={{
@@ -207,15 +211,32 @@ export default function Navbar() {
                   pointerEvents: isScrolled ? 'none' : 'auto',
                 }}
               >
-                {NAV_LINKS.map((link) => (
-                  <button
-                    key={link.label}
-                    onClick={() => handleNavClick(link.href)}
-                    className="px-4 py-2.5 text-white bg-white/20 rounded-full text-sm hover:bg-white/30 transition-colors backdrop-blur-sm"
-                  >
-                    <span className="hdr-white-fill">{link.label}</span>
-                  </button>
-                ))}
+                {isAdmin && adminTab ? (
+                  ADMIN_TABS.map((tab) => (
+                    <button
+                      key={tab.key}
+                      onClick={() => adminTab.setActiveTab(tab.key)}
+                      className={cn(
+                        'px-4 py-2.5 rounded-full text-sm transition-colors backdrop-blur-sm',
+                        adminTab.activeTab === tab.key
+                          ? 'text-white bg-white/30 font-medium'
+                          : 'text-white bg-white/20 hover:bg-white/30',
+                      )}
+                    >
+                      <span className="hdr-white-fill">{tab.label}</span>
+                    </button>
+                  ))
+                ) : (
+                  NAV_LINKS.map((link) => (
+                    <button
+                      key={link.label}
+                      onClick={() => handleNavClick(link.href)}
+                      className="px-4 py-2.5 text-white bg-white/20 rounded-full text-sm hover:bg-white/30 transition-colors backdrop-blur-sm"
+                    >
+                      <span className="hdr-white-fill">{link.label}</span>
+                    </button>
+                  ))
+                )}
               </div>
 
               {/* Background Toggle Button */}

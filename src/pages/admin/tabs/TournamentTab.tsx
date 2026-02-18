@@ -20,7 +20,7 @@ import MatchResultEditor from '../components/MatchResultEditor';
 import TournamentMapView from '../components/TournamentMapView';
 import TournamentFlowCard from '../components/TournamentFlowCard';
 import DangerZone from '../components/DangerZone';
-import type { AdminTab } from '../components/AdminTabBar';
+import type { AdminTab } from '@/contexts/AdminTabContextDef';
 
 /* ─── Helpers ─────────────────────────────────────────────────── */
 

@@ -12,7 +12,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import type { Match, Tournament } from '@/lib/database.types';
-import type { AdminTab } from './AdminTabBar';
+import type { AdminTab } from '@/contexts/AdminTabContextDef';
 
 interface Props {
   tournament: Tournament | null;

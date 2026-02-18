@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import type { Team, Match, Tournament } from '@/lib/database.types';
 import MatchResultEditor from '../components/MatchResultEditor';
-import type { AdminTab } from '../components/AdminTabBar';
+import type { AdminTab } from '@/contexts/AdminTabContextDef';
 
 interface LiveTabProps {
   onTabChange: (tab: AdminTab) => void;

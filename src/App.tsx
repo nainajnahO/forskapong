@@ -7,6 +7,7 @@ import About from './components/sections/About';
 import ScheduleVariant2 from './components/sections/schedule';
 import ExplodedView from './components/sections/ExplodedView';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import { AdminTabProvider } from '@/contexts/AdminTabContext';
 import { VENUE_MAP_CONFIG } from '@/lib/constants';
 
 const VenueMap = lazy(() => import('./components/sections/VenueMap'));
@@ -43,13 +44,15 @@ function HomePage() {
 
 function AppLayout() {
   return (
-    <div className="min-h-screen bg-background text-foreground transition-colors duration-500">
-      <Navbar />
-      <main>
-        <Outlet />
-      </main>
-      <Footer />
-    </div>
+    <AdminTabProvider>
+      <div className="min-h-screen bg-background text-foreground transition-colors duration-500">
+        <Navbar />
+        <main>
+          <Outlet />
+        </main>
+        <Footer />
+      </div>
+    </AdminTabProvider>
   );
 }
 
