@@ -154,6 +154,7 @@ export default function Dashboard() {
   const [error, setError] = useState('');
   const [player1, setPlayer1] = useState('');
   const [player2, setPlayer2] = useState('');
+  const [focusedField, setFocusedField] = useState<number | null>(null);
   const savingNamesRef = useRef(false);
 
   // Redirect if not logged in
@@ -238,11 +239,12 @@ export default function Dashboard() {
 
   const cardBg = theme === 'dark' ? 'bg-white/[0.03]' : 'bg-zinc-50';
   const cardBorder = theme === 'dark' ? 'border-white/[0.06]' : 'border-zinc-200';
-  const nameInputClass = cn(
-    'w-28 bg-transparent border-0 border-b rounded-none px-0 py-0.5 text-sm outline-none transition-colors',
-    'placeholder:opacity-40 focus:border-brand-500',
-    theme === 'dark' ? 'border-zinc-600 text-zinc-100' : 'border-zinc-300 text-zinc-900',
-  );
+  const nameInputClass = (hideCaret: boolean) =>
+    cn(
+      'min-w-0 bg-transparent border-none px-0 py-0 text-sm outline-none placeholder:opacity-0 col-start-1 row-start-1',
+      hideCaret && 'caret-transparent',
+      themeText(theme, 'secondary'),
+    );
 
   /* ── Loading state ──────────────────────────────── */
   if (loading) {
@@ -382,25 +384,43 @@ export default function Dashboard() {
                 </span>
               </div>
               <div className="mt-2 flex items-center gap-2 flex-wrap">
-                <input
-                  type="text"
-                  value={player1}
-                  onChange={(e) => setPlayer1(e.target.value)}
-                  onBlur={savePlayerNames}
-                  onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                  placeholder="Spelare 1"
-                  className={nameInputClass}
-                />
-                <span className={cn('text-sm', themeText(theme, 'secondary'))}>&</span>
-                <input
-                  type="text"
-                  value={player2}
-                  onChange={(e) => setPlayer2(e.target.value)}
-                  onBlur={savePlayerNames}
-                  onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                  placeholder="Spelare 2"
-                  className={nameInputClass}
-                />
+                {[
+                  { value: player1, set: setPlayer1, placeholder: 'Spelare 1', idx: 0 },
+                  null,
+                  { value: player2, set: setPlayer2, placeholder: 'Spelare 2', idx: 1 },
+                ].map((field, i) =>
+                  field === null ? (
+                    <span key="amp" className={cn('text-sm', themeText(theme, 'secondary'))}>&</span>
+                  ) : (
+                    <span key={field.idx} className="inline-grid items-center">
+                      <span className="invisible text-sm col-start-1 row-start-1 whitespace-pre" aria-hidden>
+                        {field.value || field.placeholder + '|'}
+                      </span>
+                      <input
+                        type="text"
+                        size={1}
+                        value={field.value}
+                        onChange={(e) => field.set(e.target.value)}
+                        onFocus={() => setFocusedField(field.idx)}
+                        onBlur={(e) => { setFocusedField(null); savePlayerNames(e); }}
+                        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                        placeholder={field.placeholder}
+                        className={nameInputClass(!field.value && focusedField !== field.idx)}
+                      />
+                      {!field.value && focusedField !== field.idx && (
+                        <span
+                          className={cn(
+                            'pointer-events-none col-start-1 row-start-1 flex items-center text-sm opacity-40',
+                            themeText(theme, 'secondary'),
+                          )}
+                          aria-hidden
+                        >
+                          {field.placeholder}<span className="animate-blink">|</span>
+                        </span>
+                      )}
+                    </span>
+                  ),
+                )}
               </div>
             </div>
             <div className="flex items-center gap-2 self-start">
