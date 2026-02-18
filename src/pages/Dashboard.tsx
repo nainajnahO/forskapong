@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { useTheme } from '@/contexts/useTheme';
@@ -152,6 +152,9 @@ export default function Dashboard() {
   const [rounds, setRounds] = useState<RoundDisplay[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [player1, setPlayer1] = useState('');
+  const [player2, setPlayer2] = useState('');
+  const savingNamesRef = useRef(false);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -166,6 +169,8 @@ export default function Dashboard() {
     try {
       const [teamData, matchData] = await Promise.all([fetchTeam(teamId), fetchMatches(teamId)]);
       setTeam(teamData);
+      setPlayer1(teamData.player1 ?? '');
+      setPlayer2(teamData.player2 ?? '');
       setRounds(matchData.map((m) => matchToRound(m, teamId)));
       setError('');
     } catch {
@@ -178,6 +183,21 @@ export default function Dashboard() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  async function savePlayerNames() {
+    if (!teamId || savingNamesRef.current) return;
+    savingNamesRef.current = true;
+    const { error } = await supabase
+      .from('teams')
+      .update({ player1: player1.trim() || null, player2: player2.trim() || null })
+      .eq('id', teamId);
+    if (!error) {
+      setTeam((prev) =>
+        prev ? { ...prev, player1: player1.trim() || null, player2: player2.trim() || null } : prev,
+      );
+    }
+    savingNamesRef.current = false;
+  }
 
   // Real-time subscription — re-fetch when matches change
   useEffect(() => {
@@ -193,7 +213,7 @@ export default function Dashboard() {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'teams', filter: `id=eq.${teamId}` },
         () => {
-          loadData();
+          if (!savingNamesRef.current) loadData();
         },
       )
       .subscribe();
@@ -353,9 +373,35 @@ export default function Dashboard() {
                   {code}
                 </span>
               </div>
-              <p className={cn('mt-2 text-sm', themeText(theme, 'secondary'))}>
-                {team.player1} & {team.player2}
-              </p>
+              <div className="mt-2 flex items-center gap-2 flex-wrap">
+                <input
+                  type="text"
+                  value={player1}
+                  onChange={(e) => setPlayer1(e.target.value)}
+                  onBlur={savePlayerNames}
+                  onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                  placeholder="Spelare 1"
+                  className={cn(
+                    'w-28 rounded-lg px-2.5 py-1 text-sm bg-transparent border outline-none transition-colors',
+                    'placeholder:opacity-40 focus:border-brand-500',
+                    theme === 'dark' ? 'border-zinc-700 text-zinc-100' : 'border-zinc-300 text-zinc-900',
+                  )}
+                />
+                <span className={cn('text-sm', themeText(theme, 'secondary'))}>&</span>
+                <input
+                  type="text"
+                  value={player2}
+                  onChange={(e) => setPlayer2(e.target.value)}
+                  onBlur={savePlayerNames}
+                  onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                  placeholder="Spelare 2"
+                  className={cn(
+                    'w-28 rounded-lg px-2.5 py-1 text-sm bg-transparent border outline-none transition-colors',
+                    'placeholder:opacity-40 focus:border-brand-500',
+                    theme === 'dark' ? 'border-zinc-700 text-zinc-100' : 'border-zinc-300 text-zinc-900',
+                  )}
+                />
+              </div>
             </div>
             <div className="flex items-center gap-2 self-start">
               <button
