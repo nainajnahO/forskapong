@@ -149,6 +149,9 @@ export default function Scoreboard() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, () => {
         loadData();
       })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'teams' }, () => {
+        loadData();
+      })
       .subscribe();
 
     return () => {
@@ -351,7 +354,9 @@ export default function Scoreboard() {
                         themeText(theme, 'secondary'),
                       )}
                     >
-                      {team.player1} & {team.player2}
+                      {team.player1 && team.player2
+                        ? `${team.player1} & ${team.player2}`
+                        : team.player1 || team.player2 || '–'}
                     </p>
                   </div>
 

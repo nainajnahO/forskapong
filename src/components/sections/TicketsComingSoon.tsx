@@ -72,7 +72,11 @@ export default function TicketsComingSoon({ id }: TicketsComingSoonProps) {
     setError('');
     setPhase('warping');
 
-    const { data, error: rpcError } = await supabase.rpc('register_team', { team_name: trimmed });
+    const delay = new Promise((r) => setTimeout(r, 2500));
+    const [{ data, error: rpcError }] = await Promise.all([
+      supabase.rpc('register_team', { team_name: trimmed }),
+      delay,
+    ]);
 
     if (rpcError || !data || data.length === 0) {
       setPhase('form');

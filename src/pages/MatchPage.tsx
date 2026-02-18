@@ -400,7 +400,9 @@ export default function MatchPage() {
                   {ourTeam.name}
                 </p>
                 <p className={cn('text-xs mt-1', themeText(theme, 'secondary'))}>
-                  {ourTeam.player1} & {ourTeam.player2}
+                  {ourTeam.player1 && ourTeam.player2
+                    ? `${ourTeam.player1} & ${ourTeam.player2}`
+                    : ourTeam.player1 || ourTeam.player2 || '–'}
                 </p>
               </div>
 
@@ -423,7 +425,9 @@ export default function MatchPage() {
                   {theirTeam.name}
                 </p>
                 <p className={cn('text-xs mt-1', themeText(theme, 'secondary'))}>
-                  {theirTeam.player1} & {theirTeam.player2}
+                  {theirTeam.player1 && theirTeam.player2
+                    ? `${theirTeam.player1} & ${theirTeam.player2}`
+                    : theirTeam.player1 || theirTeam.player2 || '–'}
                 </p>
               </div>
             </div>
