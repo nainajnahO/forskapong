@@ -1,4 +1,4 @@
-import { useReducer, useEffect, useRef, useCallback } from 'react';
+import { useState, useReducer, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { generateFakeTeams, simulateMatchResult } from '@/lib/simulator';
@@ -13,9 +13,11 @@ import {
   type KnockoutBracket as KnockoutBracketType,
   type TeamStanding,
 } from '@/lib/tournament-engine';
+import type { Match } from '@/lib/database.types';
 import StandingsTable from '../components/StandingsTable';
 import SwissRoundCard from '../components/SwissRoundCard';
 import KnockoutBracketView from '../components/KnockoutBracketView';
+import TournamentMapView from '../components/TournamentMapView';
 
 /* ─── State Machine ───────────────────────────────────────────── */
 
@@ -44,6 +46,7 @@ interface SimState {
   roundPairings: RoundPairings | null;
   roundResults: MatchResult[];
   revealedCount: number;
+  roundHistory: { round: number; results: MatchResult[] }[];
   standings: TeamStanding[];
   bracket: KnockoutBracketType | null;
   knockoutResults: MatchResult[];
@@ -68,6 +71,7 @@ const INITIAL_STATE: SimState = {
   roundPairings: null,
   roundResults: [],
   revealedCount: 0,
+  roundHistory: [],
   standings: [],
   bracket: null,
   knockoutResults: [],
@@ -127,6 +131,10 @@ function reducer(state: SimState, action: SimAction): SimState {
         }
 
         case 'swiss_complete': {
+          const updatedHistory = [
+            ...state.roundHistory,
+            { round: state.currentRound, results: state.roundResults },
+          ];
           if (state.currentRound < 7) {
             const nextRound = state.currentRound + 1;
             const pairings = generateSwissPairings(
@@ -141,11 +149,12 @@ function reducer(state: SimState, action: SimAction): SimState {
               roundPairings: pairings,
               roundResults: [],
               revealedCount: 0,
+              roundHistory: updatedHistory,
             };
           }
           // After round 7: show standings
           const standings = calculateRankings(state.teams, state.allResults);
-          return { ...state, phase: 'standings', standings };
+          return { ...state, phase: 'standings', standings, roundHistory: updatedHistory };
         }
 
         case 'standings': {
@@ -247,10 +256,83 @@ const SPEED_MS: Record<Speed, number> = {
   slow: 1200,
 };
 
+/* ─── Helpers ─────────────────────────────────────────────────── */
+
+function simResultToMatch(r: MatchResult, round: number, idx: number): Match {
+  return {
+    id: `sim-${round}-${idx}`,
+    round,
+    team1_id: r.team1Id,
+    team2_id: r.team2Id,
+    winner_id: r.winnerId,
+    loser_id: r.loserId,
+    score_team1: r.scoreTeam1,
+    score_team2: r.scoreTeam2,
+    table_number: idx + 1,
+    scheduled_time: null,
+    reported_by: null,
+    confirmed: true,
+    confirmed_by: 'admin',
+    created_at: new Date().toISOString(),
+  };
+}
+
+/* ─── Map View Wrapper ────────────────────────────────────────── */
+
+const KNOCKOUT_PHASES = new Set<SimPhase>([
+  'knockout_qf',
+  'knockout_qf_results',
+  'knockout_sf',
+  'knockout_sf_results',
+  'knockout_final',
+  'knockout_final_results',
+]);
+
+function MapView({ state }: { state: SimState }) {
+  // Build rounds from history + current in-progress round
+  const mapRounds: [number, Match[]][] = state.roundHistory.map((rh) => [
+    rh.round,
+    rh.results.map((r, i) => simResultToMatch(r, rh.round, i)),
+  ]);
+
+  // Add current round if it has results being revealed
+  if (
+    state.roundResults.length > 0 &&
+    !state.roundHistory.some((rh) => rh.round === state.currentRound)
+  ) {
+    const revealed = state.roundResults.slice(0, state.revealedCount);
+    mapRounds.push([
+      state.currentRound,
+      revealed.map((r, i) => simResultToMatch(r, state.currentRound, i)),
+    ]);
+  }
+
+  let mapStatus = 'swiss';
+  if (KNOCKOUT_PHASES.has(state.phase)) {
+    mapStatus = 'knockout';
+  } else if (state.phase === 'champion') {
+    mapStatus = 'finished';
+  }
+
+  return (
+    <TournamentMapView
+      rounds={mapRounds}
+      standings={state.standings}
+      teamNameMap={state.teamNameMap}
+      liveBracket={state.bracket}
+      knockoutResults={state.knockoutResults}
+      champion={state.champion}
+      totalRounds={7}
+      status={mapStatus}
+    />
+  );
+}
+
 /* ─── Component ───────────────────────────────────────────────── */
 
 export default function SimulatorTab() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
+  const [view, setView] = useState<'steps' | 'map'>('steps');
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const step = useCallback(() => dispatch({ type: 'STEP' }), []);
@@ -351,8 +433,26 @@ export default function SimulatorTab() {
 
         {state.phase !== 'idle' && (
           <>
-            {/* Speed */}
+            {/* View toggle */}
             <div className="flex items-center gap-1.5 ml-auto">
+              {(['steps', 'map'] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setView(v)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-lg text-xs transition-all border',
+                    view === v
+                      ? 'bg-white/[0.08] text-white border-white/[0.12]'
+                      : 'text-zinc-600 border-transparent hover:text-zinc-400',
+                  )}
+                >
+                  {v === 'steps' ? 'Steg' : 'Karta'}
+                </button>
+              ))}
+            </div>
+
+            {/* Speed */}
+            <div className="flex items-center gap-1.5">
               {(['fast', 'normal', 'slow'] as const).map((s) => (
                 <button
                   key={s}
@@ -391,53 +491,63 @@ export default function SimulatorTab() {
         </motion.div>
       )}
 
-      {/* Swiss round display */}
-      {(state.phase === 'swiss_pairings' ||
-        state.phase === 'swiss_results' ||
-        state.phase === 'swiss_complete') &&
-        state.roundPairings && (
-          <SwissRoundCard
-            round={state.currentRound}
-            pairings={state.roundPairings.pairings}
-            results={state.roundResults}
-            teamNameMap={state.teamNameMap}
-            bye={state.roundPairings.bye}
-            revealedCount={state.revealedCount}
-            animated
-          />
-        )}
+      {/* Step-by-step view */}
+      {view === 'steps' && (
+        <>
+          {/* Swiss round display */}
+          {(state.phase === 'swiss_pairings' ||
+            state.phase === 'swiss_results' ||
+            state.phase === 'swiss_complete') &&
+            state.roundPairings && (
+              <SwissRoundCard
+                round={state.currentRound}
+                pairings={state.roundPairings.pairings}
+                results={state.roundResults}
+                teamNameMap={state.teamNameMap}
+                bye={state.roundPairings.bye}
+                revealedCount={state.revealedCount}
+                animated
+              />
+            )}
 
-      {/* Standings */}
-      {(state.phase === 'standings' || state.phase === 'champion') &&
-        state.standings.length > 0 && (
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium text-zinc-400">Slutställning</h3>
-            <StandingsTable standings={state.standings} highlightTop={8} compact />
-          </div>
-        )}
+          {/* Standings */}
+          {(state.phase === 'standings' || state.phase === 'champion') &&
+            state.standings.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium text-zinc-400">Slutställning</h3>
+                <StandingsTable standings={state.standings} highlightTop={8} compact />
+              </div>
+            )}
 
-      {/* Knockout bracket */}
-      {state.bracket &&
-        [
-          'knockout_qf',
-          'knockout_qf_results',
-          'knockout_sf',
-          'knockout_sf_results',
-          'knockout_final',
-          'knockout_final_results',
-          'champion',
-        ].includes(state.phase) && (
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium text-zinc-400">Slutspel</h3>
-            <KnockoutBracketView
-              bracket={state.bracket}
-              teamNameMap={state.teamNameMap}
-              results={state.knockoutResults}
-              champion={state.champion}
-              animated
-            />
-          </div>
-        )}
+          {/* Knockout bracket */}
+          {state.bracket &&
+            [
+              'knockout_qf',
+              'knockout_qf_results',
+              'knockout_sf',
+              'knockout_sf_results',
+              'knockout_final',
+              'knockout_final_results',
+              'champion',
+            ].includes(state.phase) && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium text-zinc-400">Slutspel</h3>
+                <KnockoutBracketView
+                  bracket={state.bracket}
+                  teamNameMap={state.teamNameMap}
+                  results={state.knockoutResults}
+                  champion={state.champion}
+                  animated
+                />
+              </div>
+            )}
+        </>
+      )}
+
+      {/* Map view */}
+      {view === 'map' && state.phase !== 'idle' && (
+        <MapView state={state} />
+      )}
 
       {/* Idle state */}
       {state.phase === 'idle' && (
