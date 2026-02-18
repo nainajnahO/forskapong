@@ -19,7 +19,9 @@ import SwissRoundCard from '../components/SwissRoundCard';
 import KnockoutBracketView from '../components/KnockoutBracketView';
 import MatchResultEditor from '../components/MatchResultEditor';
 import TournamentMapView from '../components/TournamentMapView';
+import TournamentFlowCard from '../components/TournamentFlowCard';
 import DangerZone from '../components/DangerZone';
+import type { AdminTab } from '../components/AdminTabBar';
 
 /* ─── Helpers ─────────────────────────────────────────────────── */
 
@@ -45,7 +47,11 @@ function teamsToEngine(teams: Team[], results: MatchResult[]): TournamentTeam[] 
 
 /* ─── Component ───────────────────────────────────────────────── */
 
-export default function TournamentTab() {
+interface TournamentTabProps {
+  onTabChange: (tab: AdminTab) => void;
+}
+
+export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -214,6 +220,63 @@ export default function TournamentTab() {
     }
   }
 
+  async function handleGenerateSemifinals() {
+    if (!tournament) return;
+    setGenerating(true);
+    try {
+      const qfMatches = matches.filter((m) => m.round === 8 && m.confirmed);
+      const qfWinners = qfMatches.map((m) => m.winner_id!);
+      if (qfWinners.length !== 4) return;
+
+      // QF1 winner vs QF2 winner, QF3 winner vs QF4 winner
+      const sfInserts = [
+        { round: 9, team1_id: qfWinners[0], team2_id: qfWinners[1], table_number: 1, scheduled_time: roundTime || null },
+        { round: 9, team1_id: qfWinners[2], team2_id: qfWinners[3], table_number: 2, scheduled_time: roundTime || null },
+      ];
+      await supabase.from('matches').insert(sfInserts);
+      setRoundTime('');
+      await loadData();
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function handleGenerateFinal() {
+    if (!tournament) return;
+    setGenerating(true);
+    try {
+      const sfMatches = matches.filter((m) => m.round === 9 && m.confirmed);
+      const sfWinners = sfMatches.map((m) => m.winner_id!);
+      if (sfWinners.length !== 2) return;
+
+      await supabase.from('matches').insert({
+        round: 10,
+        team1_id: sfWinners[0],
+        team2_id: sfWinners[1],
+        table_number: 1,
+        scheduled_time: roundTime || null,
+      });
+      setRoundTime('');
+      await loadData();
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function handleFinishTournament() {
+    if (!tournament) return;
+    setGenerating(true);
+    try {
+      await supabase
+        .from('tournament')
+        .update({ status: 'finished' })
+        .eq('id', tournament.id);
+      await loadData();
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   // Build a live knockout bracket from matches in rounds >= 8
   const knockoutMatches = matches.filter((m) => m.round >= 8);
   const knockoutResults = knockoutMatches
@@ -286,6 +349,8 @@ export default function TournamentTab() {
     );
   }
 
+  const championName = champion ? teamNameMap.get(champion) ?? null : null;
+
   return (
     <div className="space-y-6">
       {/* Status header */}
@@ -331,94 +396,26 @@ export default function TournamentTab() {
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex flex-wrap gap-3 items-center">
-        {/* Time input — shown when generating pairings is possible */}
-        {((status === 'swiss' && !roundsMap.has(currentRound)) ||
-          (status === 'knockout' && !roundsMap.has(8))) && (
-          <input
-            type="time"
-            value={roundTime}
-            onChange={(e) => setRoundTime(e.target.value)}
-            placeholder="Tid"
-            className="h-10 px-3 rounded-xl text-sm bg-white/[0.04] border border-white/[0.08] text-white outline-none focus:border-brand-500"
-          />
-        )}
-
-        {status === 'not_started' && teams.length > 0 && (
-          <button
-            onClick={handleStartTournament}
-            disabled={generating}
-            className={cn(
-              'px-4 py-2.5 rounded-xl text-sm font-medium transition-all',
-              'bg-brand-500 text-white shadow-lg shadow-brand-500/20',
-              'hover:brightness-110 disabled:opacity-50',
-            )}
-          >
-            {generating ? 'Startar…' : 'Starta turnering'}
-          </button>
-        )}
-
-        {status === 'swiss' && (
-          <>
-            {!roundsMap.has(currentRound) && (
-              <button
-                onClick={handleGeneratePairings}
-                disabled={generating}
-                className={cn(
-                  'px-4 py-2.5 rounded-xl text-sm font-medium transition-all',
-                  'bg-brand-500 text-white shadow-lg shadow-brand-500/20',
-                  'hover:brightness-110 disabled:opacity-50',
-                )}
-              >
-                {generating ? 'Genererar…' : `Generera lottning Runda ${currentRound}`}
-              </button>
-            )}
-
-            {roundsMap.has(currentRound) && currentRound < 7 && (
-              <button
-                onClick={handleAdvanceRound}
-                disabled={generating}
-                className={cn(
-                  'px-4 py-2.5 rounded-xl text-sm font-medium transition-all',
-                  'bg-white/[0.04] text-zinc-300 border border-white/[0.08]',
-                  'hover:text-white disabled:opacity-50',
-                )}
-              >
-                Nästa runda →
-              </button>
-            )}
-
-            {currentRound >= 7 && roundsMap.has(currentRound) && (
-              <button
-                onClick={handleStartKnockout}
-                disabled={generating}
-                className={cn(
-                  'px-4 py-2.5 rounded-xl text-sm font-medium transition-all',
-                  'bg-amber-500/15 text-amber-400 border border-amber-500/20',
-                  'hover:bg-amber-500/25 disabled:opacity-50',
-                )}
-              >
-                Gå till slutspel →
-              </button>
-            )}
-          </>
-        )}
-
-        {status === 'knockout' && !roundsMap.has(8) && (
-          <button
-            onClick={handleGenerateKnockout}
-            disabled={generating}
-            className={cn(
-              'px-4 py-2.5 rounded-xl text-sm font-medium transition-all',
-              'bg-amber-500/15 text-amber-400 border border-amber-500/20',
-              'hover:bg-amber-500/25 disabled:opacity-50',
-            )}
-          >
-            {generating ? 'Genererar…' : 'Generera slutspelsträd'}
-          </button>
-        )}
-      </div>
+      {/* Flow Card — always-visible guidance + action */}
+      <TournamentFlowCard
+        tournament={tournament}
+        teams={teams}
+        matches={matches}
+        roundsMap={roundsMap}
+        generating={generating}
+        roundTime={roundTime}
+        onRoundTimeChange={setRoundTime}
+        onStartTournament={handleStartTournament}
+        onGeneratePairings={handleGeneratePairings}
+        onAdvanceRound={handleAdvanceRound}
+        onStartKnockout={handleStartKnockout}
+        onGenerateKnockout={handleGenerateKnockout}
+        onGenerateSemifinals={handleGenerateSemifinals}
+        onGenerateFinal={handleGenerateFinal}
+        onFinishTournament={handleFinishTournament}
+        onTabChange={onTabChange}
+        championName={championName}
+      />
 
       {/* Disputed matches */}
       {(() => {
@@ -576,13 +573,6 @@ export default function TournamentTab() {
             </div>
           )}
 
-          {/* Empty state */}
-          {teams.length === 0 && (
-            <div className="text-center py-16 text-zinc-600">
-              <p className="text-lg">Inga lag registrerade</p>
-              <p className="text-sm mt-2">Skapa lag i fliken "Lag" först</p>
-            </div>
-          )}
         </>
       )}
 

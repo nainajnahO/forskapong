@@ -4,8 +4,13 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import type { Team, Match, Tournament } from '@/lib/database.types';
 import MatchResultEditor from '../components/MatchResultEditor';
+import type { AdminTab } from '../components/AdminTabBar';
 
-export default function LiveTab() {
+interface LiveTabProps {
+  onTabChange: (tab: AdminTab) => void;
+}
+
+export default function LiveTab({ onTabChange }: LiveTabProps) {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -133,9 +138,18 @@ export default function LiveTab() {
 
   if (status === 'not_started') {
     return (
-      <div className="text-center py-16 text-zinc-600">
-        <p className="text-lg">Turneringen har inte startat</p>
-        <p className="text-sm mt-2">Starta turneringen i fliken "Turnering"</p>
+      <div className="text-center py-16">
+        <p className="text-lg text-zinc-400">Turneringen har inte startat</p>
+        <p className="text-sm text-zinc-600 mt-2">Konfigurera och starta turneringen från Turnering-fliken.</p>
+        <button
+          onClick={() => onTabChange('tournament')}
+          className={cn(
+            'mt-4 px-5 py-2.5 rounded-xl text-sm font-medium transition-all inline-flex items-center gap-2',
+            'bg-brand-500 text-white shadow-lg shadow-brand-500/20 hover:brightness-110',
+          )}
+        >
+          Gå till Turnering
+        </button>
       </div>
     );
   }

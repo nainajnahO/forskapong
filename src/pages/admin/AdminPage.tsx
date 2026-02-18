@@ -43,9 +43,9 @@ export default function AdminPage() {
 
           {/* Content */}
           <div>
-            {activeTab === 'live' && <LiveTab />}
+            {activeTab === 'live' && <LiveTab onTabChange={setActiveTab} />}
             {activeTab === 'teams' && <TeamsTab />}
-            {activeTab === 'tournament' && <TournamentTab />}
+            {activeTab === 'tournament' && <TournamentTab onTabChange={setActiveTab} />}
             {activeTab === 'simulator' && <SimulatorTab />}
           </div>
         </div>
