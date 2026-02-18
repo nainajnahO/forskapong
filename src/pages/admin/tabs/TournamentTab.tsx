@@ -14,7 +14,6 @@ import {
   type KnockoutBracket as KnockoutBracketType,
 } from '@/lib/tournament-engine';
 import { List, LayoutGrid } from 'lucide-react';
-import StandingsTable from '../components/StandingsTable';
 import SwissRoundCard from '../components/SwissRoundCard';
 import KnockoutBracketView from '../components/KnockoutBracketView';
 import MatchResultEditor from '../components/MatchResultEditor';
@@ -514,6 +513,77 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
             </div>
           )}
 
+          {/* Knockout match list (editable) */}
+          {knockoutMatches.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-zinc-400">Slutspelsmatcher</h3>
+              <div className="rounded-2xl border border-white/[0.06] overflow-hidden divide-y divide-white/[0.04]">
+                {[
+                  { round: 8, label: 'Kvartsfinal' },
+                  { round: 9, label: 'Semifinal' },
+                  { round: 10, label: 'Final' },
+                ]
+                  .filter(({ round }) => knockoutMatches.some((m) => m.round === round))
+                  .map(({ round, label }) => (
+                    <div key={round}>
+                      <div className="px-4 py-2 bg-white/[0.02] text-xs font-medium text-zinc-500">
+                        {label}
+                      </div>
+                      {knockoutMatches
+                        .filter((m) => m.round === round)
+                        .map((m) =>
+                          editingMatchId === m.id ? (
+                            <div key={m.id} className="px-3 py-2">
+                              <MatchResultEditor
+                                match={m}
+                                team1Name={teamNameMap.get(m.team1_id) ?? m.team1_id}
+                                team2Name={teamNameMap.get(m.team2_id) ?? m.team2_id}
+                                onSaved={() => {
+                                  setEditingMatchId(null);
+                                  loadData();
+                                }}
+                                onCancel={() => setEditingMatchId(null)}
+                              />
+                            </div>
+                          ) : (
+                            <button
+                              key={m.id}
+                              onClick={() => setEditingMatchId(m.id)}
+                              className={cn(
+                                'w-full grid grid-cols-[1fr_4.5rem_1fr] gap-2 px-4 py-2.5 text-sm',
+                                'hover:bg-white/[0.03] transition-colors cursor-pointer',
+                              )}
+                            >
+                              <span
+                                className={cn(
+                                  'truncate text-left',
+                                  m.winner_id === m.team1_id ? 'text-emerald-400 font-medium' : 'text-white',
+                                )}
+                              >
+                                {teamNameMap.get(m.team1_id) ?? m.team1_id}
+                              </span>
+                              <span className="text-center font-mono text-zinc-400">
+                                {m.score_team1 != null && m.score_team2 != null
+                                  ? `${m.score_team1}\u2013${m.score_team2}`
+                                  : '\u2013'}
+                              </span>
+                              <span
+                                className={cn(
+                                  'truncate text-right',
+                                  m.winner_id === m.team2_id ? 'text-emerald-400 font-medium' : 'text-white',
+                                )}
+                              >
+                                {teamNameMap.get(m.team2_id) ?? m.team2_id}
+                              </span>
+                            </button>
+                          ),
+                        )}
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
           {/* Swiss rounds */}
           {rounds.filter(([r]) => r <= 7).length > 0 && (
             <div className="space-y-4">
@@ -535,8 +605,16 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
                           .filter(Boolean) as MatchResult[]
                       }
                       teamNameMap={teamNameMap}
+                      onMatchClick={(t1, t2) => {
+                        const m = roundMatches.find(
+                          (m) =>
+                            (m.team1_id === t1 && m.team2_id === t2) ||
+                            (m.team1_id === t2 && m.team2_id === t1),
+                        );
+                        if (m) setEditingMatchId(editingMatchId === m.id ? null : m.id);
+                      }}
                     />
-                    {/* Inline editors */}
+                    {/* Inline editor */}
                     {roundMatches.map((m) =>
                       editingMatchId === m.id ? (
                         <MatchResultEditor
@@ -550,28 +628,13 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
                           }}
                           onCancel={() => setEditingMatchId(null)}
                         />
-                      ) : (
-                        <button
-                          key={m.id}
-                          onClick={() => setEditingMatchId(m.id)}
-                          className="hidden group-hover:block text-xs text-zinc-600 hover:text-zinc-400 transition"
-                        >
-                          Redigera
-                        </button>
-                      ),
+                      ) : null,
                     )}
                   </div>
                 ))}
             </div>
           )}
 
-          {/* Standings */}
-          {standings.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium text-zinc-400">Ställning</h3>
-              <StandingsTable standings={standings} highlightTop={8} />
-            </div>
-          )}
 
         </>
       )}
