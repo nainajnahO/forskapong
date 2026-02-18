@@ -224,10 +224,11 @@ export default function MatchPage() {
   const theirTeam = match ? (isTeam1 ? match.team2 : match.team1) : null;
 
   const isPlayed = match?.winner_id !== null && match?.winner_id !== undefined;
+  const isDisputed = match?.confirmed_by === 'disputed' && !match?.confirmed;
   const weWon = match?.winner_id === teamId;
   const weLost = match?.loser_id === teamId;
   const weReported = match?.reported_by === teamId;
-  const needsOurConfirmation = weLost && !match?.confirmed && !weReported;
+  const needsOurConfirmation = weLost && !match?.confirmed && !weReported && !isDisputed;
 
   // Format score from our perspective
   const formatScore = () => {
@@ -312,9 +313,21 @@ export default function MatchPage() {
   };
 
   // ── Dispute ────────────────────────────────────
-  const handleDispute = () => {
-    // For now, just a visual state. Admin resolves manually.
-    setSubmitError('Disputerad — en admin kommer att avgöra resultatet.');
+  const handleDispute = async () => {
+    if (!match) return;
+    setSubmitError('');
+
+    const { error: updateError } = await supabase
+      .from('matches')
+      .update({ confirmed_by: 'disputed' })
+      .eq('id', match.id);
+
+    if (updateError) {
+      setSubmitError('Kunde inte disputera. Försök igen.');
+      return;
+    }
+
+    loadMatch();
   };
 
   /* ── Loading ────────────────────────────────────── */
@@ -484,8 +497,34 @@ export default function MatchPage() {
               </div>
             )}
 
+            {/* ─── STATE: Disputed ────────────────────── */}
+            {isPlayed && isDisputed && (
+              <div className="text-center">
+                <div
+                  className={cn(
+                    'inline-flex items-center px-4 py-2 rounded-xl text-sm font-bold border mb-4',
+                    theme === 'dark'
+                      ? 'bg-amber-500/15 text-amber-400 border-amber-500/20'
+                      : 'bg-amber-50 text-amber-600 border-amber-200',
+                  )}
+                >
+                  Disputerad
+                </div>
+
+                {scoreDisplay && (
+                  <p className="text-4xl font-mono font-bold text-foreground mb-2">
+                    {scoreDisplay}
+                  </p>
+                )}
+
+                <p className={cn('text-xs', themeText(theme, 'secondary'))}>
+                  En admin kommer att avgöra resultatet.
+                </p>
+              </div>
+            )}
+
             {/* ─── STATE: Reported, waiting for confirmation ── */}
-            {isPlayed && !match.confirmed && !needsOurConfirmation && (
+            {isPlayed && !match.confirmed && !needsOurConfirmation && !isDisputed && (
               <div className="text-center">
                 <div
                   className={cn(

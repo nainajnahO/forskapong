@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 
-export type AdminTab = 'teams' | 'tournament' | 'simulator';
+export type AdminTab = 'teams' | 'tournament' | 'simulator' | 'live';
 
 interface Props {
   activeTab: AdminTab;
@@ -8,6 +8,7 @@ interface Props {
 }
 
 const TABS: { key: AdminTab; label: string }[] = [
+  { key: 'live', label: 'Live' },
   { key: 'teams', label: 'Lag' },
   { key: 'tournament', label: 'Turnering' },
   { key: 'simulator', label: 'Simulator' },

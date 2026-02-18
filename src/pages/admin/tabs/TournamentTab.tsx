@@ -19,6 +19,7 @@ import SwissRoundCard from '../components/SwissRoundCard';
 import KnockoutBracketView from '../components/KnockoutBracketView';
 import MatchResultEditor from '../components/MatchResultEditor';
 import TournamentMapView from '../components/TournamentMapView';
+import DangerZone from '../components/DangerZone';
 
 /* ─── Helpers ─────────────────────────────────────────────────── */
 
@@ -53,6 +54,7 @@ export default function TournamentTab() {
   const [generating, setGenerating] = useState(false);
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null);
   const [view, setView] = useState<'list' | 'map'>('list');
+  const [roundTime, setRoundTime] = useState('');
 
   const loadData = useCallback(async () => {
     const [tRes, teamsRes, matchesRes] = await Promise.all([
@@ -145,10 +147,12 @@ export default function TournamentTab() {
         team1_id: p.team1Id,
         team2_id: p.team2Id,
         table_number: i + 1,
+        scheduled_time: roundTime || null,
       }));
 
       const { error } = await supabase.from('matches').insert(inserts);
       if (error) throw error;
+      setRoundTime('');
       await loadData();
     } finally {
       setGenerating(false);
@@ -200,8 +204,10 @@ export default function TournamentTab() {
         team1_id: qf.team1Id!,
         team2_id: qf.team2Id!,
         table_number: i + 1,
+        scheduled_time: roundTime || null,
       }));
       await supabase.from('matches').insert(qfInserts);
+      setRoundTime('');
       await loadData();
     } finally {
       setGenerating(false);
@@ -326,7 +332,19 @@ export default function TournamentTab() {
       </div>
 
       {/* Actions */}
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-3 items-center">
+        {/* Time input — shown when generating pairings is possible */}
+        {((status === 'swiss' && !roundsMap.has(currentRound)) ||
+          (status === 'knockout' && !roundsMap.has(8))) && (
+          <input
+            type="time"
+            value={roundTime}
+            onChange={(e) => setRoundTime(e.target.value)}
+            placeholder="Tid"
+            className="h-10 px-3 rounded-xl text-sm bg-white/[0.04] border border-white/[0.08] text-white outline-none focus:border-brand-500"
+          />
+        )}
+
         {status === 'not_started' && teams.length > 0 && (
           <button
             onClick={handleStartTournament}
@@ -401,6 +419,55 @@ export default function TournamentTab() {
           </button>
         )}
       </div>
+
+      {/* Disputed matches */}
+      {(() => {
+        const disputed = matches.filter(
+          (m) => m.confirmed_by === 'disputed' && !m.confirmed,
+        );
+        if (disputed.length === 0) return null;
+        return (
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-amber-400">
+              Disputerade matcher ({disputed.length})
+            </h3>
+            <div className="space-y-2">
+              {disputed.map((m) => (
+                <div key={m.id}>
+                  {editingMatchId === m.id ? (
+                    <MatchResultEditor
+                      match={m}
+                      team1Name={teamNameMap.get(m.team1_id) ?? m.team1_id}
+                      team2Name={teamNameMap.get(m.team2_id) ?? m.team2_id}
+                      onSaved={() => {
+                        setEditingMatchId(null);
+                        loadData();
+                      }}
+                      onCancel={() => setEditingMatchId(null)}
+                    />
+                  ) : (
+                    <button
+                      onClick={() => setEditingMatchId(m.id)}
+                      className={cn(
+                        'w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all',
+                        'bg-amber-500/[0.06] border-amber-500/20 hover:bg-amber-500/[0.1]',
+                      )}
+                    >
+                      <span className="text-sm text-white">
+                        {teamNameMap.get(m.team1_id) ?? '?'} vs{' '}
+                        {teamNameMap.get(m.team2_id) ?? '?'}
+                      </span>
+                      <span className="text-xs text-amber-400">
+                        R{m.round} · {m.score_team1}–{m.score_team2} · Klicka för att avgöra
+                      </span>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* View content */}
       {view === 'map' ? (
@@ -518,6 +585,13 @@ export default function TournamentTab() {
           )}
         </>
       )}
+
+      {/* Danger Zone */}
+      <DangerZone
+        tournament={tournament}
+        currentRound={currentRound}
+        onActionComplete={loadData}
+      />
     </div>
   );
 }
