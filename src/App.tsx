@@ -15,6 +15,7 @@ const Play = lazy(() => import('./pages/Play'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const MatchPage = lazy(() => import('./pages/MatchPage'));
 const Scoreboard = lazy(() => import('./pages/Scoreboard'));
+const AdminPage = lazy(() => import('./pages/admin/AdminPage'));
 
 function HomePage() {
   return (
@@ -51,6 +52,7 @@ function App() {
             <Route path="/play/dashboard" element={<Suspense fallback={<div className="min-h-screen" />}><Dashboard /></Suspense>} />
             <Route path="/play/match/:matchId" element={<Suspense fallback={<div className="min-h-screen" />}><MatchPage /></Suspense>} />
             <Route path="/scoreboard" element={<Suspense fallback={<div className="min-h-screen" />}><Scoreboard /></Suspense>} />
+            <Route path="/admin" element={<Suspense fallback={<div className="min-h-screen" />}><AdminPage /></Suspense>} />
           </Routes>
         </main>
         <Footer />
