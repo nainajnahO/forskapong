@@ -14,8 +14,8 @@ import SectionLabel from '../components/common/SectionLabel';
 interface TeamStanding {
   id: string;
   name: string;
-  player1: string;
-  player2: string;
+  player1: string | null;
+  player2: string | null;
   wins: number;
   losses: number;
   opponentWins: number; // Buchholz: sum of opponents' wins
