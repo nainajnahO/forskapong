@@ -4,6 +4,7 @@ import { ArrowRight } from 'lucide-react';
 import { useTheme } from '@/contexts/useTheme';
 import { useIsVisible } from '@/hooks/useIsVisible';
 import { useScrollToSection } from '@/hooks/useScrollToSection';
+import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { themeText } from '@/lib/theme-utils';
 import type { WarpSpeedConfig } from '@/lib/warpspeed';
@@ -17,14 +18,9 @@ interface TicketsComingSoonProps {
 
 type Phase = 'form' | 'warping' | 'result';
 
-function generateCode(): string {
-  const letters = Array.from({ length: 3 }, () =>
-    String.fromCharCode(65 + Math.floor(Math.random() * 26))
-  ).join('');
-  const digits = Array.from({ length: 3 }, () =>
-    Math.floor(Math.random() * 10)
-  ).join('');
-  return `${letters}·${digits}`;
+/** Format DB code "ABC123" → "ABC·123" for display */
+function formatCode(code: string): string {
+  return `${code.slice(0, 3)}·${code.slice(3)}`;
 }
 
 export default function TicketsComingSoon({ id }: TicketsComingSoonProps) {
@@ -44,8 +40,9 @@ export default function TicketsComingSoon({ id }: TicketsComingSoonProps) {
   }, []);
 
   const [teamName, setTeamName] = useState(stored?.teamName ?? '');
-  const [generatedCode, setGeneratedCode] = useState(stored?.code ?? '');
+  const [generatedCode, setGeneratedCode] = useState(stored ? formatCode(stored.code) : '');
   const [phase, setPhase] = useState<Phase>(stored ? 'result' : 'form');
+  const [error, setError] = useState('');
 
   const warpConfig = useMemo<WarpSpeedConfig>(
     () => ({
@@ -63,21 +60,36 @@ export default function TicketsComingSoon({ id }: TicketsComingSoonProps) {
     [theme],
   );
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!teamName.trim()) return;
+    const trimmed = teamName.trim();
+    if (!trimmed) return;
 
     // Dismiss mobile keyboard and re-center section
     (document.activeElement as HTMLElement)?.blur();
     scrollToSection('#tickets');
 
-    const code = generateCode();
-    setGeneratedCode(code);
+    setError('');
     setPhase('warping');
-    setTimeout(() => setPhase('result'), 2500);
+
+    const { data, error: rpcError } = await supabase.rpc('register_team', { team_name: trimmed });
+
+    if (rpcError || !data || data.length === 0) {
+      setPhase('form');
+      setError(
+        rpcError?.message?.includes('DUPLICATE_NAME')
+          ? 'Det lagnamnet är redan taget, välj ett annat'
+          : 'Något gick fel, försök igen',
+      );
+      return;
+    }
+
+    const team = data[0];
+    setGeneratedCode(formatCode(team.code));
+    setPhase('result');
 
     try {
-      localStorage.setItem('forskopong_registered', JSON.stringify({ teamName: teamName.trim(), code }));
+      localStorage.setItem('forskopong_registered', JSON.stringify({ teamName: trimmed, code: team.code }));
     } catch { /* storage full or unavailable */ }
   }
 
@@ -156,6 +168,16 @@ export default function TicketsComingSoon({ id }: TicketsComingSoonProps) {
                     <ArrowRight className="size-5" />
                   </button>
                 </motion.form>
+
+                {error && (
+                  <motion.p
+                    className="mt-4 text-sm text-red-500"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  >
+                    {error}
+                  </motion.p>
+                )}
               </motion.div>
             )}
 

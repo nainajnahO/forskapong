@@ -8,8 +8,8 @@ export interface Database {
           id: string;
           code: string;
           name: string;
-          player1: string;
-          player2: string;
+          player1: string | null;
+          player2: string | null;
           wins: number;
           losses: number;
           created_at: string;
@@ -18,8 +18,8 @@ export interface Database {
           id?: string;
           code: string;
           name: string;
-          player1: string;
-          player2: string;
+          player1?: string | null;
+          player2?: string | null;
           wins?: number;
           losses?: number;
           created_at?: string;
@@ -28,8 +28,8 @@ export interface Database {
           id?: string;
           code?: string;
           name?: string;
-          player1?: string;
-          player2?: string;
+          player1?: string | null;
+          player2?: string | null;
           wins?: number;
           losses?: number;
           created_at?: string;
@@ -149,7 +149,10 @@ export interface Database {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      register_team: {
+        Args: { team_name: string };
+        Returns: { id: string; code: string; name: string }[];
+      };
     };
     Enums: {
       [_ in never]: never;
