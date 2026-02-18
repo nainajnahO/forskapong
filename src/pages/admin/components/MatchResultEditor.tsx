@@ -18,15 +18,15 @@ export default function MatchResultEditor({
   onSaved,
   onCancel,
 }: Props) {
-  const [winnerId, setWinnerId] = useState(match.winner_id ?? '');
   const [score1, setScore1] = useState(match.score_team1 ?? 0);
   const [score2, setScore2] = useState(match.score_team2 ?? 0);
   const [saving, setSaving] = useState(false);
 
-  const loserId = winnerId === match.team1_id ? match.team2_id : match.team1_id;
+  const winnerId = score1 > score2 ? match.team1_id : score2 > score1 ? match.team2_id : null;
+  const loserId = winnerId === match.team1_id ? match.team2_id : winnerId === match.team2_id ? match.team1_id : null;
 
   async function handleSave() {
-    if (!winnerId) return;
+    if (!winnerId || !loserId) return;
     setSaving(true);
     try {
       const { error } = await supabase
@@ -49,28 +49,9 @@ export default function MatchResultEditor({
 
   return (
     <div className="flex flex-wrap items-center gap-3 py-2 px-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-      <div className="flex gap-2 items-center">
-        <label className="flex items-center gap-1.5 cursor-pointer">
-          <input
-            type="radio"
-            name={`winner-${match.id}`}
-            checked={winnerId === match.team1_id}
-            onChange={() => setWinnerId(match.team1_id)}
-            className="accent-emerald-500"
-          />
-          <span className="text-sm text-white">{team1Name}</span>
-        </label>
-        <label className="flex items-center gap-1.5 cursor-pointer">
-          <input
-            type="radio"
-            name={`winner-${match.id}`}
-            checked={winnerId === match.team2_id}
-            onChange={() => setWinnerId(match.team2_id)}
-            className="accent-emerald-500"
-          />
-          <span className="text-sm text-white">{team2Name}</span>
-        </label>
-      </div>
+      <span className={cn('text-sm', winnerId === match.team1_id ? 'text-emerald-400 font-medium' : 'text-white')}>
+        {team1Name}
+      </span>
 
       <div className="flex items-center gap-1.5">
         <input
@@ -91,6 +72,10 @@ export default function MatchResultEditor({
           className="w-12 h-8 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white text-center text-sm outline-none focus:border-brand-500"
         />
       </div>
+
+      <span className={cn('text-sm', winnerId === match.team2_id ? 'text-emerald-400 font-medium' : 'text-white')}>
+        {team2Name}
+      </span>
 
       <div className="flex gap-2 ml-auto">
         <button
