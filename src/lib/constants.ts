@@ -353,6 +353,11 @@ export function buildSwishUrl(code: string): string {
 // Hall of Fame Avatars
 export const HALL_OF_FAME_AVATARS = [
   {
+    src: '/avatar-hall.webp',
+    fallback: 'HÅ',
+    tooltip: 'Håll',
+  },
+  {
     src: '/avatar-forskarl.webp',
     fallback: 'FK',
     tooltip: 'Forskarl',
@@ -361,10 +366,5 @@ export const HALL_OF_FAME_AVATARS = [
     src: '/avatar-fest.webp',
     fallback: 'FE',
     tooltip: 'Fest',
-  },
-  {
-    src: '/avatar-hall.webp',
-    fallback: 'HÅ',
-    tooltip: 'Håll',
   },
 ] as const;
