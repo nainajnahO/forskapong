@@ -28,12 +28,13 @@ export default function TeamsTab() {
   }, []);
 
   useEffect(() => {
-    loadData();
     const channel = supabase
       .channel('admin-teams')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'teams' }, () => loadData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, () => loadData())
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') loadData();
+      });
     return () => {
       supabase.removeChannel(channel);
     };
