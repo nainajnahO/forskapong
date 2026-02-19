@@ -203,7 +203,6 @@ function PlayerNameInput({
 export default function Dashboard() {
   const { theme } = useTheme();
   const navigate = useNavigate();
-  const isInView = true; // Always animate (page load, not scroll section)
 
   const teamId = sessionStorage.getItem('teamId');
   const code = sessionStorage.getItem('playCode');
@@ -417,7 +416,7 @@ export default function Dashboard() {
           <motion.div
             className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-10"
             initial={{ opacity: 0, y: 16 }}
-            animate={isInView ? { opacity: 1, y: 0 } : undefined}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
           >
             <div>
@@ -491,7 +490,7 @@ export default function Dashboard() {
                   cardBorder,
                 )}
                 initial={{ opacity: 0, y: 20 }}
-                animate={isInView ? { opacity: 1, y: 0 } : undefined}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.1 + i * 0.08, ease: 'easeOut' }}
               >
                 <p className={cn('text-xs mb-1', themeText(theme, 'secondary'))}>{stat.label}</p>
@@ -528,7 +527,7 @@ export default function Dashboard() {
                 cardBorder,
               )}
               initial={{ opacity: 0, y: 16 }}
-              animate={isInView ? { opacity: 1, y: 0 } : undefined}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.35, ease: 'easeOut' }}
             >
               <div className="flex justify-between text-xs mb-2">
@@ -548,7 +547,7 @@ export default function Dashboard() {
                 <motion.div
                   className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-400"
                   initial={{ width: 0 }}
-                  animate={isInView ? { width: `${winRate}%` } : undefined}
+                  animate={{ width: `${winRate}%` }}
                   transition={{ duration: 1, delay: 0.6, ease: 'easeOut' }}
                 />
               </div>
@@ -558,7 +557,7 @@ export default function Dashboard() {
           {/* ── Round Schedule ───────────────────────────── */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
-            animate={isInView ? { opacity: 1, y: 0 } : undefined}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.45, ease: 'easeOut' }}
           >
             <h2 className={cn('text-sm font-semibold mb-4', themeText(theme, 'secondary'))}>
@@ -594,7 +593,7 @@ export default function Dashboard() {
                         isTbd && 'opacity-50',
                       )}
                       initial={{ opacity: 0, x: -12 }}
-                      animate={isInView ? { opacity: isTbd ? 0.5 : 1, x: 0 } : undefined}
+                      animate={{ opacity: isTbd ? 0.5 : 1, x: 0 }}
                       transition={{ duration: 0.4, delay: 0.5 + i * 0.07, ease: 'easeOut' }}
                       onClick={
                         isCurrent ? () => navigate(`/play/match/${round.matchId}`) : undefined
@@ -756,7 +755,7 @@ export default function Dashboard() {
           <motion.div
             className={cn('mt-12 h-px', themeGradientLine(theme))}
             initial={{ opacity: 0 }}
-            animate={isInView ? { opacity: [0.3, 0.6, 0.3] } : undefined}
+            animate={{ opacity: [0.3, 0.6, 0.3] }}
             transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
           />
           <p

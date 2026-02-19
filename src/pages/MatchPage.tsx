@@ -19,40 +19,27 @@ interface MatchWithTeams extends Match {
 /* ─── Data ────────────────────────────────────────────────────── */
 
 async function fetchMatch(matchId: string): Promise<MatchWithTeams> {
-  console.log('[MatchPage] Fetching match:', matchId);
-
   const { data: match, error: matchError } = await supabase
     .from('matches')
     .select('*')
     .eq('id', matchId)
     .single();
 
-  if (matchError) {
-    console.error('[MatchPage] Match query failed:', matchError);
-    throw matchError;
-  }
-  console.log('[MatchPage] Match data:', match);
+  if (matchError) throw matchError;
 
-  // Fetch both teams individually (more reliable than .in())
   const [team1Result, team2Result] = await Promise.all([
     supabase.from('teams').select('*').eq('id', match.team1_id).single(),
     supabase.from('teams').select('*').eq('id', match.team2_id).single(),
   ]);
 
-  if (team1Result.error) {
-    console.error('[MatchPage] Team1 query failed:', team1Result.error);
-    throw team1Result.error;
-  }
-  if (team2Result.error) {
-    console.error('[MatchPage] Team2 query failed:', team2Result.error);
-    throw team2Result.error;
-  }
+  if (team1Result.error) throw team1Result.error;
+  if (team2Result.error) throw team2Result.error;
 
-  const team1 = team1Result.data;
-  const team2 = team2Result.data;
-  console.log('[MatchPage] Teams loaded:', team1.name, 'vs', team2.name);
-
-  return { ...match, team1, team2 } as MatchWithTeams;
+  return {
+    ...match,
+    team1: team1Result.data,
+    team2: team2Result.data,
+  } as MatchWithTeams;
 }
 
 /* ─── Icons ───────────────────────────────────────────────────── */
@@ -153,7 +140,6 @@ export default function MatchPage() {
   const { matchId } = useParams<{ matchId: string }>();
   const { theme } = useTheme();
   const navigate = useNavigate();
-  const isInView = true; // Always animate on this page (no scroll gating)
 
   const teamId = sessionStorage.getItem('teamId');
 
@@ -215,9 +201,6 @@ export default function MatchPage() {
 
   if (!teamId) return null;
 
-  // Debug logging
-  console.log('[MatchPage] Render state:', { matchId, teamId, loading, error, hasMatch: !!match });
-
   // ── Derived state ──────────────────────────────
   const isTeam1 = match?.team1_id === teamId;
   const ourTeam = match ? (isTeam1 ? match.team1 : match.team2) : null;
@@ -231,14 +214,10 @@ export default function MatchPage() {
   const needsOurConfirmation = weLost && !match?.confirmed && !weReported && !isDisputed;
 
   // Format score from our perspective
-  const formatScore = () => {
-    if (match?.score_team1 === null || match?.score_team1 === undefined) return null;
-    if (match?.score_team2 === null || match?.score_team2 === undefined) return null;
-    const ours = isTeam1 ? match.score_team1 : match.score_team2;
-    const theirs = isTeam1 ? match.score_team2 : match.score_team1;
-    return `${ours}–${theirs}`;
-  };
-  const scoreDisplay = formatScore();
+  const scoreDisplay =
+    match?.score_team1 != null && match?.score_team2 != null
+      ? `${isTeam1 ? match.score_team1 : match.score_team2}–${isTeam1 ? match.score_team2 : match.score_team1}`
+      : null;
 
   const cardBg = theme === 'dark' ? 'bg-white/[0.03]' : 'bg-zinc-50';
   const cardBorder = theme === 'dark' ? 'border-white/[0.06]' : 'border-zinc-200';
@@ -251,23 +230,15 @@ export default function MatchPage() {
     setIsSubmitting(true);
     setSubmitError('');
 
-    const winnerId = weAreWinner ? teamId : isTeam1 ? match.team2_id : match.team1_id;
-    const loserId = weAreWinner ? (isTeam1 ? match.team2_id : match.team1_id) : teamId;
+    const opponentId = isTeam1 ? match.team2_id : match.team1_id;
+    const winnerId = weAreWinner ? teamId : opponentId;
+    const loserId = weAreWinner ? opponentId : teamId;
 
-    // Winner hit 6, loser hit loserCups
+    // Winner always hit 6, loser hit loserCups
     const winnerScore = 6;
-    const ourIsTeam1 = match.team1_id === teamId;
-
-    let scoreTeam1: number;
-    let scoreTeam2: number;
-
-    if (weAreWinner) {
-      scoreTeam1 = ourIsTeam1 ? winnerScore : loserCups;
-      scoreTeam2 = ourIsTeam1 ? loserCups : winnerScore;
-    } else {
-      scoreTeam1 = ourIsTeam1 ? loserCups : winnerScore;
-      scoreTeam2 = ourIsTeam1 ? winnerScore : loserCups;
-    }
+    const team1IsWinner = winnerId === match.team1_id;
+    const scoreTeam1 = team1IsWinner ? winnerScore : loserCups;
+    const scoreTeam2 = team1IsWinner ? loserCups : winnerScore;
 
     const { error: updateError } = await supabase
       .from('matches')
@@ -396,7 +367,7 @@ export default function MatchPage() {
           <motion.div
             className="text-center mb-10"
             initial={{ opacity: 0, y: 16 }}
-            animate={isInView ? { opacity: 1, y: 0 } : undefined}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
           >
             <SectionLabel variant="gradient">RUNDA {match.round}</SectionLabel>
@@ -470,7 +441,7 @@ export default function MatchPage() {
           <motion.div
             className={cn('rounded-2xl p-6 sm:p-8 border max-w-lg mx-auto', cardBg, cardBorder)}
             initial={{ opacity: 0, y: 20 }}
-            animate={isInView ? { opacity: 1, y: 0 } : undefined}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2, ease: 'easeOut' }}
           >
             {/* ─── STATE: Completed & confirmed ───────── */}
@@ -785,7 +756,7 @@ export default function MatchPage() {
           <motion.div
             className="text-center mt-8"
             initial={{ opacity: 0 }}
-            animate={isInView ? { opacity: 1 } : undefined}
+            animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.4 }}
           >
             <button

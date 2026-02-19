@@ -464,14 +464,14 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
           />
 
           {/* Inline editor for map view */}
-          {editingMatchId && (() => {
-            const m = matches.find((m) => m.id === editingMatchId);
-            if (!m) return null;
+          {(() => {
+            const editMatch = editingMatchId ? matches.find((m) => m.id === editingMatchId) : null;
+            if (!editMatch) return null;
             return (
               <MatchResultEditor
-                match={m}
-                team1Name={teamNameMap.get(m.team1_id) ?? m.team1_id}
-                team2Name={teamNameMap.get(m.team2_id) ?? m.team2_id}
+                match={editMatch}
+                team1Name={teamNameMap.get(editMatch.team1_id) ?? editMatch.team1_id}
+                team2Name={teamNameMap.get(editMatch.team2_id) ?? editMatch.team2_id}
                 onSaved={handleMatchSaved}
                 onCancel={handleMatchCancelled}
               />
@@ -583,12 +583,12 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
                       }
                       teamNameMap={teamNameMap}
                       onMatchClick={(t1, t2) => {
-                        const m = roundMatches.find(
-                          (m) =>
-                            (m.team1_id === t1 && m.team2_id === t2) ||
-                            (m.team1_id === t2 && m.team2_id === t1),
+                        const found = roundMatches.find(
+                          (rm) =>
+                            (rm.team1_id === t1 && rm.team2_id === t2) ||
+                            (rm.team1_id === t2 && rm.team2_id === t1),
                         );
-                        if (m) setEditingMatchId(editingMatchId === m.id ? null : m.id);
+                        if (found) setEditingMatchId(editingMatchId === found.id ? null : found.id);
                       }}
                     />
                     {/* Inline editor */}

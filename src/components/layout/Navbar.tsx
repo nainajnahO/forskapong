@@ -270,11 +270,11 @@ export default function Navbar() {
                   willChange: 'transform, opacity',
                   opacity: viewportWidth >= 1024 || isScrolled ? 1 : 0,
                   pointerEvents: viewportWidth >= 1024 || isScrolled ? 'auto' : 'none',
-                  transition: viewportWidth >= 1024
-                    ? 'all 0.7s ease-in-out'
-                    : isScrolled
-                      ? 'opacity 0.3s ease-in-out 0.2s, transform 0.7s ease-in-out'
-                      : 'opacity 0.4s ease-in-out, transform 0s 0.4s',
+                  transition: (() => {
+                    if (viewportWidth >= 1024) return 'all 0.7s ease-in-out';
+                    if (isScrolled) return 'opacity 0.3s ease-in-out 0.2s, transform 0.7s ease-in-out';
+                    return 'opacity 0.4s ease-in-out, transform 0s 0.4s';
+                  })(),
                 }}
               >
                 {isLoggedIn ? (
