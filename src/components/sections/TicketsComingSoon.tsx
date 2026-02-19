@@ -42,10 +42,11 @@ export default function TicketsComingSoon({ id }: TicketsComingSoonProps) {
   }, []);
 
   const [teamName, setTeamName] = useState(stored?.teamName ?? '');
-  const [rawCode, setRawCode] = useState(stored?.code ?? '');
-  const [generatedCode, setGeneratedCode] = useState(stored ? formatCode(stored.code) : '');
+  const [code, setCode] = useState(stored?.code ?? '');
   const [phase, setPhase] = useState<Phase>(stored ? 'result' : 'form');
   const [error, setError] = useState('');
+
+  const displayCode = code ? formatCode(code) : '';
 
   const warpConfig = useMemo<WarpSpeedConfig>(
     () => ({
@@ -92,8 +93,7 @@ export default function TicketsComingSoon({ id }: TicketsComingSoonProps) {
     }
 
     const team = data[0];
-    setRawCode(team.code);
-    setGeneratedCode(formatCode(team.code));
+    setCode(team.code);
     setPhase('result');
 
     try {
@@ -212,7 +212,7 @@ export default function TicketsComingSoon({ id }: TicketsComingSoonProps) {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 1.4, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
                 >
-                  {generatedCode}
+                  {displayCode}
                 </motion.p>
 
                 <motion.p
@@ -225,7 +225,7 @@ export default function TicketsComingSoon({ id }: TicketsComingSoonProps) {
                 </motion.p>
 
                 <motion.a
-                  href={buildSwishUrl(rawCode)}
+                  href={buildSwishUrl(code)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-8 inline-block"

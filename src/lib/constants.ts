@@ -27,7 +27,7 @@ export const FOOTER_LINKS = [
 ] as const;
 
 // Hero Section
-export const HERO_ROTATING_WORDS = ['Enheter', 'Bra kast', 'Armbåge', "99 kr"] as const;
+export const HERO_ROTATING_WORDS = ['Enheter', 'Bra kast', 'Armbåge', '99 kr'] as const;
 
 // Attendee Categories
 export const ATTENDEE_CATEGORIES = [
@@ -152,12 +152,12 @@ export const SHOWCASE_CONFIG = {
     },
     {
       text: 'Muggarna',
-      subtext: '1 omformation per match.' + '\nRedemption tillåtet.' + '\n-Studsprick? 2 bort' + '\n-Parprick? 3 bort',
+      subtext: '1 omformation per match.\nRedemption tillåtet.\n-Studsprick? 2 bort\n-Parprick? 3 bort',
       position: ['20%', '15%'] as const,
     },
     {
       text: 'Redo att spela?',
-      subtext: 'Vi ses den' + '\n31:a Mars 2026',
+      subtext: 'Vi ses den\n31:a Mars 2026',
       position: ['25%', '50%'] as const,
     },
   ] as const,
@@ -335,14 +335,14 @@ export const FRAMER_BACKGROUND_URL = 'https://incomplete-listening-378233.framer
 export const SWISH_NUMBER = '0736990412' as const;
 export const SWISH_AMOUNT = 99 as const;
 
+const SWISH_PAYEE = SWISH_NUMBER.replace(/^0/, '+46');
+
 export function buildSwishUrl(code: string): string {
-  const displayCode = `${code.slice(0, 3)}.${code.slice(3)}`;
-  const msg = `Forskåpong - ${displayCode}`;
   const data = {
     version: 1,
-    payee: { value: SWISH_NUMBER.replace(/^0/, '+46') },
+    payee: { value: SWISH_PAYEE },
     amount: { value: SWISH_AMOUNT },
-    message: { value: msg, editable: true },
+    message: { value: `Forskåpong - ${code.slice(0, 3)}.${code.slice(3)}`, editable: true },
   };
   return `swish://payment?data=${encodeURIComponent(JSON.stringify(data))}`;
 }
