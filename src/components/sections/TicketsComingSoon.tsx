@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { themeText } from '@/lib/theme-utils';
 import { buildSwishUrl } from '@/lib/constants';
-import swishQR from '@/assets/swish-QR-small.png';
+import swishQR from '@/assets/swish-QR-small.webp';
 import type { WarpSpeedConfig } from '@/lib/warpspeed';
 import Container from '../common/Container';
 import SectionLabel from '../common/SectionLabel';
