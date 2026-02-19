@@ -473,20 +473,6 @@ export default function Dashboard() {
               >
                 Scoreboard
               </button>
-              <button
-                onClick={() => {
-                  sessionStorage.clear();
-                  navigate('/play', { replace: true });
-                }}
-                className={cn(
-                  'text-xs px-4 py-2 rounded-lg font-medium transition-all duration-200 border hover:opacity-80',
-                  theme === 'dark'
-                    ? 'bg-white/[0.04] border-white/10 text-zinc-400'
-                    : 'bg-zinc-100 border-zinc-200 text-zinc-500',
-                )}
-              >
-                Logga ut
-              </button>
             </div>
           </motion.div>
 

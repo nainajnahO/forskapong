@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowUpRight, Flame, Waves } from 'lucide-react';
+import { ArrowUpRight, Flame, LogOut, Waves } from 'lucide-react';
 import logo from '../../assets/logo.webp';
 import logoHdr from '../../assets/hdr/logo.avif';
 import { NAV_LINKS, NAV_RESPONSIVE_OFFSETS } from '@/lib/constants';
+import { useAdminTab } from '@/contexts/useAdminTab';
+import { ADMIN_TABS } from '@/contexts/AdminTabContextDef';
 import Container from '../common/Container';
 import { useTheme } from '@/contexts/useTheme';
 import { useScrollState } from '@/hooks/useScrollState';
@@ -20,9 +22,11 @@ import {
 function NavbarEasterEgg({
   isScrolled,
   responsiveOffset,
+  isLoggedIn,
 }: {
   isScrolled: boolean;
   responsiveOffset: number;
+  isLoggedIn: boolean;
 }) {
   const { isDragging } = useSpring();
   const show = isDragging && isScrolled;
@@ -49,8 +53,7 @@ function NavbarEasterEgg({
         className="absolute inset-0 w-full h-full object-cover object-[center_34%]"
       />
       {/* Invisible CTA replica to match exact dimensions */}
-      <span className="invisible hidden lg:inline">Anmälan</span>
-      <span className="invisible lg:hidden">Anmäl</span>
+      <span className="invisible">{isLoggedIn ? 'Tillbaka' : <><span className="hidden lg:inline">Anmälan</span><span className="lg:hidden">Anmäl</span></>}</span>
       <div className="w-10 h-10 -my-1 -mr-1 invisible flex-shrink-0" />
     </div>
   );
@@ -67,7 +70,18 @@ export default function Navbar() {
   const scrollToSection = useScrollToSection();
   const location = useLocation();
   const navigate = useNavigate();
+  const adminTab = useAdminTab();
   const isHome = location.pathname === '/';
+  const isAdmin = location.pathname === '/admin';
+  const isLoggedIn =
+    location.pathname.startsWith('/play/dashboard') ||
+    location.pathname.startsWith('/play/match') ||
+    location.pathname === '/admin';
+
+  const handleLogout = useCallback(() => {
+    sessionStorage.clear();
+    navigate('/');
+  }, [navigate]);
 
   // Calculate responsive offset based on viewport width
   const responsiveOffset = useMemo(() => {
@@ -140,6 +154,7 @@ export default function Navbar() {
           <NavbarEasterEgg
             isScrolled={isScrolled}
             responsiveOffset={responsiveOffset}
+            isLoggedIn={isLoggedIn}
           />
           <SpringElement
             drag={isScrolled}
@@ -188,7 +203,7 @@ export default function Navbar() {
 
             {/* Right: Nav Links and CTA Button */}
             <div className="flex items-center gap-4 relative z-10">
-              {/* Nav Links (Desktop) */}
+              {/* Nav Links (Desktop) / Admin Tabs */}
               <div
                 className="hidden lg:flex items-center gap-2 transition-opacity duration-500 ease-in-out"
                 style={{
@@ -196,15 +211,32 @@ export default function Navbar() {
                   pointerEvents: isScrolled ? 'none' : 'auto',
                 }}
               >
-                {NAV_LINKS.map((link) => (
-                  <button
-                    key={link.label}
-                    onClick={() => handleNavClick(link.href)}
-                    className="px-4 py-2.5 text-white bg-white/20 rounded-full text-sm hover:bg-white/30 transition-colors backdrop-blur-sm"
-                  >
-                    <span className="hdr-white-fill">{link.label}</span>
-                  </button>
-                ))}
+                {isAdmin && adminTab ? (
+                  ADMIN_TABS.map((tab) => (
+                    <button
+                      key={tab.key}
+                      onClick={() => adminTab.setActiveTab(tab.key)}
+                      className={cn(
+                        'px-4 py-2.5 rounded-full text-sm transition-colors backdrop-blur-sm',
+                        adminTab.activeTab === tab.key
+                          ? 'text-white bg-white/30 font-medium'
+                          : 'text-white bg-white/20 hover:bg-white/30',
+                      )}
+                    >
+                      <span className="hdr-white-fill">{tab.label}</span>
+                    </button>
+                  ))
+                ) : (
+                  NAV_LINKS.map((link) => (
+                    <button
+                      key={link.label}
+                      onClick={() => handleNavClick(link.href)}
+                      className="px-4 py-2.5 text-white bg-white/20 rounded-full text-sm hover:bg-white/30 transition-colors backdrop-blur-sm"
+                    >
+                      <span className="hdr-white-fill">{link.label}</span>
+                    </button>
+                  ))
+                )}
               </div>
 
               {/* Background Toggle Button */}
@@ -229,27 +261,36 @@ export default function Navbar() {
               {/* CTA Button - mobile: only when scrolled, desktop: always visible */}
               <button
                 ref={ctaRef}
-                onClick={() => handleNavClick('#tickets')}
+                onClick={isLoggedIn ? handleLogout : () => handleNavClick('#tickets')}
                 className="flex items-center justify-between gap-3 pl-6 pr-2 py-2 bg-white hdr-bg-white text-black font-semibold rounded-full hover:bg-zinc-100 absolute lg:relative right-0 lg:right-auto"
                 style={{
                   transform: isScrolled
                     ? `translateX(calc(-50vw + 50% + ${responsiveOffset}rem)) scale(1)`
                     : 'translateX(0) scale(1)',
                   willChange: 'transform, opacity',
-                  opacity: viewportWidth >= 1024 ? 1 : isScrolled ? 1 : 0,
-                  pointerEvents: viewportWidth >= 1024 ? 'auto' : isScrolled ? 'auto' : 'none',
-                  transition:
-                    viewportWidth >= 1024
-                      ? 'all 0.7s ease-in-out'
-                      : isScrolled
-                        ? 'opacity 0.3s ease-in-out 0.2s, transform 0.7s ease-in-out'
-                        : 'opacity 0.4s ease-in-out, transform 0s 0.4s',
+                  opacity: viewportWidth >= 1024 || isScrolled ? 1 : 0,
+                  pointerEvents: viewportWidth >= 1024 || isScrolled ? 'auto' : 'none',
+                  transition: viewportWidth >= 1024
+                    ? 'all 0.7s ease-in-out'
+                    : isScrolled
+                      ? 'opacity 0.3s ease-in-out 0.2s, transform 0.7s ease-in-out'
+                      : 'opacity 0.4s ease-in-out, transform 0s 0.4s',
                 }}
               >
-                <span className="hidden lg:inline">Anmälan</span>
-                <span className="lg:hidden">Anmäl</span>
+                {isLoggedIn ? (
+                  <span>Tillbaka</span>
+                ) : (
+                  <>
+                    <span className="hidden lg:inline">Anmälan</span>
+                    <span className="lg:hidden">Anmäl</span>
+                  </>
+                )}
                 <div className="w-10 h-10 -my-1 -mr-1 bg-brand-500 rounded-full flex items-center justify-center flex-shrink-0 hdr-dot-fill">
-                  <ArrowUpRight className="w-6 h-6 text-white hdr-white-icon" />
+                  {isLoggedIn ? (
+                    <LogOut className="w-5 h-5 text-white hdr-white-icon" />
+                  ) : (
+                    <ArrowUpRight className="w-6 h-6 text-white hdr-white-icon" />
+                  )}
                 </div>
               </button>
             </div>
