@@ -7,6 +7,8 @@ import { useScrollToSection } from '@/hooks/useScrollToSection';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { themeText } from '@/lib/theme-utils';
+import { buildSwishUrl } from '@/lib/constants';
+import swishQR from '@/assets/swish-QR-small.webp';
 import type { WarpSpeedConfig } from '@/lib/warpspeed';
 import Container from '../common/Container';
 import SectionLabel from '../common/SectionLabel';
@@ -40,9 +42,11 @@ export default function TicketsComingSoon({ id }: TicketsComingSoonProps) {
   }, []);
 
   const [teamName, setTeamName] = useState(stored?.teamName ?? '');
-  const [generatedCode, setGeneratedCode] = useState(stored ? formatCode(stored.code) : '');
+  const [code, setCode] = useState(stored?.code ?? '');
   const [phase, setPhase] = useState<Phase>(stored ? 'result' : 'form');
   const [error, setError] = useState('');
+
+  const displayCode = code ? formatCode(code) : '';
 
   const warpConfig = useMemo<WarpSpeedConfig>(
     () => ({
@@ -89,7 +93,7 @@ export default function TicketsComingSoon({ id }: TicketsComingSoonProps) {
     }
 
     const team = data[0];
-    setGeneratedCode(formatCode(team.code));
+    setCode(team.code);
     setPhase('result');
 
     try {
@@ -208,7 +212,7 @@ export default function TicketsComingSoon({ id }: TicketsComingSoonProps) {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 1.4, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
                 >
-                  {generatedCode}
+                  {displayCode}
                 </motion.p>
 
                 <motion.p
@@ -219,6 +223,20 @@ export default function TicketsComingSoon({ id }: TicketsComingSoonProps) {
                 >
                   Spara koden — ni behöver den för att logga in
                 </motion.p>
+
+                {code && (
+                  <motion.a
+                    href={buildSwishUrl(code)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-8 inline-block"
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 1, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    <img src={swishQR} alt="Swish QR-kod" className="w-48 rounded-xl" />
+                  </motion.a>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
