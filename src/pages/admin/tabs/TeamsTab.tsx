@@ -69,13 +69,14 @@ export default function TeamsTab() {
   async function bulkCheckIn(value: boolean) {
     const prev = teams;
     setTeams((cur) => cur.map((t) => ({ ...t, checked_in: value })));
-    const { error } = await supabase.from('teams').update({ checked_in: value }).neq('id', '');
+    const { error } = await supabase.from('teams').update({ checked_in: value }).not('id', 'is', null);
     if (error) setTeams(prev);
   }
 
   async function deleteUnchecked() {
     const { error } = await supabase.from('teams').delete().eq('checked_in', false);
     if (error) throw error;
+    setTeams((cur) => cur.filter((t) => t.checked_in));
   }
 
   // Sort teams by rank (from standings) when tournament has started, otherwise by created_at
