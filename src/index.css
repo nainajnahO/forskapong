@@ -65,6 +65,12 @@
   }
 }
 
+.framer {
+  --brand-400: 0.677 0.109 240;
+  --brand-500: 0.613 0.124 241;
+  --brand-600: 0.536 0.108 241;
+}
+
 /* Wide-gamut upgrade for P3 displays — higher chroma = more vivid */
 @media (color-gamut: p3) {
   :root {
@@ -90,12 +96,6 @@
     --brand-500: 0.64 0.19 241;
     --brand-600: 0.56 0.17 241;
   }
-}
-
-.framer {
-  --brand-400: 0.677 0.109 240;
-  --brand-500: 0.613 0.124 241;
-  --brand-600: 0.536 0.108 241;
 }
 
 html {
