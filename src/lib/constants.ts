@@ -27,7 +27,7 @@ export const FOOTER_LINKS = [
 ] as const;
 
 // Hero Section
-export const HERO_ROTATING_WORDS = ['Enheter', 'Bra kast', 'Tofflor'] as const;
+export const HERO_ROTATING_WORDS = ['Enheter', 'Bra kast', 'Armbåge', "99 kr"] as const;
 
 // Attendee Categories
 export const ATTENDEE_CATEGORIES = [
@@ -44,7 +44,7 @@ export const ABOUT_CONTENT = {
   description1:
     'Forskåpong är en årlig beer pong-turnering som samlar forskåare från när och fjärran för en kväll fylld av tävling, gemenskap och glädje. Detta är 76:e gången vi arrangerar detta legendariska event som har blivit en älskad tradition.',
   description2:
-    'Varje lag tävlar i spännande matcher genom kvällen, med en kommentator som håller stämningen på topp. Oavsett om du är nybörjare eller erfaren spelare, garanterar vi en oförglömlig upplevelse med vänner och kollegor.',
+    'Varje lag tävlar i spännande matcher genom kvällen, med en kommentator som håller stämningen på topp. Oavsett om du är nybörjare eller erfaren spelare, garanterar vi en oförglömlig upplevelse.',
 } as const;
 
 // Schedule Data
@@ -54,12 +54,12 @@ export const SCHEDULE_PHASES = [
     startTime: '18:00',
     events: [
       {
-        time: '18:00-18:30',
+        time: '18:00-18:40',
         title: 'Mingel',
         description: 'Dörrna öppnas och alla är välkommna till skönt häng!',
       },
       {
-        time: '18:30',
+        time: '18:45',
         title: 'Välkomstceremoni',
         description: 'Projektledarna hälsar alla varmt välkommna.',
         italic: true,
@@ -72,16 +72,16 @@ export const SCHEDULE_PHASES = [
   },
   {
     name: 'Avspark',
-    startTime: '18:50',
+    startTime: '18:55',
     events: [
       {
-        time: '18:50',
+        time: '18:55',
         title: 'Skotten i Mikrorummet',
         description: 'Forskåpongen går av stapeln för 76:e gången.',
         bold: true,
       },
       {
-        time: '19:05-21:30',
+        time: '19:00-21:30',
         title: 'Spelchemat',
         description:
           'Skriv in din 6-teckens kod för att se era matcher.',
@@ -98,7 +98,7 @@ export const SCHEDULE_PHASES = [
       {
         time: '21:45-22:00',
         title: 'Prisutdelning',
-        description: '🤫🤫',
+        description: '',
         bold: true,
       },
       {
@@ -142,7 +142,7 @@ export const SHOWCASE_CONFIG = {
   annotations: [
     {
       text: 'Klara, färdiga, gå!',
-      subtext: '10 minuter per match.',
+      subtext: '7 minuter per match.',
       position: ['15%', '34%'] as const,
     },
     {
@@ -152,12 +152,12 @@ export const SHOWCASE_CONFIG = {
     },
     {
       text: 'Muggarna',
-      subtext: '1 omformation per match.' + '\n-Studsprick? 2 bort' + '\n-Parprick? 3 bort',
+      subtext: '1 omformation per match.' + '\nRedemption tillåtet.' + '\n-Studsprick? 2 bort' + '\n-Parprick? 3 bort',
       position: ['20%', '15%'] as const,
     },
     {
       text: 'Redo att spela?',
-      subtext: 'Vi ses den' + '\n31 Mars 2026',
+      subtext: 'Vi ses den' + '\n31:a Mars 2026',
       position: ['25%', '50%'] as const,
     },
   ] as const,
@@ -330,6 +330,22 @@ export const EXPLODED_VIEW_TITLE = {
 
 // Background
 export const FRAMER_BACKGROUND_URL = 'https://incomplete-listening-378233.framer.app' as const;
+
+// Swish Payment
+export const SWISH_NUMBER = '0736990412' as const;
+export const SWISH_AMOUNT = 99 as const;
+
+export function buildSwishUrl(code: string): string {
+  const displayCode = `${code.slice(0, 3)}.${code.slice(3)}`;
+  const msg = `Forskåpong - ${displayCode}`;
+  const data = {
+    version: 1,
+    payee: { value: SWISH_NUMBER.replace(/^0/, '+46') },
+    amount: { value: SWISH_AMOUNT },
+    message: { value: msg, editable: true },
+  };
+  return `swish://payment?data=${encodeURIComponent(JSON.stringify(data))}`;
+}
 
 // Hall of Fame Avatars
 export const HALL_OF_FAME_AVATARS = [
