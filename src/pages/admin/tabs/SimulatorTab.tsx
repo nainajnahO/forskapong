@@ -547,7 +547,7 @@ function SimKnockoutView({
       (r) =>
         (r.team1Id === slot.team1Id && r.team2Id === slot.team2Id) ||
         (r.team1Id === slot.team2Id && r.team2Id === slot.team1Id),
-    );
+    ) ?? null;
   }
 
   return (
