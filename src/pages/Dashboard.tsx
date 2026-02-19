@@ -4,10 +4,42 @@ import { motion } from 'motion/react';
 import { useTheme } from '@/contexts/useTheme';
 import { cn } from '@/lib/utils';
 import { themeText, themeGradientLine } from '@/lib/theme-utils';
+import { EVENT_INFO } from '@/lib/constants';
 import { supabase } from '@/lib/supabase';
 import type { Team, Match } from '@/lib/database.types';
 import Container from '../components/common/Container';
 import SectionLabel from '../components/common/SectionLabel';
+
+/* ─── Countdown Hook ─────────────────────────────────────────── */
+
+const EVENT_DATE = new Date('2026-03-31T18:00:00');
+
+interface TimeLeft {
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+}
+
+function useCountdown(): { timeLeft: TimeLeft; isBeforeEvent: boolean } {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const diff = EVENT_DATE.getTime() - now;
+  const isBeforeEvent = diff > 0;
+
+  const totalSec = Math.max(0, Math.floor(diff / 1000));
+  const days = Math.floor(totalSec / 86400);
+  const hours = Math.floor((totalSec % 86400) / 3600);
+  const minutes = Math.floor((totalSec % 3600) / 60);
+  const seconds = totalSec % 60;
+
+  return { timeLeft: { days, hours, minutes, seconds }, isBeforeEvent };
+}
 
 /* ─── Types ───────────────────────────────────────────────────── */
 
@@ -215,6 +247,7 @@ export default function Dashboard() {
   const [player2, setPlayer2] = useState('');
   const [focusedField, setFocusedField] = useState<number | null>(null);
   const savingNamesRef = useRef(false);
+  const { timeLeft, isBeforeEvent } = useCountdown();
 
   // Redirect if not logged in
   useEffect(() => {
@@ -331,6 +364,152 @@ export default function Dashboard() {
           >
             Försök igen
           </button>
+        </Container>
+      </section>
+    );
+  }
+
+  /* ── Countdown view (before event) ─────────────── */
+  if (isBeforeEvent) {
+    const digits: { value: number; label: string }[] = [
+      { value: timeLeft.days, label: 'dagar' },
+      { value: timeLeft.hours, label: 'timmar' },
+      { value: timeLeft.minutes, label: 'min' },
+      { value: timeLeft.seconds, label: 'sek' },
+    ];
+
+    return (
+      <section className="relative w-full min-h-[calc(100vh-5rem)] pt-24 md:pt-28 pb-10 md:pb-16">
+        <Container>
+          <div>
+            {/* ── Header ──────────────────────────────────── */}
+            <motion.div
+              className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-10"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: 'easeOut' }}
+            >
+              <div>
+                <SectionLabel variant="gradient">TURNERING</SectionLabel>
+                <div className="flex items-center gap-3 mt-1 flex-wrap">
+                  <h1 className="font-display text-3xl md:text-4xl lg:text-5xl text-brand-500 tracking-wider hdr-text-fill">
+                    {team.name}
+                  </h1>
+                  <span
+                    className={cn(
+                      'inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-mono font-semibold tracking-wider border',
+                      theme === 'dark'
+                        ? 'bg-brand-500/10 text-brand-400 border-brand-500/20'
+                        : 'bg-brand-50 text-brand-600 border-brand-200',
+                    )}
+                  >
+                    {code}
+                  </span>
+                </div>
+                <div className="mt-2 flex items-center gap-2 flex-wrap">
+                  <PlayerNameInput
+                    value={player1}
+                    onChange={setPlayer1}
+                    onSave={savePlayerNames}
+                    placeholder="Spelare 1"
+                    focused={focusedField === 0}
+                    onFocus={() => setFocusedField(0)}
+                    onBlur={() => setFocusedField(null)}
+                    theme={theme}
+                  />
+                  <span className={cn('text-sm', themeText(theme, 'secondary'))}>&</span>
+                  <PlayerNameInput
+                    value={player2}
+                    onChange={setPlayer2}
+                    onSave={savePlayerNames}
+                    placeholder="Spelare 2"
+                    focused={focusedField === 1}
+                    onFocus={() => setFocusedField(1)}
+                    onBlur={() => setFocusedField(null)}
+                    theme={theme}
+                  />
+                </div>
+              </div>
+            </motion.div>
+
+            {/* ── Countdown ───────────────────────────────── */}
+            <motion.div
+              className="flex flex-col items-center gap-8 py-12 md:py-20"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.2, ease: 'easeOut' }}
+            >
+              <p
+                className={cn(
+                  'text-sm font-semibold uppercase tracking-wider',
+                  theme === 'dark' ? 'text-brand-400' : 'text-brand-600',
+                )}
+              >
+                Nedräkning till {EVENT_INFO.date} kl {EVENT_INFO.time}
+              </p>
+
+              <div className="grid grid-cols-4 gap-3 sm:gap-5">
+                {digits.map((d, i) => (
+                  <motion.div
+                    key={d.label}
+                    className={cn(
+                      'flex flex-col items-center rounded-2xl border p-4 sm:p-6 min-w-[70px] sm:min-w-[90px] transition-colors duration-500',
+                      cardBg,
+                      cardBorder,
+                    )}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.3 + i * 0.08, ease: 'easeOut' }}
+                  >
+                    <span
+                      className={cn(
+                        'text-3xl sm:text-5xl font-bold font-mono tracking-tight tabular-nums',
+                        theme === 'dark' ? 'text-white' : 'text-zinc-900',
+                      )}
+                    >
+                      {String(d.value).padStart(2, '0')}
+                    </span>
+                    <span
+                      className={cn(
+                        'text-[10px] sm:text-xs mt-1 uppercase tracking-wider',
+                        themeText(theme, 'secondary'),
+                      )}
+                    >
+                      {d.label}
+                    </span>
+                  </motion.div>
+                ))}
+              </div>
+
+              <motion.p
+                className={cn(
+                  'text-lg sm:text-xl font-medium',
+                  themeText(theme, 'secondary'),
+                )}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.6, delay: 0.7 }}
+              >
+                Vi ses den 31:a Mars!
+              </motion.p>
+            </motion.div>
+
+            {/* ── Footer line ─────────────────────────────── */}
+            <motion.div
+              className={cn('mt-12 h-px', themeGradientLine(theme))}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0.3, 0.6, 0.3] }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            />
+            <p
+              className={cn(
+                'mt-4 text-center text-xs',
+                theme === 'dark' ? 'text-zinc-600' : 'text-zinc-400',
+              )}
+            >
+              Turneringen börjar {EVENT_INFO.date} kl {EVENT_INFO.time}
+            </p>
+          </div>
         </Container>
       </section>
     );
