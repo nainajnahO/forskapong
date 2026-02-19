@@ -28,13 +28,13 @@ export default function TeamsTab() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch is intentional
+    void loadData();
     const channel = supabase
       .channel('admin-teams')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'teams' }, () => loadData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, () => loadData())
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') loadData();
-      });
+      .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };

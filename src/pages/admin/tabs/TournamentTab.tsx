@@ -63,14 +63,13 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   }, []);
 
   useEffect(() => {
+    void loadData();
     const channel = supabase
       .channel('admin-tournament')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament' }, () => loadData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, () => loadData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'teams' }, () => loadData())
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') loadData();
-      });
+      .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
