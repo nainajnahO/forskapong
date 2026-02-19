@@ -7,6 +7,7 @@ import { calculateRankings, type MatchResult } from '@/lib/tournament-engine';
 import { dbMatchToResult, teamsToEngine } from '../lib/match-utils';
 import TeamFormModal from '../components/TeamFormModal';
 import DeleteConfirmModal from '../components/DeleteConfirmModal';
+import TypedConfirmModal from '../components/TypedConfirmModal';
 
 export default function TeamsTab() {
   const [teams, setTeams] = useState<Team[]>([]);
@@ -16,6 +17,7 @@ export default function TeamsTab() {
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [deletingTeam, setDeletingTeam] = useState<Team | null>(null);
+  const [showBulkDelete, setShowBulkDelete] = useState(false);
 
   const loadData = useCallback(async () => {
     const [teamsRes, matchesRes] = await Promise.all([
@@ -53,6 +55,28 @@ export default function TeamsTab() {
   );
 
   const hasMatches = matches.length > 0;
+
+  const uncheckedCount = teams.filter((t) => !t.checked_in).length;
+  const allCheckedIn = teams.length > 0 && uncheckedCount === 0;
+
+  async function toggleCheckIn(team: Team) {
+    const prev = teams;
+    setTeams((cur) => cur.map((t) => (t.id === team.id ? { ...t, checked_in: !t.checked_in } : t)));
+    const { error } = await supabase.from('teams').update({ checked_in: !team.checked_in }).eq('id', team.id);
+    if (error) setTeams(prev);
+  }
+
+  async function bulkCheckIn(value: boolean) {
+    const prev = teams;
+    setTeams((cur) => cur.map((t) => ({ ...t, checked_in: value })));
+    const { error } = await supabase.from('teams').update({ checked_in: value }).neq('id', '');
+    if (error) setTeams(prev);
+  }
+
+  async function deleteUnchecked() {
+    const { error } = await supabase.from('teams').delete().eq('checked_in', false);
+    if (error) throw error;
+  }
 
   // Sort teams by rank (from standings) when tournament has started, otherwise by created_at
   const sorted = useMemo(() => {
@@ -114,6 +138,36 @@ export default function TeamsTab() {
         </button>
       </div>
 
+      {/* Check-in actions */}
+      {teams.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => void bulkCheckIn(!allCheckedIn)}
+            className={cn(
+              'h-8 px-3 rounded-lg text-xs font-medium transition-all cursor-pointer',
+              'border border-white/[0.08] hover:bg-white/[0.06]',
+              allCheckedIn ? 'text-zinc-400' : 'text-emerald-400',
+            )}
+          >
+            {allCheckedIn ? 'Nollställ incheckning' : 'Checka in alla'}
+          </button>
+          {uncheckedCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowBulkDelete(true)}
+              className={cn(
+                'h-8 px-3 rounded-lg text-xs font-medium transition-all cursor-pointer',
+                'bg-red-500/10 text-red-400 border border-red-500/20',
+                'hover:bg-red-500/20',
+              )}
+            >
+              Radera ej incheckade ({uncheckedCount})
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Count */}
       <p className="text-xs text-zinc-600">
         {filtered.length} lag {search && `(av ${teams.length})`}
@@ -126,10 +180,11 @@ export default function TeamsTab() {
           className={cn(
             'grid gap-2 px-4 py-3 border-b border-white/[0.06] bg-white/[0.02] text-xs text-zinc-500',
             hasMatches
-              ? 'grid-cols-[2.5rem_1fr_1fr_5rem_3rem_3rem_3rem_3rem_4.5rem]'
-              : 'grid-cols-[2.5rem_1fr_1fr_5rem_4rem_4.5rem]',
+              ? 'grid-cols-[2.5rem_2.5rem_1fr_1fr_5rem_3rem_3rem_3rem_3rem_4.5rem]'
+              : 'grid-cols-[2.5rem_2.5rem_1fr_1fr_5rem_4rem_4.5rem]',
           )}
         >
+          <span />
           <span className="text-center">#</span>
           <span>Namn</span>
           <span>Spelare</span>
@@ -163,15 +218,39 @@ export default function TeamsTab() {
                 className={cn(
                   'grid gap-2 px-4 py-2.5 border-b border-white/[0.04] last:border-0 text-sm items-center',
                   hasMatches
-                    ? 'grid-cols-[2.5rem_1fr_1fr_5rem_3rem_3rem_3rem_3rem_4.5rem]'
-                    : 'grid-cols-[2.5rem_1fr_1fr_5rem_4rem_4.5rem]',
+                    ? 'grid-cols-[2.5rem_2.5rem_1fr_1fr_5rem_3rem_3rem_3rem_3rem_4.5rem]'
+                    : 'grid-cols-[2.5rem_2.5rem_1fr_1fr_5rem_4rem_4.5rem]',
+                  !team.checked_in && 'opacity-60',
                 )}
               >
+                {/* Check-in toggle */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void toggleCheckIn(team);
+                  }}
+                  className={cn(
+                    'w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer',
+                    team.checked_in
+                      ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400'
+                      : 'border-zinc-600 hover:border-zinc-400',
+                  )}
+                  title={team.checked_in ? 'Incheckad' : 'Ej incheckad'}
+                >
+                  {team.checked_in && (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </button>
                 <span className="text-zinc-600 text-center font-mono text-xs">
                   {s?.rank ?? i + 1}
                 </span>
-                <span className="text-white truncate">{team.name}</span>
-                <span className="text-zinc-400 truncate text-xs">
+                <span className={cn('truncate', team.checked_in ? 'text-white' : 'text-zinc-500')}>
+                  {team.name}
+                </span>
+                <span className={cn('truncate text-xs', team.checked_in ? 'text-zinc-400' : 'text-zinc-600')}>
                   {[team.player1, team.player2].filter(Boolean).join(', ') || '—'}
                 </span>
                 <span className="text-zinc-500 text-center font-mono text-xs">
@@ -255,6 +334,17 @@ export default function TeamsTab() {
             setDeletingTeam(null);
             loadData();
           }}
+        />
+      )}
+
+      {showBulkDelete && (
+        <TypedConfirmModal
+          title="Radera ej incheckade lag?"
+          description={`${uncheckedCount} lag har inte checkat in och kommer att raderas permanent.`}
+          confirmPhrase={String(uncheckedCount)}
+          confirmLabel={`Radera ${uncheckedCount} lag`}
+          onConfirm={deleteUnchecked}
+          onClose={() => setShowBulkDelete(false)}
         />
       )}
     </div>

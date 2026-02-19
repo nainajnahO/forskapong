@@ -12,6 +12,7 @@ export interface Database {
           player2: string | null;
           wins: number;
           losses: number;
+          checked_in: boolean;
           created_at: string;
         };
         Insert: {
@@ -22,6 +23,7 @@ export interface Database {
           player2?: string | null;
           wins?: number;
           losses?: number;
+          checked_in?: boolean;
           created_at?: string;
         };
         Update: {
@@ -32,6 +34,7 @@ export interface Database {
           player2?: string | null;
           wins?: number;
           losses?: number;
+          checked_in?: boolean;
           created_at?: string;
         };
         Relationships: [];
