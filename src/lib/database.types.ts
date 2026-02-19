@@ -153,6 +153,10 @@ export interface Database {
         Args: { team_name: string };
         Returns: { id: string; code: string; name: string }[];
       };
+      verify_admin_code: {
+        Args: { code: string };
+        Returns: boolean;
+      };
     };
     Enums: {
       [_ in never]: never;

@@ -1,21 +1,31 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
-
-const PASSPHRASE = import.meta.env.VITE_ADMIN_PASSPHRASE ?? 'ADMIN2026';
+import { supabase } from '@/lib/supabase';
 
 interface Props {
   onAuthenticated: () => void;
 }
 
-  function handleSubmit(e: React.FormEvent) {
+export default function AdminPassphraseGate({ onAuthenticated }: Props) {
+  const [value, setValue] = useState('');
+  const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (value === PASSPHRASE) {
-      sessionStorage.setItem('adminAuth', 'true');
-      onAuthenticated();
-    } else {
-      setError(true);
-      setTimeout(() => setError(false), 1500);
+    setLoading(true);
+    try {
+      const { data } = await supabase.rpc('verify_admin_code', { code: value });
+      if (data) {
+        sessionStorage.setItem('adminAuth', 'true');
+        onAuthenticated();
+      } else {
+        setError(true);
+        setTimeout(() => setError(false), 1500);
+      }
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -50,13 +60,15 @@ interface Props {
 
         <button
           type="submit"
+          disabled={loading}
           className={cn(
             'w-full h-12 rounded-xl font-medium transition-all',
             'bg-brand-500 text-white shadow-lg shadow-brand-500/20',
             'hover:brightness-110 active:scale-[0.98]',
+            loading && 'opacity-60 cursor-not-allowed',
           )}
         >
-          Logga in
+          {loading ? 'Verifierar...' : 'Logga in'}
         </button>
 
         {error && (
