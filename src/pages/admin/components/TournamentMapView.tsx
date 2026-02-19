@@ -5,6 +5,7 @@ import type {
   KnockoutBracket as KnockoutBracketType,
 } from '@/lib/tournament-engine';
 import type { Match } from '@/lib/database.types';
+import { dbMatchToResult } from '../lib/match-utils';
 import KnockoutBracketView from './KnockoutBracketView';
 
 interface TournamentMapViewProps {
@@ -17,18 +18,6 @@ interface TournamentMapViewProps {
   totalRounds: number;
   status: string;
   onEditMatch?: (matchId: string) => void;
-}
-
-function dbMatchToResult(m: Match): MatchResult | null {
-  if (!m.winner_id || !m.loser_id) return null;
-  return {
-    team1Id: m.team1_id,
-    team2Id: m.team2_id,
-    winnerId: m.winner_id,
-    loserId: m.loser_id,
-    scoreTeam1: m.score_team1 ?? 0,
-    scoreTeam2: m.score_team2 ?? 0,
-  };
 }
 
 function MatchRow({

@@ -16,7 +16,7 @@ export default function DangerZone({ tournament, currentRound, onActionComplete 
 
   async function handleResetTournament() {
     // Delete all matches
-    const { error: matchErr } = await supabase.from('matches').delete().gte('id', '00000000-0000-0000-0000-000000000000');
+    const { error: matchErr } = await supabase.from('matches').delete().not('id', 'is', null);
     if (matchErr) throw matchErr;
 
     // Reset tournament state
@@ -32,7 +32,7 @@ export default function DangerZone({ tournament, currentRound, onActionComplete 
     const { error: teamErr } = await supabase
       .from('teams')
       .update({ wins: 0, losses: 0 })
-      .gte('id', '00000000-0000-0000-0000-000000000000');
+      .not('id', 'is', null);
     if (teamErr) throw teamErr;
 
     onActionComplete();

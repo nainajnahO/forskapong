@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 
-const PASSPHRASE = import.meta.env.VITE_ADMIN_PASSPHRASE ?? 'ADMIN2026';
+const PASSPHRASE = import.meta.env.VITE_ADMIN_PASSPHRASE;
+
+if (!PASSPHRASE) {
+  throw new Error('VITE_ADMIN_PASSPHRASE is not set');
+}
 
 interface Props {
   onAuthenticated: () => void;

@@ -9,9 +9,7 @@ import LiveTab from './tabs/LiveTab';
 
 export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState(
-    () =>
-      !!import.meta.env.VITE_ADMIN_PASSPHRASE ||
-      sessionStorage.getItem('adminAuth') === 'true',
+    () => sessionStorage.getItem('adminAuth') === 'true',
   );
   const adminTab = useAdminTab();
   const activeTab = adminTab?.activeTab ?? 'live';

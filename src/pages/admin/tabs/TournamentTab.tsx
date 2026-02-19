@@ -189,7 +189,8 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
         table_number: i + 1,
         scheduled_time: roundTime || null,
       }));
-      await supabase.from('matches').insert(qfInserts);
+      const { error } = await supabase.from('matches').insert(qfInserts);
+      if (error) throw error;
       setRoundTime('');
       await loadData();
     } finally {
@@ -201,7 +202,9 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     if (!tournament) return;
     setGenerating(true);
     try {
-      const qfMatches = matches.filter((m) => m.round === 8 && m.confirmed);
+      const qfMatches = matches
+        .filter((m) => m.round === 8 && m.confirmed)
+        .sort((a, b) => (a.table_number ?? 0) - (b.table_number ?? 0));
       const qfWinners = qfMatches.map((m) => m.winner_id!);
       if (qfWinners.length !== 4) return;
 
@@ -210,7 +213,8 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
         { round: 9, team1_id: qfWinners[0], team2_id: qfWinners[1], table_number: 1, scheduled_time: roundTime || null },
         { round: 9, team1_id: qfWinners[2], team2_id: qfWinners[3], table_number: 2, scheduled_time: roundTime || null },
       ];
-      await supabase.from('matches').insert(sfInserts);
+      const { error } = await supabase.from('matches').insert(sfInserts);
+      if (error) throw error;
       setRoundTime('');
       await loadData();
     } finally {
@@ -222,17 +226,20 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     if (!tournament) return;
     setGenerating(true);
     try {
-      const sfMatches = matches.filter((m) => m.round === 9 && m.confirmed);
+      const sfMatches = matches
+        .filter((m) => m.round === 9 && m.confirmed)
+        .sort((a, b) => (a.table_number ?? 0) - (b.table_number ?? 0));
       const sfWinners = sfMatches.map((m) => m.winner_id!);
       if (sfWinners.length !== 2) return;
 
-      await supabase.from('matches').insert({
+      const { error } = await supabase.from('matches').insert({
         round: 10,
         team1_id: sfWinners[0],
         team2_id: sfWinners[1],
         table_number: 1,
         scheduled_time: roundTime || null,
       });
+      if (error) throw error;
       setRoundTime('');
       await loadData();
     } finally {
