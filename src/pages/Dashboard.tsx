@@ -4,15 +4,13 @@ import { motion } from 'motion/react';
 import { useTheme } from '@/contexts/useTheme';
 import { cn } from '@/lib/utils';
 import { themeText, themeGradientLine } from '@/lib/theme-utils';
-import { EVENT_INFO } from '@/lib/constants';
+import { EVENT_DATE, EVENT_INFO } from '@/lib/constants';
 import { supabase } from '@/lib/supabase';
 import type { Team, Match } from '@/lib/database.types';
 import Container from '../components/common/Container';
 import SectionLabel from '../components/common/SectionLabel';
 
 /* ─── Countdown Hook ─────────────────────────────────────────── */
-
-const EVENT_DATE = new Date('2026-03-31T18:00:00');
 
 interface TimeLeft {
   days: number;
@@ -379,136 +377,107 @@ export default function Dashboard() {
     ];
 
     return (
-      <section className="relative w-full min-h-[calc(100vh-5rem)] pt-24 md:pt-28 pb-10 md:pb-16">
+      <section className="relative w-full min-h-[calc(100vh-5rem)] pt-24 flex flex-col items-center justify-center">
         <Container>
-          <div>
-            {/* ── Header ──────────────────────────────────── */}
+          <div className="flex flex-col items-center text-center">
+            {/* ── Team info ───────────────────────────────── */}
             <motion.div
-              className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-10"
-              initial={{ opacity: 0, y: 16 }}
+              className="flex flex-col items-center gap-3 mb-10"
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: 'easeOut' }}
+              transition={{ duration: 0.6 }}
             >
-              <div>
-                <SectionLabel variant="gradient">TURNERING</SectionLabel>
-                <div className="flex items-center gap-3 mt-1 flex-wrap">
-                  <h1 className="font-display text-3xl md:text-4xl lg:text-5xl text-brand-500 tracking-wider hdr-text-fill">
-                    {team.name}
-                  </h1>
-                  <span
-                    className={cn(
-                      'inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-mono font-semibold tracking-wider border',
-                      theme === 'dark'
-                        ? 'bg-brand-500/10 text-brand-400 border-brand-500/20'
-                        : 'bg-brand-50 text-brand-600 border-brand-200',
-                    )}
-                  >
-                    {code}
-                  </span>
-                </div>
-                <div className="mt-2 flex items-center gap-2 flex-wrap">
-                  <PlayerNameInput
-                    value={player1}
-                    onChange={setPlayer1}
-                    onSave={savePlayerNames}
-                    placeholder="Spelare 1"
-                    focused={focusedField === 0}
-                    onFocus={() => setFocusedField(0)}
-                    onBlur={() => setFocusedField(null)}
-                    theme={theme}
-                  />
-                  <span className={cn('text-sm', themeText(theme, 'secondary'))}>&</span>
-                  <PlayerNameInput
-                    value={player2}
-                    onChange={setPlayer2}
-                    onSave={savePlayerNames}
-                    placeholder="Spelare 2"
-                    focused={focusedField === 1}
-                    onFocus={() => setFocusedField(1)}
-                    onBlur={() => setFocusedField(null)}
-                    theme={theme}
-                  />
-                </div>
+              <div className="flex items-center gap-3 flex-wrap justify-center">
+                <h1 className="font-display text-2xl md:text-3xl text-brand-500 tracking-wider hdr-text-fill">
+                  {team.name}
+                </h1>
+                <span
+                  className={cn(
+                    'inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold tracking-wider border',
+                    theme === 'dark'
+                      ? 'bg-brand-500/10 text-brand-400 border-brand-500/20'
+                      : 'bg-brand-50 text-brand-600 border-brand-200',
+                  )}
+                >
+                  {code}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap justify-center">
+                <PlayerNameInput
+                  value={player1}
+                  onChange={setPlayer1}
+                  onSave={savePlayerNames}
+                  placeholder="Spelare 1"
+                  focused={focusedField === 0}
+                  onFocus={() => setFocusedField(0)}
+                  onBlur={() => setFocusedField(null)}
+                  theme={theme}
+                />
+                <span className={cn('text-sm', themeText(theme, 'secondary'))}>&</span>
+                <PlayerNameInput
+                  value={player2}
+                  onChange={setPlayer2}
+                  onSave={savePlayerNames}
+                  placeholder="Spelare 2"
+                  focused={focusedField === 1}
+                  onFocus={() => setFocusedField(1)}
+                  onBlur={() => setFocusedField(null)}
+                  theme={theme}
+                />
               </div>
             </motion.div>
 
             {/* ── Countdown ───────────────────────────────── */}
             <motion.div
-              className="flex flex-col items-center gap-8 py-12 md:py-20"
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.2, ease: 'easeOut' }}
+              className="flex flex-col items-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.8, delay: 0.15 }}
             >
-              <p
-                className={cn(
-                  'text-sm font-semibold uppercase tracking-wider',
-                  theme === 'dark' ? 'text-brand-400' : 'text-brand-600',
-                )}
-              >
-                Nedräkning till {EVENT_INFO.date} kl {EVENT_INFO.time}
-              </p>
-
-              <div className="grid grid-cols-4 gap-3 sm:gap-5">
+              <div className="flex items-baseline gap-2 sm:gap-4 font-mono tabular-nums">
                 {digits.map((d, i) => (
-                  <motion.div
-                    key={d.label}
-                    className={cn(
-                      'flex flex-col items-center rounded-2xl border p-4 sm:p-6 min-w-[70px] sm:min-w-[90px] transition-colors duration-500',
-                      cardBg,
-                      cardBorder,
+                  <div key={d.label} className="flex items-baseline gap-2 sm:gap-4">
+                    {i > 0 && (
+                      <span
+                        className={cn(
+                          'text-2xl sm:text-4xl md:text-5xl font-light select-none',
+                          theme === 'dark' ? 'text-zinc-700' : 'text-zinc-300',
+                        )}
+                      >
+                        :
+                      </span>
                     )}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.3 + i * 0.08, ease: 'easeOut' }}
-                  >
-                    <span
-                      className={cn(
-                        'text-3xl sm:text-5xl font-bold font-mono tracking-tight tabular-nums',
-                        theme === 'dark' ? 'text-white' : 'text-zinc-900',
-                      )}
-                    >
-                      {String(d.value).padStart(2, '0')}
-                    </span>
-                    <span
-                      className={cn(
-                        'text-[10px] sm:text-xs mt-1 uppercase tracking-wider',
-                        themeText(theme, 'secondary'),
-                      )}
-                    >
-                      {d.label}
-                    </span>
-                  </motion.div>
+                    <div className="flex flex-col items-center">
+                      <span
+                        className={cn(
+                          'text-4xl sm:text-6xl md:text-7xl font-semibold tracking-tighter',
+                          theme === 'dark' ? 'text-zinc-100' : 'text-zinc-900',
+                        )}
+                      >
+                        {String(d.value).padStart(2, '0')}
+                      </span>
+                      <span
+                        className={cn(
+                          'text-[10px] sm:text-xs tracking-widest uppercase mt-1',
+                          theme === 'dark' ? 'text-zinc-600' : 'text-zinc-400',
+                        )}
+                      >
+                        {d.label}
+                      </span>
+                    </div>
+                  </div>
                 ))}
               </div>
 
-              <motion.p
+              <p
                 className={cn(
-                  'text-lg sm:text-xl font-medium',
-                  themeText(theme, 'secondary'),
+                  'mt-6 text-sm',
+                  theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400',
                 )}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.6, delay: 0.7 }}
               >
-                Vi ses den 31:a Mars!
-              </motion.p>
+                {EVENT_INFO.date} kl {EVENT_INFO.time} &middot; {EVENT_INFO.venue}
+              </p>
             </motion.div>
-
-            {/* ── Footer line ─────────────────────────────── */}
-            <motion.div
-              className={cn('mt-12 h-px', themeGradientLine(theme))}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: [0.3, 0.6, 0.3] }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-            />
-            <p
-              className={cn(
-                'mt-4 text-center text-xs',
-                theme === 'dark' ? 'text-zinc-600' : 'text-zinc-400',
-              )}
-            >
-              Turneringen börjar {EVENT_INFO.date} kl {EVENT_INFO.time}
-            </p>
           </div>
         </Container>
       </section>

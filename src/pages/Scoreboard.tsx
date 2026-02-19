@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { useTheme } from '@/contexts/useTheme';
 import { cn } from '@/lib/utils';
-import { themeText } from '@/lib/theme-utils';
+import { themeText, themeGradientLine } from '@/lib/theme-utils';
+import { EVENT_DATE, EVENT_INFO } from '@/lib/constants';
 import { supabase } from '@/lib/supabase';
 import type { Team, Match } from '@/lib/database.types';
 import Container from '../components/common/Container';
@@ -194,6 +195,52 @@ export default function Scoreboard() {
           >
             Försök igen
           </button>
+        </Container>
+      </section>
+    );
+  }
+
+  /* ── Pre-event gate ────────────────────────────── */
+  if (Date.now() < EVENT_DATE.getTime()) {
+    return (
+      <section className="relative w-full min-h-[calc(100vh-5rem)] pt-24 flex items-center justify-center">
+        <Container className="max-w-md">
+          <motion.div
+            className={cn('rounded-2xl border p-8 text-center', cardBg, cardBorder)}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+          >
+            <p
+              className={cn(
+                'text-sm font-semibold uppercase tracking-wider mb-3',
+                theme === 'dark' ? 'text-brand-400' : 'text-brand-600',
+              )}
+            >
+              Scoreboard
+            </p>
+            <h2 className={cn('text-lg font-semibold mb-2', 'text-foreground')}>
+              Scoreboarden öppnas vid turneringsstart
+            </h2>
+            <p className={cn('text-sm mb-6', themeText(theme, 'secondary'))}>
+              {EVENT_INFO.date} kl {EVENT_INFO.time}
+            </p>
+            <motion.div
+              className={cn('h-px mb-6', themeGradientLine(theme))}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0.3, 0.6, 0.3] }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            />
+            <button
+              onClick={() => navigate('/play/dashboard')}
+              className={cn(
+                'text-sm transition-opacity hover:opacity-70',
+                themeText(theme, 'secondary'),
+              )}
+            >
+              ← Tillbaka till dashboard
+            </button>
+          </motion.div>
         </Container>
       </section>
     );
