@@ -149,28 +149,42 @@ function simMatch(
 
 /* ─── Run remaining Swiss rounds synchronously ────────────────── */
 
+function applyRoundResults(
+  s: SimState,
+  results: MatchResult[],
+  round: number,
+  bye: string | null,
+): SimState {
+  let updatedTeams = s.teams.map((t) => {
+    const won = results.filter((r) => r.winnerId === t.id).length;
+    const lost = results.filter((r) => r.loserId === t.id).length;
+    return { ...t, wins: t.wins + won, losses: t.losses + lost };
+  });
+  if (bye) {
+    updatedTeams = updatedTeams.map((t) =>
+      t.id === bye ? { ...t, wins: t.wins + 1 } : t,
+    );
+  }
+  return {
+    ...s,
+    teams: updatedTeams,
+    allResults: [...s.allResults, ...results],
+    roundResults: results,
+    roundHistory: [...s.roundHistory, { round, results }],
+  };
+}
+
 function runRemainingSwiss(state: SimState): SimState {
   let s = { ...state };
   // If we're mid-round, finish it first
-  if (s.phase === 'swiss_pairings' || s.phase === 'swiss_results') {
+  if (s.phase === 'swiss_pairings') {
     const results = s.roundPairings!.pairings.map((p) =>
       simMatch(p, s.matchOverrides, s.skillRatings),
     );
-    const updatedTeams = s.teams.map((t) => {
-      const won = results.filter((r) => r.winnerId === t.id).length;
-      const lost = results.filter((r) => r.loserId === t.id).length;
-      return { ...t, wins: t.wins + won, losses: t.losses + lost };
-    });
-    s = {
-      ...s,
-      teams: updatedTeams,
-      allResults: [...s.allResults, ...results],
-      roundResults: results,
-      roundHistory: [
-        ...s.roundHistory,
-        { round: s.currentRound, results },
-      ],
-    };
+    s = applyRoundResults(s, results, s.currentRound, s.roundPairings!.bye);
+  } else if (s.phase === 'swiss_results') {
+    // Reuse already-simulated results instead of re-simulating
+    s = applyRoundResults(s, s.roundResults, s.currentRound, s.roundPairings!.bye);
   } else if (s.phase === 'swiss_complete') {
     s = {
       ...s,
@@ -188,22 +202,8 @@ function runRemainingSwiss(state: SimState): SimState {
     const results = rp.pairings.map((p) =>
       simMatch(p, s.matchOverrides, s.skillRatings),
     );
-    const updatedTeams = s.teams.map((t) => {
-      const won = results.filter((r) => r.winnerId === t.id).length;
-      const lost = results.filter((r) => r.loserId === t.id).length;
-      return { ...t, wins: t.wins + won, losses: t.losses + lost };
-    });
-    s = {
-      ...s,
-      currentRound: nextRound,
-      teams: updatedTeams,
-      allResults: [...s.allResults, ...results],
-      roundResults: results,
-      roundHistory: [
-        ...s.roundHistory,
-        { round: nextRound, results },
-      ],
-    };
+    s = applyRoundResults(s, results, nextRound, rp.bye);
+    s = { ...s, currentRound: nextRound };
   }
 
   const standings = calculateRankings(s.teams, s.allResults);
@@ -341,6 +341,7 @@ function reducer(state: SimState, action: SimAction): SimState {
         // ── Top-16 R16 ──
         case 'knockout_r16': {
           const slots = state.simBracket!.rounds[0];
+          if (slots.some((s) => !s.team1Id || !s.team2Id)) return state;
           const results = slots.map((s) =>
             simMatch({ team1Id: s.team1Id!, team2Id: s.team2Id! }, state.matchOverrides, state.skillRatings),
           );
@@ -372,6 +373,7 @@ function reducer(state: SimState, action: SimAction): SimState {
           }
           // Top-16 path (QF is round index 1)
           const qfSlots = state.simBracket!.rounds[1];
+          if (qfSlots.some((s) => !s.team1Id || !s.team2Id)) return state;
           const results = qfSlots.map((s) =>
             simMatch({ team1Id: s.team1Id!, team2Id: s.team2Id! }, state.matchOverrides, state.skillRatings),
           );
@@ -403,6 +405,7 @@ function reducer(state: SimState, action: SimAction): SimState {
           // SimBracket SF
           const sfRoundIdx = state.config.knockoutSize === 4 ? 0 : 2;
           const sfSlots = state.simBracket!.rounds[sfRoundIdx];
+          if (sfSlots.some((s) => !s.team1Id || !s.team2Id)) return state;
           const results = sfSlots.map((s) =>
             simMatch({ team1Id: s.team1Id!, team2Id: s.team2Id! }, state.matchOverrides, state.skillRatings),
           );
@@ -421,7 +424,8 @@ function reducer(state: SimState, action: SimAction): SimState {
         case 'knockout_final': {
           if (state.bracket) {
             const f = state.bracket.final;
-            const result = simMatch({ team1Id: f.team1Id!, team2Id: f.team2Id! }, state.matchOverrides, state.skillRatings);
+            if (!f.team1Id || !f.team2Id) return state;
+            const result = simMatch({ team1Id: f.team1Id, team2Id: f.team2Id }, state.matchOverrides, state.skillRatings);
             return {
               ...state,
               phase: 'knockout_final_results',
@@ -430,8 +434,9 @@ function reducer(state: SimState, action: SimAction): SimState {
           }
           const finalRoundIdx = state.simBracket!.rounds.length - 1;
           const finalSlot = state.simBracket!.rounds[finalRoundIdx][0];
+          if (!finalSlot.team1Id || !finalSlot.team2Id) return state;
           const result = simMatch(
-            { team1Id: finalSlot.team1Id!, team2Id: finalSlot.team2Id! },
+            { team1Id: finalSlot.team1Id, team2Id: finalSlot.team2Id },
             state.matchOverrides,
             state.skillRatings,
           );
@@ -1006,10 +1011,10 @@ function BatchPanel({ config }: { config: SimConfig }) {
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<BatchResults | null>(null);
-  const abortRef = useRef({ current: false });
+  const abortRef = useRef(false);
 
   const run = useCallback(async () => {
-    abortRef.current = { current: false };
+    abortRef.current = false;
     setRunning(true);
     setProgress(0);
     setResults(null);
@@ -1017,14 +1022,14 @@ function BatchPanel({ config }: { config: SimConfig }) {
       config,
       count,
       (done) => setProgress(done),
-      abortRef.current,
+      abortRef,
     );
     setResults(res);
     setRunning(false);
   }, [config, count]);
 
   const abort = useCallback(() => {
-    abortRef.current.current = true;
+    abortRef.current = true;
   }, []);
 
   return (
