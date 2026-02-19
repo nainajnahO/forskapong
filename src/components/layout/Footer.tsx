@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import Container from '../common/Container';
 import MediaBetweenText from '../common/MediaBetweenText';
@@ -20,22 +20,51 @@ interface CapItem {
   status: Status;
 }
 
-function detectCapabilities(): Record<string, boolean | null> {
+function detectCapabilities(): Record<string, boolean> {
   const canvas = document.createElement('canvas');
   const webgl2Ctx = canvas.getContext('webgl2');
   const webglCtx = webgl2Ctx || canvas.getContext('webgl');
 
   return {
-    hdr: window.matchMedia('(dynamic-range: high)').matches || null,
-    p3: window.matchMedia('(color-gamut: p3)').matches || null,
-    webgl: !!webglCtx || null,
-    webgl2: !!webgl2Ctx || null,
-    highDpr: window.devicePixelRatio > 1 || null,
+    hdr: window.matchMedia('(dynamic-range: high)').matches,
+    p3: window.matchMedia('(color-gamut: p3)').matches,
+    webgl: !!webglCtx,
+    webgl2: !!webgl2Ctx,
+    highDpr: window.devicePixelRatio > 1,
   };
 }
 
-function useCapabilities(): Record<string, boolean | null> {
-  const [caps] = useState(detectCapabilities);
+function useCapabilities(): Record<string, boolean> {
+  const [caps, setCaps] = useState(detectCapabilities);
+
+  useEffect(() => {
+    const hdrMql = window.matchMedia('(dynamic-range: high)');
+    const p3Mql = window.matchMedia('(color-gamut: p3)');
+
+    const update = () => {
+      const hdr = hdrMql.matches;
+      const p3 = p3Mql.matches;
+      setCaps((prev) => {
+        if (prev.hdr === hdr && prev.p3 === p3) return prev;
+        return { ...prev, hdr, p3 };
+      });
+    };
+
+    // Instant update when the browser fires the event (Chrome, Firefox)
+    hdrMql.addEventListener('change', update);
+    p3Mql.addEventListener('change', update);
+
+    // Polling fallback: Safari doesn't fire change events for capability
+    // media queries toggled via developer settings
+    const interval = setInterval(update, 2000);
+
+    return () => {
+      hdrMql.removeEventListener('change', update);
+      p3Mql.removeEventListener('change', update);
+      clearInterval(interval);
+    };
+  }, []);
+
   return caps;
 }
 
@@ -64,11 +93,11 @@ export default function Footer() {
 
   const items: CapItem[] = useMemo(
     () => [
-      { label: 'HDR', status: caps.hdr ? 'on' : caps.hdr === false ? 'unsupported' : 'off' },
-      { label: 'P3 Gamut', status: caps.p3 ? 'on' : caps.p3 === false ? 'unsupported' : 'off' },
-      { label: 'GPU Accel', status: caps.webgl ? 'on' : caps.webgl === false ? 'unsupported' : 'off' },
-      { label: 'WebGL 2', status: caps.webgl2 ? 'on' : caps.webgl2 === false ? 'unsupported' : 'off' },
-      { label: 'Retina', status: caps.highDpr ? 'on' : caps.highDpr === false ? 'unsupported' : 'off' },
+      { label: 'HDR', status: caps.hdr ? 'on' : 'off' },
+      { label: 'P3 Gamut', status: caps.p3 ? 'on' : 'off' },
+      { label: 'GPU Accel', status: caps.webgl ? 'on' : 'off' },
+      { label: 'WebGL 2', status: caps.webgl2 ? 'on' : 'off' },
+      { label: 'Retina', status: caps.highDpr ? 'on' : 'off' },
       { label: 'Fluid BG', status: backgroundVariant === 'fluid' ? 'on' : 'off' },
     ],
     [caps, backgroundVariant],
