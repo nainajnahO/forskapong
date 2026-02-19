@@ -395,7 +395,6 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       <TournamentFlowCard
         tournament={tournament}
         teams={teams}
-        matches={matches}
         roundsMap={roundsMap}
         generating={generating}
         roundTime={roundTime}

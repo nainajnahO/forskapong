@@ -17,7 +17,6 @@ import type { AdminTab } from '@/contexts/AdminTabContextDef';
 interface Props {
   tournament: Tournament | null;
   teams: { length: number };
-  matches: Match[];
   roundsMap: Map<number, Match[]>;
   generating: boolean;
   roundTime: string;
@@ -53,7 +52,6 @@ type FlowState =
 function deriveFlowState(
   tournament: Tournament | null,
   teamsCount: number,
-  matches: Match[],
   roundsMap: Map<number, Match[]>,
 ): FlowState {
   const status = tournament?.status ?? 'not_started';
@@ -110,7 +108,6 @@ export default function TournamentFlowCard(props: Props) {
   const {
     tournament,
     teams,
-    matches,
     roundsMap,
     generating,
     roundTime,
@@ -127,7 +124,7 @@ export default function TournamentFlowCard(props: Props) {
     championName,
   } = props;
 
-  const flowState = deriveFlowState(tournament, teams.length, matches, roundsMap);
+  const flowState = deriveFlowState(tournament, teams.length, roundsMap);
   const currentRound = tournament?.current_round ?? 0;
 
   const config = getCardConfig(flowState, currentRound, roundsMap, championName);
