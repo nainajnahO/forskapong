@@ -2,7 +2,7 @@
 export const SECTION_PADDING = 'py-16 md:py-24' as const;
 
 // Event Date (used for countdown + scoreboard gate)
-export const EVENT_DATE = new Date('2026-03-31T18:00:00');
+export const EVENT_DATE = new Date('2026-03-31T18:00:00+02:00');
 
 // Event Information
 export const EVENT_INFO = {

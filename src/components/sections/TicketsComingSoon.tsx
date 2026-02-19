@@ -224,17 +224,19 @@ export default function TicketsComingSoon({ id }: TicketsComingSoonProps) {
                   Spara koden — ni behöver den för att logga in
                 </motion.p>
 
-                <motion.a
-                  href={buildSwishUrl(code)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-8 inline-block"
-                  initial={{ opacity: 0, scale: 0.5 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 1, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                >
-                  <img src={swishQR} alt="Swish QR-kod" className="w-48 rounded-xl" />
-                </motion.a>
+                {code && (
+                  <motion.a
+                    href={buildSwishUrl(code)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-8 inline-block"
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 1, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    <img src={swishQR} alt="Swish QR-kod" className="w-48 rounded-xl" />
+                  </motion.a>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

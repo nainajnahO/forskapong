@@ -123,8 +123,10 @@ export default function Scoreboard() {
 
   const teamId = sessionStorage.getItem('teamId');
 
+  const isBeforeEvent = Date.now() < EVENT_DATE.getTime();
+
   const [standings, setStandings] = useState<TeamStanding[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!isBeforeEvent);
   const [error, setError] = useState('');
 
   const loadData = useCallback(async () => {
@@ -140,11 +142,13 @@ export default function Scoreboard() {
   }, []);
 
   useEffect(() => {
+    if (isBeforeEvent) return;
     loadData();
-  }, [loadData]);
+  }, [isBeforeEvent, loadData]);
 
   // Real-time: refresh when matches update
   useEffect(() => {
+    if (isBeforeEvent) return;
     const channel = supabase
       .channel('scoreboard')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, () => {
@@ -158,7 +162,7 @@ export default function Scoreboard() {
     return () => {
       void channel.unsubscribe();
     };
-  }, [loadData]);
+  }, [isBeforeEvent, loadData]);
 
   const cardBg = theme === 'dark' ? 'bg-white/[0.03]' : 'bg-zinc-50';
   const cardBorder = theme === 'dark' ? 'border-white/[0.06]' : 'border-zinc-200';
@@ -201,7 +205,7 @@ export default function Scoreboard() {
   }
 
   /* ── Pre-event gate ────────────────────────────── */
-  if (Date.now() < EVENT_DATE.getTime()) {
+  if (isBeforeEvent) {
     return (
       <section className="relative w-full min-h-[calc(100vh-5rem)] pt-24 flex items-center justify-center">
         <Container className="max-w-md">
