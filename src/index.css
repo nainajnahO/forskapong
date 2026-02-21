@@ -125,6 +125,7 @@ html {
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
+    filter: brightness(1.2);
   }
   .hdr-text-fill-400 {
     background-image: url('./assets/hdr/brand-400-red.avif');
@@ -132,6 +133,7 @@ html {
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
+    filter: brightness(1.2);
   }
   .hdr-bg-fill {
     background-image: url('./assets/hdr/brand-600-red.avif') !important;
@@ -148,6 +150,7 @@ html {
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
+    filter: brightness(1.2);
   }
   .hdr-white-icon {
     filter: brightness(2.5);
