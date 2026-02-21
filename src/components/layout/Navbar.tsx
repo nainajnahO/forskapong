@@ -195,7 +195,7 @@ export default function Navbar() {
                     src={logo}
                     alt="Forsränningen Logo"
                     draggable={false}
-                    className="h-9 lg:h-10 w-auto cursor-pointer"
+                    className="h-9 lg:h-10 w-auto cursor-pointer hdr-img-fill"
                   />
                 </picture>
               </a>

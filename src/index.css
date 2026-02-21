@@ -151,16 +151,19 @@ html {
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    filter: brightness(1.2);
+    filter: brightness(1.4);
   }
   .hdr-white-icon {
     filter: brightness(2.5);
+  }
+  .hdr-img-fill {
+    filter: brightness(1.4);
   }
 
   .hdr-bg-white {
     background-image: url('./assets/hdr/white.avif') !important;
     background-size: 8px 8px;
-    filter: brightness(1.2);
+    filter: brightness(1.4);
   }
 
   .light .hdr-white-fill {
