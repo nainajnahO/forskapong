@@ -142,6 +142,7 @@ html {
   .hdr-dot-fill {
     background-image: url('./assets/hdr/brand-500-red.avif') !important;
     background-size: 8px 8px;
+    filter: brightness(1.2);
   }
 
   .hdr-white-fill {
@@ -159,6 +160,7 @@ html {
   .hdr-bg-white {
     background-image: url('./assets/hdr/white.avif') !important;
     background-size: 8px 8px;
+    filter: brightness(1.2);
   }
 
   .light .hdr-white-fill {
