@@ -223,11 +223,12 @@ export default function LoginForm({ theme, side }: LoginFormProps) {
           'disabled:opacity-30 disabled:cursor-not-allowed',
           side === 'left' && 'md:ml-auto md:block',
           'bg-brand-500 text-white shadow-lg shadow-brand-500/20 hover:shadow-brand-500/30 hover:brightness-110',
+          isComplete && 'hdr-dot-fill',
         )}
         whileTap={isComplete && !isSubmitting ? { scale: 0.97 } : undefined}
       >
         {isSubmitting ? (
-          <span className="inline-flex items-center gap-1.5">
+          <span className={cn('inline-flex items-center gap-1.5', isComplete && 'hdr-white-icon')}>
             <motion.svg
               className="w-3.5 h-3.5"
               viewBox="0 0 24 24"
@@ -253,7 +254,7 @@ export default function LoginForm({ theme, side }: LoginFormProps) {
             Verifierar…
           </span>
         ) : (
-          'Fortsätt'
+          <span className={cn(isComplete && 'hdr-white-icon')}>Fortsätt</span>
         )}
       </motion.button>
     </div>
