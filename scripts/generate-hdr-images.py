@@ -33,12 +33,12 @@ OUTPUT_DIR = Path(__file__).parent.parent / "src" / "assets" / "hdr"
 # Boost = luminance multiplier vs SDR. Higher = brighter on HDR displays.
 # 3-4× makes the color's dominant channel exceed SDR peak → visible glow.
 BRAND_COLORS = {
-    "brand-400-red":  {"oklch": (0.704, 0.191, 22.2), "boost": 3.0},
-    "brand-500-red":  {"oklch": (0.637, 0.237, 25.3), "boost": 4.0},
-    "brand-600-red":  {"oklch": (0.577, 0.245, 27.3), "boost": 1.8},
-    "brand-400-blue": {"oklch": (0.685, 0.1,   230),  "boost": 3.0},
-    "brand-500-blue": {"oklch": (0.621, 0.12,  235),  "boost": 4.0},
-    "brand-600-blue": {"oklch": (0.542, 0.11,  237),  "boost": 1.8},
+    "brand-400-red":  {"oklch": (0.604, 0.191, 22.2), "boost": 3.0},
+    "brand-500-red":  {"oklch": (0.537, 0.237, 25.3), "boost": 4.0},
+    "brand-600-red":  {"oklch": (0.477, 0.245, 27.3), "boost": 1.8},
+    "brand-400-blue": {"oklch": (0.585, 0.1,   230),  "boost": 3.0},
+    "brand-500-blue": {"oklch": (0.521, 0.12,  235),  "boost": 4.0},
+    "brand-600-blue": {"oklch": (0.442, 0.11,  237),  "boost": 1.8},
     "white":          {"oklch": (1.0, 0, 0),          "boost": 2.5},
 }
 
