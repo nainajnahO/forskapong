@@ -23,13 +23,12 @@ function Annotation({
 
   return (
     <motion.div
-      className="absolute pointer-events-none left-0 right-0 top-24"
+      className="absolute z-10 pointer-events-none left-0 right-0 top-24"
       style={{ opacity, y }}
     >
       <p
         className={cn(
           'font-display text-3xl md:text-5xl lg:text-6xl text-white hdr-white-fill',
-          'drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]',
           'text-center',
         )}
       >
@@ -38,7 +37,6 @@ function Annotation({
       <p
         className={cn(
           'font-sans text-base md:text-xl text-zinc-400 text-center mt-1 whitespace-pre-line',
-          'drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]',
         )}
       >
         {subtext}
@@ -49,7 +47,7 @@ function Annotation({
 
 export default function VenueMapAnnotations({ scrollYProgress }: VenueMapAnnotationsProps) {
   return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+    <>
       {VENUE_MAP_CONFIG.annotations.map((annotation) => (
         <Annotation
           key={annotation.text}
@@ -59,6 +57,6 @@ export default function VenueMapAnnotations({ scrollYProgress }: VenueMapAnnotat
           scrollYProgress={scrollYProgress}
         />
       ))}
-    </div>
+    </>
   );
 }

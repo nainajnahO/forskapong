@@ -42,7 +42,7 @@ function Annotation({
 
   return (
     <motion.div
-      className={cn('absolute pointer-events-none', !isMobile && 'max-w-[80vw]')}
+      className={cn('absolute z-10 pointer-events-none', !isMobile && 'max-w-[80vw]')}
       style={{
         top: isMobile ? '6rem' : position[0],
         left: isMobile ? 0 : position[1],
@@ -55,7 +55,6 @@ function Annotation({
       <p
         className={cn(
           'font-display text-3xl md:text-5xl lg:text-6xl text-white hdr-white-fill',
-          'drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]',
           'text-center',
         )}
       >
@@ -65,7 +64,6 @@ function Annotation({
         <p
           className={cn(
             'font-sans text-base md:text-xl text-zinc-400 text-center mt-1 whitespace-pre-line',
-            'drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]',
           )}
         >
           {subtext}
@@ -80,7 +78,7 @@ export default function ExplodedViewAnnotations({ scrollYProgress }: ExplodedVie
   const isMobile = viewportWidth < 768;
 
   return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+    <>
       {SHOWCASE_CONFIG.annotations.map((annotation, i) => (
         <Annotation
           key={annotation.text}
@@ -93,6 +91,6 @@ export default function ExplodedViewAnnotations({ scrollYProgress }: ExplodedVie
           isFirst={i === 0}
         />
       ))}
-    </div>
+    </>
   );
 }
