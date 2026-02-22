@@ -54,7 +54,7 @@ export default function SwissRoundCard({
       {/* Matches */}
       {pairings.map((p, i) => {
         const result = getResult(p);
-        const revealed = i < showCount && result;
+        const revealed = (revealedCount != null ? i < showCount : true) && !!result;
         const t1Won = revealed && result!.winnerId === p.team1Id;
         const t2Won = revealed && result!.winnerId === p.team2Id;
 
