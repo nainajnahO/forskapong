@@ -256,11 +256,11 @@ interface CardConfig {
 }
 
 const BRAND_THEME = {
-  iconClass: 'text-brand-400',
+  iconClass: 'text-brand-400 hdr-brand-icon',
   iconBgClass: 'bg-brand-500/10',
-  borderClass: 'border-brand-500/20',
+  borderClass: 'border-brand-500/20 hdr-brand-border',
   bgClass: 'bg-brand-500/[0.03]',
-  titleClass: 'text-brand-300',
+  titleClass: 'text-brand-300 hdr-text-fill-300',
 } as const;
 
 const AMBER_THEME = {

@@ -9,6 +9,7 @@ module.exports = {
     extend: {
       colors: {
         brand: {
+          300: "oklch(var(--brand-300) / <alpha-value>)",
           400: "oklch(var(--brand-400) / <alpha-value>)",
           500: "oklch(var(--brand-500) / <alpha-value>)",
           600: "oklch(var(--brand-600) / <alpha-value>)",
