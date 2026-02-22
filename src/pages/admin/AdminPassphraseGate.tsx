@@ -68,7 +68,7 @@ export default function AdminPassphraseGate({ onAuthenticated }: Props) {
             loading && 'opacity-60 cursor-not-allowed',
           )}
         >
-          {loading ? 'Verifierar...' : 'Logga in'}
+          <span className="hdr-white-fill">{loading ? 'Verifierar...' : 'Logga in'}</span>
         </button>
 
         {error && (

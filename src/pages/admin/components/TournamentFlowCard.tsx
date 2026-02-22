@@ -212,7 +212,9 @@ export default function TournamentFlowCard(props: Props) {
                   'disabled:opacity-50',
                 )}
               >
-                {generating ? 'Vänta…' : config.action.label}
+                <span className={cn(config.action.buttonClass.includes('bg-brand-500') && 'hdr-white-fill')}>
+                  {generating ? 'Vänta…' : config.action.label}
+                </span>
                 {!generating && <ChevronRight size={14} />}
               </button>
             )}

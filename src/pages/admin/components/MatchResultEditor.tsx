@@ -142,7 +142,7 @@ export default function MatchResultEditor({
             'disabled:opacity-50 disabled:pointer-events-none',
           )}
         >
-          {saving ? '...' : 'Spara'}
+          <span className="hdr-white-fill">{saving ? '...' : 'Spara'}</span>
         </button>
       </div>
     </div>

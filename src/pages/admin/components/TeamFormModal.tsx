@@ -132,7 +132,7 @@ export default function TeamFormModal({ team, onClose, onSaved }: Props) {
               'disabled:opacity-50 disabled:pointer-events-none',
             )}
           >
-            {saving ? 'Sparar…' : isEdit ? 'Spara' : 'Skapa'}
+            <span className="hdr-white-fill">{saving ? 'Sparar…' : isEdit ? 'Spara' : 'Skapa'}</span>
           </button>
         </div>
       </motion.form>

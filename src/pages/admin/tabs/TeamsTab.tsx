@@ -135,7 +135,7 @@ export default function TeamsTab() {
             'hover:brightness-110 active:scale-[0.98]',
           )}
         >
-          + Skapa lag
+          <span className="hdr-white-fill">+ Skapa lag</span>
         </button>
       </div>
 

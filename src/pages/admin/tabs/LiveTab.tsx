@@ -162,7 +162,7 @@ export default function LiveTab({ onTabChange }: LiveTabProps) {
             'bg-brand-500 text-white shadow-lg shadow-brand-500/20 hover:brightness-110',
           )}
         >
-          Gå till Turnering
+          <span className="hdr-white-fill">Gå till Turnering</span>
         </button>
       </div>
     );

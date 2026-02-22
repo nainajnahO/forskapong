@@ -806,7 +806,7 @@ function ConfigPanel({
           'disabled:opacity-40 disabled:pointer-events-none',
         )}
       >
-        Starta simulering
+        <span className="hdr-white-fill">Starta simulering</span>
       </button>
     </div>
   );
@@ -1240,7 +1240,7 @@ export default function SimulatorTab() {
                 'disabled:opacity-40 disabled:pointer-events-none',
               )}
             >
-              Steg ▶
+              <span className="hdr-white-fill">Steg ▶</span>
             </button>
 
             <button

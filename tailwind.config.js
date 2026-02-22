@@ -13,6 +13,20 @@ module.exports = {
           500: "oklch(var(--brand-500) / <alpha-value>)",
           600: "oklch(var(--brand-600) / <alpha-value>)",
         },
+        emerald: {
+          300: "oklch(var(--emerald-300) / <alpha-value>)",
+          400: "oklch(var(--emerald-400) / <alpha-value>)",
+          500: "oklch(var(--emerald-500) / <alpha-value>)",
+        },
+        amber: {
+          300: "oklch(var(--amber-300) / <alpha-value>)",
+          400: "oklch(var(--amber-400) / <alpha-value>)",
+          500: "oklch(var(--amber-500) / <alpha-value>)",
+        },
+        red: {
+          400: "oklch(var(--red-400) / <alpha-value>)",
+          500: "oklch(var(--red-500) / <alpha-value>)",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
