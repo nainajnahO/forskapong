@@ -255,6 +255,33 @@ interface CardConfig {
   } | null;
 }
 
+const BRAND_THEME = {
+  iconClass: 'text-brand-400',
+  iconBgClass: 'bg-brand-500/10',
+  borderClass: 'border-brand-500/20',
+  bgClass: 'bg-brand-500/[0.03]',
+  titleClass: 'text-brand-300',
+} as const;
+
+const AMBER_THEME = {
+  iconClass: 'text-amber-400',
+  iconBgClass: 'bg-amber-500/10',
+  borderClass: 'border-amber-500/20',
+  bgClass: 'bg-amber-500/[0.03]',
+  titleClass: 'text-amber-300',
+} as const;
+
+const EMERALD_THEME = {
+  iconClass: 'text-emerald-400',
+  iconBgClass: 'bg-emerald-500/10',
+  borderClass: 'border-emerald-500/20',
+  bgClass: 'bg-emerald-500/[0.03]',
+  titleClass: 'text-emerald-300',
+} as const;
+
+const BRAND_PRIMARY_BTN = 'bg-brand-500 text-white shadow-lg shadow-brand-500/20 hover:brightness-110';
+const AMBER_BTN = 'bg-amber-500/15 text-amber-400 border border-amber-500/20 hover:bg-amber-500/25';
+
 function getCardConfig(
   flowState: FlowState,
   currentRound: number,
@@ -296,67 +323,40 @@ function getCardConfig(
     case 'not_started':
       return {
         ...base,
+        ...BRAND_THEME,
         Icon: Play,
-        iconClass: 'text-brand-400',
-        iconBgClass: 'bg-brand-500/10',
-        borderClass: 'border-brand-500/20',
-        bgClass: 'bg-brand-500/[0.03]',
-        titleClass: 'text-brand-300',
         title: 'Steg 2: Starta turneringen',
         subtitle: 'Alla lag är redo. Starta turneringen för att börja swiss-rundan.',
-        action: {
-          label: 'Starta turnering',
-          handler: 'start',
-          buttonClass: 'bg-brand-500 text-white shadow-lg shadow-brand-500/20 hover:brightness-110',
-        },
+        action: { label: 'Starta turnering', handler: 'start', buttonClass: BRAND_PRIMARY_BTN },
       };
 
     case 'swiss_generate':
       return {
         ...base,
+        ...BRAND_THEME,
         Icon: Shuffle,
-        iconClass: 'text-brand-400',
-        iconBgClass: 'bg-brand-500/10',
-        borderClass: 'border-brand-500/20',
-        bgClass: 'bg-brand-500/[0.03]',
-        titleClass: 'text-brand-300',
         title: `Runda ${currentRound}: Generera lottning`,
         subtitle: `Generera matchlottning för runda ${currentRound} av 7.`,
         showTimeInput: true,
-        action: {
-          label: 'Generera lottning',
-          handler: 'generate_pairings',
-          buttonClass: 'bg-brand-500 text-white shadow-lg shadow-brand-500/20 hover:brightness-110',
-        },
+        action: { label: 'Generera lottning', handler: 'generate_pairings', buttonClass: BRAND_PRIMARY_BTN },
       };
 
     case 'swiss_in_progress': {
       const roundMatches = roundsMap.get(currentRound) ?? [];
-      const progress = getProgress(roundMatches);
       return {
         ...base,
-        Icon: Clock,
-        iconClass: 'text-brand-400',
-        iconBgClass: 'bg-brand-500/10',
-        borderClass: 'border-brand-500/20',
-        bgClass: 'bg-brand-500/[0.03]',
-        titleClass: 'text-brand-300',
+        ...BRAND_THEME,
         title: `Runda ${currentRound}: Väntar på resultat`,
         subtitle: 'Resultat rapporteras av lagen. Bekräfta disputerade matcher nedan.',
-        progress,
-        progressBarClass: 'bg-brand-500',
+        progress: getProgress(roundMatches),
       };
     }
 
     case 'swiss_round_done':
       return {
         ...base,
+        ...EMERALD_THEME,
         Icon: CheckCircle2,
-        iconClass: 'text-emerald-400',
-        iconBgClass: 'bg-emerald-500/10',
-        borderClass: 'border-emerald-500/20',
-        bgClass: 'bg-emerald-500/[0.03]',
-        titleClass: 'text-emerald-300',
         title: `Runda ${currentRound} klar!`,
         subtitle: 'Alla matcher i rundan är bekräftade. Fortsätt till nästa runda.',
         action: {
@@ -369,54 +369,32 @@ function getCardConfig(
     case 'swiss_done':
       return {
         ...base,
+        ...AMBER_THEME,
         Icon: Swords,
-        iconClass: 'text-amber-400',
-        iconBgClass: 'bg-amber-500/10',
-        borderClass: 'border-amber-500/20',
-        bgClass: 'bg-amber-500/[0.03]',
-        titleClass: 'text-amber-300',
         title: 'Swiss klart!',
         subtitle: 'Alla 7 swiss-rundor är klara. Gå vidare till slutspelet.',
-        action: {
-          label: 'Gå till slutspel',
-          handler: 'start_knockout',
-          buttonClass: 'bg-amber-500/15 text-amber-400 border border-amber-500/20 hover:bg-amber-500/25',
-        },
+        action: { label: 'Gå till slutspel', handler: 'start_knockout', buttonClass: AMBER_BTN },
       };
 
     case 'knockout_generate_qf':
       return {
         ...base,
+        ...AMBER_THEME,
         Icon: Swords,
-        iconClass: 'text-amber-400',
-        iconBgClass: 'bg-amber-500/10',
-        borderClass: 'border-amber-500/20',
-        bgClass: 'bg-amber-500/[0.03]',
-        titleClass: 'text-amber-300',
         title: 'Slutspel: Generera kvartsfinaler',
         subtitle: 'Top 8 från swiss möts i kvartsfinal. Generera matcherna.',
         showTimeInput: true,
-        action: {
-          label: 'Generera kvartsfinaler',
-          handler: 'generate_knockout',
-          buttonClass: 'bg-amber-500/15 text-amber-400 border border-amber-500/20 hover:bg-amber-500/25',
-        },
+        action: { label: 'Generera kvartsfinaler', handler: 'generate_knockout', buttonClass: AMBER_BTN },
       };
 
     case 'knockout_qf_in_progress': {
       const qfMatches = roundsMap.get(8) ?? [];
-      const progress = getProgress(qfMatches);
       return {
         ...base,
-        Icon: Clock,
-        iconClass: 'text-amber-400',
-        iconBgClass: 'bg-amber-500/10',
-        borderClass: 'border-amber-500/20',
-        bgClass: 'bg-amber-500/[0.03]',
-        titleClass: 'text-amber-300',
+        ...AMBER_THEME,
         title: 'Kvartsfinal: Väntar på resultat',
         subtitle: 'Kvartsfinalmatcherna pågår.',
-        progress,
+        progress: getProgress(qfMatches),
         progressBarClass: 'bg-amber-500',
       };
     }
@@ -424,35 +402,21 @@ function getCardConfig(
     case 'knockout_qf_done':
       return {
         ...base,
+        ...AMBER_THEME,
         Icon: CheckCircle2,
-        iconClass: 'text-amber-400',
-        iconBgClass: 'bg-amber-500/10',
-        borderClass: 'border-amber-500/20',
-        bgClass: 'bg-amber-500/[0.03]',
-        titleClass: 'text-amber-300',
         title: 'Kvartsfinal klar!',
         subtitle: 'Alla kvartsfinaler avgjorda. Generera semifinalerna.',
-        action: {
-          label: 'Generera semifinaler',
-          handler: 'generate_sf',
-          buttonClass: 'bg-amber-500/15 text-amber-400 border border-amber-500/20 hover:bg-amber-500/25',
-        },
+        action: { label: 'Generera semifinaler', handler: 'generate_sf', buttonClass: AMBER_BTN },
       };
 
     case 'knockout_sf_in_progress': {
       const sfMatches = roundsMap.get(9) ?? [];
-      const progress = getProgress(sfMatches);
       return {
         ...base,
-        Icon: Clock,
-        iconClass: 'text-amber-400',
-        iconBgClass: 'bg-amber-500/10',
-        borderClass: 'border-amber-500/20',
-        bgClass: 'bg-amber-500/[0.03]',
-        titleClass: 'text-amber-300',
+        ...AMBER_THEME,
         title: 'Semifinal: Väntar på resultat',
         subtitle: 'Semifinalerna pågår.',
-        progress,
+        progress: getProgress(sfMatches),
         progressBarClass: 'bg-amber-500',
       };
     }
@@ -460,35 +424,22 @@ function getCardConfig(
     case 'knockout_sf_done':
       return {
         ...base,
+        ...AMBER_THEME,
         Icon: CheckCircle2,
-        iconClass: 'text-amber-400',
-        iconBgClass: 'bg-amber-500/10',
-        borderClass: 'border-amber-500/20',
-        bgClass: 'bg-amber-500/[0.03]',
-        titleClass: 'text-amber-300',
         title: 'Semifinal klar!',
         subtitle: 'Båda semifinalerna avgjorda. Generera finalen.',
-        action: {
-          label: 'Generera final',
-          handler: 'generate_final',
-          buttonClass: 'bg-amber-500/15 text-amber-400 border border-amber-500/20 hover:bg-amber-500/25',
-        },
+        action: { label: 'Generera final', handler: 'generate_final', buttonClass: AMBER_BTN },
       };
 
     case 'knockout_final_in_progress': {
       const finalMatches = roundsMap.get(10) ?? [];
-      const progress = getProgress(finalMatches);
       return {
         ...base,
+        ...AMBER_THEME,
         Icon: Trophy,
-        iconClass: 'text-amber-400',
-        iconBgClass: 'bg-amber-500/10',
-        borderClass: 'border-amber-500/20',
-        bgClass: 'bg-amber-500/[0.03]',
-        titleClass: 'text-amber-300',
         title: 'Final: Väntar på resultat',
         subtitle: 'Finalen pågår!',
-        progress,
+        progress: getProgress(finalMatches),
         progressBarClass: 'bg-amber-500',
       };
     }
@@ -496,30 +447,20 @@ function getCardConfig(
     case 'knockout_final_done':
       return {
         ...base,
+        ...AMBER_THEME,
         Icon: Trophy,
-        iconClass: 'text-amber-400',
-        iconBgClass: 'bg-amber-500/10',
         borderClass: 'border-amber-500/25',
         bgClass: 'bg-amber-500/[0.04]',
-        titleClass: 'text-amber-300',
         title: `Turnering klar! ${championName ? `Vinnare: ${championName}` : ''}`,
         subtitle: 'Finalen är avgjord. Avsluta turneringen för att markera den som klar.',
-        action: {
-          label: 'Avsluta turnering',
-          handler: 'finish',
-          buttonClass: 'bg-amber-500/15 text-amber-400 border border-amber-500/20 hover:bg-amber-500/25',
-        },
+        action: { label: 'Avsluta turnering', handler: 'finish', buttonClass: AMBER_BTN },
       };
 
     case 'finished':
       return {
         ...base,
+        ...EMERALD_THEME,
         Icon: Sparkles,
-        iconClass: 'text-emerald-400',
-        iconBgClass: 'bg-emerald-500/10',
-        borderClass: 'border-emerald-500/20',
-        bgClass: 'bg-emerald-500/[0.03]',
-        titleClass: 'text-emerald-300',
         title: `Turneringen är avslutad${championName ? ` — ${championName} vann!` : ''}`,
         subtitle: 'Grattis till vinnarna!',
       };
