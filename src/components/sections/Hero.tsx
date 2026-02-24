@@ -1,29 +1,22 @@
-import FramerBackground from '../common/FramerBackground';
-import FluidBackground from '../common/FluidBackground';
-import StaticNoise from '../common/StaticNoise';
 import { EVENT_INFO, HERO_ROTATING_WORDS } from '@/lib/constants';
 import Sponsors from './Sponsors';
 import Container from '../common/Container';
-import { useTheme } from '@/contexts/useTheme';
 import { useTypewriter } from '@/hooks/useTypewriter';
 
 export default function Hero() {
-  const { backgroundVariant } = useTheme();
   const { displayText } = useTypewriter({ words: HERO_ROTATING_WORDS });
 
   return (
     <div className="relative w-full min-h-screen overflow-hidden bg-background transition-colors duration-500">
-      {/* Background - Switch based on background variant */}
-      {backgroundVariant === 'framer' ? (
-        <div className="absolute inset-0">
-          <FramerBackground />
-        </div>
-      ) : (
-        <div className="absolute inset-0">
-          <FluidBackground preset="Lava" />
-          <StaticNoise opacity={0.3} resolution={450} tileSize={300} />
-        </div>
-      )}
+      {/* Background Hero Image */}
+      <div className="absolute inset-0">
+        <img
+          src="/hero.png"
+          alt="Hero"
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-black/50" />
+      </div>
 
       {/* Content Container */}
       <div className="relative z-10 h-screen flex flex-col items-center justify-center px-6 -mt-8 md:mt-0">
