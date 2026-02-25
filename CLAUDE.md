@@ -8,15 +8,18 @@ Forskåpong is a Swedish beer pong tournament website for an annual event in Upp
 
 ## Commands
 
+Both `bun` and `npm` are supported. Bun is preferred for faster installs and script execution. CI uses bun.
+
 ```bash
-npm run dev          # Start dev server (Vite)
-npm run build        # Type-check (tsc -b) then build for production
-npm run type-check   # TypeScript type-check only (tsc -b --noEmit)
-npm run lint         # ESLint on all .ts/.tsx files
-npm run format       # Prettier format src/
-npm run format:check # Prettier check src/
-npm run test         # Run tests once (vitest run)
-npm run test:watch   # Run tests in watch mode
+bun install          # Install dependencies (or: npm install)
+bun run dev          # Start dev server (Vite)
+bun run build        # Type-check (tsc -b) then build for production
+bun run type-check   # TypeScript type-check only (tsc -b --noEmit)
+bun run lint         # ESLint on all .ts/.tsx files
+bun run format       # Prettier format src/
+bun run format:check # Prettier check src/
+bun test             # Run tests once (vitest run)
+bun run test:watch   # Run tests in watch mode
 ```
 
 ## Project Structure
@@ -147,7 +150,7 @@ The tournament engine has comprehensive tests covering Swiss pairing (no rematch
 
 GitHub Actions workflow (`.github/workflows/deploy.yml`):
 1. Runs on push to `main` or manual dispatch
-2. `npm ci` → `npm run lint` → `npm run build`
+2. `bun install --frozen-lockfile` → `bun run lint` → `bun run build`
 3. Copies `dist/index.html` to `dist/404.html` (SPA fallback for GitHub Pages)
 4. Deploys to GitHub Pages
 
