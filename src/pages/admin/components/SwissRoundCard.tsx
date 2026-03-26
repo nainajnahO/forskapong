@@ -89,7 +89,7 @@ export default function SwissRoundCard({
         }
 
         const result = getResult(p);
-        const revealed = i < showCount && !!result;
+        const revealed = revealedCount != null ? (i < showCount && !!result) : !!result;
         const t1Won = revealed && result!.winnerId === p.team1Id;
         const t2Won = revealed && result!.winnerId === p.team2Id;
 
@@ -101,6 +101,7 @@ export default function SwissRoundCard({
 
         const rowClass = cn(
           'grid grid-cols-[1fr_4.5rem_1fr] gap-2 px-4 py-2 border-b border-white/[0.04] last:border-0 text-sm',
+          revealed && 'bg-emerald-500/[0.08]',
           onMatchClick && 'cursor-pointer hover:bg-white/[0.03] transition-colors',
         );
 
