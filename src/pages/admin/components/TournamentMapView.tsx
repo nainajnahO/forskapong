@@ -1,3 +1,4 @@
+import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import type {
   MatchResult,
@@ -19,6 +20,7 @@ interface TournamentMapViewProps {
   status: string;
   onEditMatch?: (matchId: string) => void;
   large?: boolean;
+  currentRound?: number;
 }
 
 function MatchRow({
@@ -124,6 +126,7 @@ function RoundColumn({
   dimmed,
   onEditMatch,
   large,
+  currentRound,
 }: {
   round: number;
   matches: Match[];
@@ -131,21 +134,44 @@ function RoundColumn({
   dimmed: boolean;
   onEditMatch?: (matchId: string) => void;
   large?: boolean;
+  currentRound?: number;
 }) {
   const unconfirmedCount = matches.filter(
     (m) => m.winner_id && !m.confirmed,
   ).length;
 
+  // Per-column progress
+  let colProgress = 0;
+  if (currentRound != null && currentRound > 0 && matches.length > 0) {
+    if (round < currentRound) {
+      colProgress = 100;
+    } else if (round === currentRound) {
+      const confirmed = matches.filter((m) => m.confirmed).length;
+      colProgress = (confirmed / matches.length) * 100;
+    }
+  }
+  const showProgress = currentRound != null && currentRound > 0;
+
   return (
-    <div
-      className={cn(
-        'flex-shrink-0 rounded-xl border overflow-hidden flex flex-col',
-        large ? 'w-max min-w-48' : 'w-48',
-        dimmed
-          ? 'border-white/[0.04] bg-white/[0.01] opacity-40'
-          : 'border-white/[0.08] bg-white/[0.03]',
+    <div className={cn('flex-shrink-0 flex flex-col', large ? 'w-max min-w-48' : 'w-48')}>
+      {showProgress && (
+        <div className="h-1.5 rounded-full bg-white/[0.06] mb-1 overflow-hidden">
+          <motion.div
+            className="h-full rounded-full bg-brand-500"
+            initial={{ width: 0 }}
+            animate={{ width: `${colProgress}%` }}
+            transition={{ duration: 0.5 }}
+          />
+        </div>
       )}
-    >
+      <div
+        className={cn(
+          'rounded-xl border overflow-hidden flex flex-col flex-1',
+          dimmed
+            ? 'border-white/[0.04] bg-white/[0.01] opacity-40'
+            : 'border-white/[0.08] bg-white/[0.03]',
+        )}
+      >
       <div className="px-3 py-1.5 border-b border-white/[0.06] bg-white/[0.02] flex items-baseline justify-between">
         <div>
           <span className={cn('font-medium text-zinc-400', large ? 'text-sm' : 'text-xs')}>
@@ -178,6 +204,7 @@ function RoundColumn({
             Ej lottad
           </div>
         )}
+      </div>
       </div>
     </div>
   );
@@ -251,6 +278,7 @@ export default function TournamentMapView({
   status,
   onEditMatch,
   large,
+  currentRound,
 }: TournamentMapViewProps) {
   // Build round data for all Swiss rounds (1..totalRounds), filling empties
   const swissRounds = rounds.filter(([r]) => r <= totalRounds);
@@ -264,6 +292,7 @@ export default function TournamentMapView({
   const hasSwiss = swissRounds.length > 0;
   const hasKnockout = status === 'knockout' || status === 'finished';
 
+
   return (
     <div className={cn(large ? 'flex flex-col h-full' : 'space-y-6')}>
       {/* Swiss section */}
@@ -275,17 +304,18 @@ export default function TournamentMapView({
           <div className={cn('flex gap-2', large ? 'items-stretch flex-1 min-h-0' : 'items-start')}>
             <div className={cn('overflow-x-auto pb-2 flex-1 min-w-0', large && 'h-full')}>
               <div className={cn('flex gap-2', large ? 'items-stretch h-full' : 'items-start')}>
-                {allSwissRounds.map(([round, roundMatches]) => (
-                  <RoundColumn
-                    key={round}
-                    round={round}
-                    matches={roundMatches}
-                    teamNameMap={teamNameMap}
-                    dimmed={roundMatches.length === 0}
-                    onEditMatch={onEditMatch}
-                    large={large}
-                  />
-                ))}
+                  {allSwissRounds.map(([round, roundMatches]) => (
+                    <RoundColumn
+                      key={round}
+                      round={round}
+                      matches={roundMatches}
+                      teamNameMap={teamNameMap}
+                      dimmed={roundMatches.length === 0}
+                      onEditMatch={onEditMatch}
+                      large={large}
+                      currentRound={currentRound}
+                    />
+                  ))}
               </div>
             </div>
             <StandingsColumn standings={standings} highlightTop={8} large={large} />

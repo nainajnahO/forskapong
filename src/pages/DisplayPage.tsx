@@ -144,12 +144,6 @@ export default function DisplayPage() {
   const finalResult = knockoutMatches.find((m) => m.round === 10 && m.winner_id);
   const champion = finalResult?.winner_id ?? null;
 
-  // Current round progress
-  const currentRoundMatches = matches.filter((m) => m.round === currentRound);
-  const confirmedCurrent = currentRoundMatches.filter((m) => m.confirmed).length;
-  const totalCurrent = currentRoundMatches.length;
-  const progressPct = totalCurrent > 0 ? (confirmedCurrent / totalCurrent) * 100 : 0;
-
   if (status === 'not_started') {
     return (
       <div className="h-screen bg-zinc-950 flex items-center justify-center">
@@ -186,26 +180,6 @@ export default function DisplayPage() {
         </span>
       </div>
 
-      {/* Progress bar */}
-      {totalCurrent > 0 && (
-        <div className="px-8 pb-4 space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-zinc-500">Runda {currentRound} framsteg</span>
-            <span className="text-zinc-400 font-mono">
-              {confirmedCurrent}/{totalCurrent} matcher klara
-            </span>
-          </div>
-          <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-            <motion.div
-              className="h-full rounded-full bg-brand-500"
-              initial={{ width: 0 }}
-              animate={{ width: `${progressPct}%` }}
-              transition={{ duration: 0.5 }}
-            />
-          </div>
-        </div>
-      )}
-
       {/* Map view */}
       <div className="flex-1 min-h-0 px-8 pb-8">
         <TournamentMapView
@@ -217,6 +191,7 @@ export default function DisplayPage() {
           champion={champion}
           totalRounds={7}
           status={status}
+          currentRound={currentRound}
           large
         />
       </div>
