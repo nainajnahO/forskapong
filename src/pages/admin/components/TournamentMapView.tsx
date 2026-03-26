@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
+import FluidBackground from '@/components/common/FluidBackground';
 import type {
   MatchResult,
   TeamStanding,
@@ -155,13 +156,24 @@ function RoundColumn({
   return (
     <div className={cn('flex-shrink-0 flex flex-col', large ? 'w-max min-w-48' : 'w-48')}>
       {showProgress && (
-        <div className="h-1.5 rounded-full bg-white/[0.06] mb-1 overflow-hidden">
+        <div className="h-3 rounded-full bg-white/[0.06] mb-1.5 overflow-hidden">
           <motion.div
-            className="h-full rounded-full bg-brand-500"
+            className="h-full rounded-full overflow-hidden relative"
             initial={{ width: 0 }}
             animate={{ width: `${colProgress}%` }}
             transition={{ duration: 0.5 }}
-          />
+          >
+            {colProgress > 0 && (
+              <FluidBackground
+                className="absolute inset-x-0 top-0 h-[120px]"
+                speed={40}
+                scale={0.8}
+                distortion={15}
+                swirl={25}
+                swirlIterations={8}
+              />
+            )}
+          </motion.div>
         </div>
       )}
       <div

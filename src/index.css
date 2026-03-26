@@ -147,6 +147,7 @@ html {
   margin-left: 1px;
 }
 
+
 /* HDR image-based brand fills — true HDR via PQ-encoded AVIF */
 @media (dynamic-range: high) {
   .hdr-text-fill {
