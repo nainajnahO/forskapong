@@ -18,26 +18,40 @@ interface TournamentMapViewProps {
   totalRounds: number;
   status: string;
   onEditMatch?: (matchId: string) => void;
+  large?: boolean;
 }
 
 function MatchRow({
   match,
   teamNameMap,
   onEditMatch,
+  large,
 }: {
   match: Match;
   teamNameMap: Map<string, string>;
   onEditMatch?: (matchId: string) => void;
+  large?: boolean;
 }) {
   const result = dbMatchToResult(match);
   const t1Name = teamNameMap.get(match.team1_id) ?? '?';
   const t2Name = teamNameMap.get(match.team2_id) ?? '?';
   const isPending = !!match.winner_id && !match.confirmed;
 
+  const textClass = large ? 'text-xs leading-5' : 'text-[11px] leading-[18px]';
+
   // Not played yet
   if (!result) {
+    if (large) {
+      return (
+        <div className={cn(textClass, 'grid grid-cols-[1fr_auto_1fr] gap-2 w-full text-zinc-600')}>
+          <span>{t1Name}</span>
+          <span className="text-center font-mono">–</span>
+          <span className="text-right">{t2Name}</span>
+        </div>
+      );
+    }
     return (
-      <div className="text-[11px] leading-[18px] text-zinc-600 truncate">
+      <div className={cn(textClass, 'text-zinc-600 truncate')}>
         {t1Name} – {t2Name}
       </div>
     );
@@ -47,10 +61,30 @@ function MatchRow({
   const score1 = result.team1Id === match.team1_id ? result.scoreTeam1 : result.scoreTeam2;
   const score2 = result.team1Id === match.team1_id ? result.scoreTeam2 : result.scoreTeam1;
 
-  const content = (
+  const content = large ? (
     <div
       className={cn(
-        'text-[11px] leading-[18px] truncate flex items-center gap-1',
+        textClass,
+        'grid grid-cols-[1fr_auto_1fr] gap-2 w-full',
+        isPending && 'border-l-2 border-amber-400/60 pl-1 -ml-1',
+      )}
+    >
+      <span className={cn('flex items-center gap-1', t1Won ? 'text-emerald-400 font-medium' : 'text-zinc-600')}>
+        {isPending && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />}
+        {t1Name}
+      </span>
+      <span className="text-center text-zinc-600 font-mono">
+        {score1}–{score2}
+      </span>
+      <span className={cn('text-right', !t1Won ? 'text-emerald-400 font-medium' : 'text-zinc-600')}>
+        {t2Name}
+      </span>
+    </div>
+  ) : (
+    <div
+      className={cn(
+        textClass,
+        'flex items-center gap-1 truncate',
         isPending && 'border-l-2 border-amber-400/60 pl-1 -ml-1',
       )}
     >
@@ -89,12 +123,14 @@ function RoundColumn({
   teamNameMap,
   dimmed,
   onEditMatch,
+  large,
 }: {
   round: number;
   matches: Match[];
   teamNameMap: Map<string, string>;
   dimmed: boolean;
   onEditMatch?: (matchId: string) => void;
+  large?: boolean;
 }) {
   const unconfirmedCount = matches.filter(
     (m) => m.winner_id && !m.confirmed,
@@ -103,7 +139,8 @@ function RoundColumn({
   return (
     <div
       className={cn(
-        'flex-shrink-0 w-48 rounded-xl border overflow-hidden',
+        'flex-shrink-0 rounded-xl border overflow-hidden flex flex-col',
+        large ? 'w-max min-w-48' : 'w-48',
         dimmed
           ? 'border-white/[0.04] bg-white/[0.01] opacity-40'
           : 'border-white/[0.08] bg-white/[0.03]',
@@ -111,27 +148,33 @@ function RoundColumn({
     >
       <div className="px-3 py-1.5 border-b border-white/[0.06] bg-white/[0.02] flex items-baseline justify-between">
         <div>
-          <span className="text-xs font-medium text-zinc-400">R{round}</span>
-          <span className="text-[10px] text-zinc-600 ml-2">{matches.length} matcher</span>
+          <span className={cn('font-medium text-zinc-400', large ? 'text-sm' : 'text-xs')}>
+            R{round}
+          </span>
+          <span className={cn('text-zinc-600 ml-2', large ? 'text-xs' : 'text-[10px]')}>
+            {matches.length} matcher
+          </span>
         </div>
         {unconfirmedCount > 0 && (
-          <span className="text-[10px] text-amber-400">
+          <span className={cn('text-amber-400', large ? 'text-xs' : 'text-[10px]')}>
             {unconfirmedCount} ej bekräftade
           </span>
         )}
       </div>
-      <div className="px-2 py-1.5 space-y-px">
+      <div className={cn('px-2 py-1.5', large ? 'flex-1 flex flex-col' : 'space-y-px')}>
         {matches.length > 0 ? (
           matches.map((m) => (
-            <MatchRow
-              key={m.id}
-              match={m}
-              teamNameMap={teamNameMap}
-              onEditMatch={onEditMatch}
-            />
+            <div key={m.id} className={cn(large && 'flex-1 flex items-center')}>
+              <MatchRow
+                match={m}
+                teamNameMap={teamNameMap}
+                onEditMatch={onEditMatch}
+                large={large}
+              />
+            </div>
           ))
         ) : (
-          <div className="text-[11px] text-zinc-700 py-2 text-center">
+          <div className={cn('text-zinc-700 py-2 text-center', large ? 'text-sm' : 'text-[11px]')}>
             Ej lottad
           </div>
         )}
@@ -143,16 +186,25 @@ function RoundColumn({
 function StandingsColumn({
   standings,
   highlightTop,
+  large,
 }: {
   standings: TeamStanding[];
   highlightTop: number;
+  large?: boolean;
 }) {
   if (standings.length === 0) return null;
 
   return (
-    <div className="flex-shrink-0 w-44 rounded-xl border border-white/[0.08] bg-white/[0.03] overflow-hidden">
+    <div
+      className={cn(
+        'flex-shrink-0 rounded-xl border border-white/[0.08] bg-white/[0.03] overflow-hidden',
+        large ? 'w-56' : 'w-44',
+      )}
+    >
       <div className="px-3 py-1.5 border-b border-white/[0.06] bg-white/[0.02]">
-        <span className="text-xs font-medium text-zinc-400">Ställning</span>
+        <span className={cn('font-medium text-zinc-400', large ? 'text-sm' : 'text-xs')}>
+          Ställning
+        </span>
       </div>
       <div className="px-2 py-1">
         {standings.map((s) => {
@@ -161,23 +213,25 @@ function StandingsColumn({
             <div
               key={s.id}
               className={cn(
-                'flex items-center gap-1.5 text-[11px] leading-[18px]',
+                'flex items-center gap-1.5',
+                large ? 'text-xs leading-5' : 'text-[11px] leading-[18px]',
                 inPlayoff && 'bg-emerald-500/[0.04]',
               )}
             >
               <span
                 className={cn(
-                  'w-4 text-right font-mono',
+                  'text-right font-mono',
+                  large ? 'w-5' : 'w-4',
                   inPlayoff ? 'text-emerald-400' : 'text-zinc-700',
                 )}
               >
                 {s.rank}
               </span>
               <span className="truncate text-zinc-300 flex-1">{s.name}</span>
-              <span className="text-zinc-600 font-mono w-6 text-right">
+              <span className={cn('text-zinc-600 font-mono text-right', large ? 'w-8' : 'w-6')}>
                 {s.wins}-{s.losses}
               </span>
-              {inPlayoff && <span className="text-emerald-500 text-[9px]">*</span>}
+              {inPlayoff && <span className={cn('text-emerald-500', large ? 'text-[10px]' : 'text-[9px]')}>*</span>}
             </div>
           );
         })}
@@ -196,6 +250,7 @@ export default function TournamentMapView({
   totalRounds,
   status,
   onEditMatch,
+  large,
 }: TournamentMapViewProps) {
   // Build round data for all Swiss rounds (1..totalRounds), filling empties
   const swissRounds = rounds.filter(([r]) => r <= totalRounds);
@@ -210,16 +265,16 @@ export default function TournamentMapView({
   const hasKnockout = status === 'knockout' || status === 'finished';
 
   return (
-    <div className="space-y-6">
+    <div className={cn(large ? 'flex flex-col h-full' : 'space-y-6')}>
       {/* Swiss section */}
       {(hasSwiss || standings.length > 0) && (
-        <div className="space-y-3">
+        <div className={cn('space-y-3', large && 'flex flex-col flex-1 min-h-0')}>
           <h3 className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
             Swiss-rundor
           </h3>
-          <div className="flex gap-2 items-start">
-            <div className="overflow-x-auto pb-2 flex-1 min-w-0">
-              <div className="flex gap-2 items-start">
+          <div className={cn('flex gap-2', large ? 'items-stretch flex-1 min-h-0' : 'items-start')}>
+            <div className={cn('overflow-x-auto pb-2 flex-1 min-w-0', large && 'h-full')}>
+              <div className={cn('flex gap-2', large ? 'items-stretch h-full' : 'items-start')}>
                 {allSwissRounds.map(([round, roundMatches]) => (
                   <RoundColumn
                     key={round}
@@ -228,11 +283,12 @@ export default function TournamentMapView({
                     teamNameMap={teamNameMap}
                     dimmed={roundMatches.length === 0}
                     onEditMatch={onEditMatch}
+                    large={large}
                   />
                 ))}
               </div>
             </div>
-            <StandingsColumn standings={standings} highlightTop={8} />
+            <StandingsColumn standings={standings} highlightTop={8} large={large} />
           </div>
         </div>
       )}

@@ -207,7 +207,7 @@ export default function DisplayPage() {
       )}
 
       {/* Map view */}
-      <div className="flex-1 overflow-auto px-8 pb-8">
+      <div className="flex-1 min-h-0 px-8 pb-8">
         <TournamentMapView
           rounds={rounds}
           standings={standings}
@@ -217,6 +217,7 @@ export default function DisplayPage() {
           champion={champion}
           totalRounds={7}
           status={status}
+          large
         />
       </div>
 
