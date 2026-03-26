@@ -62,6 +62,7 @@ export default function DisplayPage() {
   }, []);
 
   useEffect(() => {
+    void loadData();
     const channel = supabase
       .channel('display')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament' }, () => loadData())
@@ -70,8 +71,12 @@ export default function DisplayPage() {
       .subscribe((_status, err) => {
         if (!err) loadData();
       });
+    // Polling fallback for reliable display updates
+    const poll = setInterval(loadData, 30000);
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(poll);
     };
   }, [loadData]);
 
