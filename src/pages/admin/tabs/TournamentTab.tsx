@@ -568,42 +568,32 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
                 .filter(([r]) => r <= 7)
                 .reverse()
                 .map(([round, roundMatches]) => (
-                  <div key={round} className="space-y-2">
-                    <SwissRoundCard
-                      round={round}
-                      pairings={roundMatches.map((m) => ({
-                        team1Id: m.team1_id,
-                        team2Id: m.team2_id,
-                      }))}
-                      results={
-                        roundMatches
-                          .map(dbMatchToResult)
-                          .filter(Boolean) as MatchResult[]
-                      }
-                      teamNameMap={teamNameMap}
-                      onMatchClick={(t1, t2) => {
-                        const found = roundMatches.find(
-                          (rm) =>
-                            (rm.team1_id === t1 && rm.team2_id === t2) ||
-                            (rm.team1_id === t2 && rm.team2_id === t1),
-                        );
-                        if (found) setEditingMatchId(editingMatchId === found.id ? null : found.id);
-                      }}
-                    />
-                    {/* Inline editor */}
-                    {roundMatches.map((m) =>
-                      editingMatchId === m.id ? (
-                        <MatchResultEditor
-                          key={m.id}
-                          match={m}
-                          team1Name={teamNameMap.get(m.team1_id) ?? m.team1_id}
-                          team2Name={teamNameMap.get(m.team2_id) ?? m.team2_id}
-                          onSaved={handleMatchSaved}
-                          onCancel={handleMatchCancelled}
-                        />
-                      ) : null,
-                    )}
-                  </div>
+                  <SwissRoundCard
+                    key={round}
+                    round={round}
+                    pairings={roundMatches.map((m) => ({
+                      team1Id: m.team1_id,
+                      team2Id: m.team2_id,
+                    }))}
+                    results={
+                      roundMatches
+                        .map(dbMatchToResult)
+                        .filter(Boolean) as MatchResult[]
+                    }
+                    teamNameMap={teamNameMap}
+                    editingMatchId={editingMatchId}
+                    matches={roundMatches}
+                    onMatchSaved={handleMatchSaved}
+                    onMatchCancelled={handleMatchCancelled}
+                    onMatchClick={(t1, t2) => {
+                      const found = roundMatches.find(
+                        (rm) =>
+                          (rm.team1_id === t1 && rm.team2_id === t2) ||
+                          (rm.team1_id === t2 && rm.team2_id === t1),
+                      );
+                      if (found) setEditingMatchId(editingMatchId === found.id ? null : found.id);
+                    }}
+                  />
                 ))}
             </div>
           )}

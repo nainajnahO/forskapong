@@ -1,6 +1,8 @@
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import type { Pairing, MatchResult } from '@/lib/tournament-engine';
+import type { Match } from '@/lib/database.types';
+import MatchResultEditor from './MatchResultEditor';
 
 interface Props {
   round: number;
@@ -11,6 +13,10 @@ interface Props {
   revealedCount?: number;
   animated?: boolean;
   onMatchClick?: (team1Id: string, team2Id: string) => void;
+  editingMatchId?: string | null;
+  matches?: Match[];
+  onMatchSaved?: () => void;
+  onMatchCancelled?: () => void;
 }
 
 export default function SwissRoundCard({
@@ -22,6 +28,10 @@ export default function SwissRoundCard({
   revealedCount,
   animated = false,
   onMatchClick,
+  editingMatchId,
+  matches,
+  onMatchSaved,
+  onMatchCancelled,
 }: Props) {
   const showCount = revealedCount ?? results.length;
 
@@ -53,6 +63,31 @@ export default function SwissRoundCard({
 
       {/* Matches */}
       {pairings.map((p, i) => {
+        // Inline editor: check if this pairing's match is being edited
+        const editMatch = matches?.find(
+          (m) =>
+            m.id === editingMatchId &&
+            ((m.team1_id === p.team1Id && m.team2_id === p.team2Id) ||
+             (m.team1_id === p.team2Id && m.team2_id === p.team1Id)),
+        );
+
+        if (editMatch && onMatchSaved && onMatchCancelled) {
+          return (
+            <div
+              key={`${p.team1Id}-${p.team2Id}`}
+              className="px-3 py-2 border-b border-white/[0.04] last:border-0"
+            >
+              <MatchResultEditor
+                match={editMatch}
+                team1Name={teamNameMap.get(editMatch.team1_id) ?? editMatch.team1_id}
+                team2Name={teamNameMap.get(editMatch.team2_id) ?? editMatch.team2_id}
+                onSaved={onMatchSaved}
+                onCancel={onMatchCancelled}
+              />
+            </div>
+          );
+        }
+
         const result = getResult(p);
         const revealed = i < showCount && !!result;
         const t1Won = revealed && result!.winnerId === p.team1Id;
