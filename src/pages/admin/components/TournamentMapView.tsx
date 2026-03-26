@@ -217,20 +217,22 @@ export default function TournamentMapView({
           <h3 className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
             Swiss-rundor
           </h3>
-          <div className="overflow-x-auto pb-2">
-            <div className="flex gap-2 items-start">
-              {allSwissRounds.map(([round, roundMatches]) => (
-                <RoundColumn
-                  key={round}
-                  round={round}
-                  matches={roundMatches}
-                  teamNameMap={teamNameMap}
-                  dimmed={roundMatches.length === 0}
-                  onEditMatch={onEditMatch}
-                />
-              ))}
-              <StandingsColumn standings={standings} highlightTop={8} />
+          <div className="flex gap-2 items-start">
+            <div className="overflow-x-auto pb-2 flex-1 min-w-0">
+              <div className="flex gap-2 items-start">
+                {allSwissRounds.map(([round, roundMatches]) => (
+                  <RoundColumn
+                    key={round}
+                    round={round}
+                    matches={roundMatches}
+                    teamNameMap={teamNameMap}
+                    dimmed={roundMatches.length === 0}
+                    onEditMatch={onEditMatch}
+                  />
+                ))}
+              </div>
             </div>
+            <StandingsColumn standings={standings} highlightTop={8} />
           </div>
         </div>
       )}
