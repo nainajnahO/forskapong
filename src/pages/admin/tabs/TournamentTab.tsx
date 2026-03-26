@@ -38,6 +38,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null);
   const [view, setView] = useState<'list' | 'map'>('list');
   const [roundTime, setRoundTime] = useState('');
+  const [roundCount, setRoundCount] = useState(7);
 
   const loadData = useCallback(async () => {
     const [tRes, teamsRes, matchesRes] = await Promise.all([
@@ -51,6 +52,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     const allMatches = matchesRes.data ?? [];
 
     setTournament(t);
+    if (t?.total_rounds) setRoundCount(t.total_rounds);
     setTeams(allTeams);
     setMatches(allMatches);
 
@@ -99,13 +101,13 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       if (!tournament) {
         await supabase.from('tournament').insert({
           current_round: 1,
-          total_rounds: 7,
+          total_rounds: roundCount,
           status: 'swiss',
         });
       } else {
         await supabase
           .from('tournament')
-          .update({ current_round: 1, status: 'swiss' })
+          .update({ current_round: 1, total_rounds: roundCount, status: 'swiss' })
           .eq('id', tournament.id);
       }
       await loadData();
@@ -390,6 +392,14 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
         </div>
       </div>
 
+      {/* Scoring HUD */}
+      <div className="flex items-center gap-4 px-3 py-2 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[11px] font-mono text-zinc-500">
+        <span className="text-zinc-600 uppercase tracking-wider text-[10px]">Ranking</span>
+        <span><span className="text-zinc-300">1.</span> Vinster</span>
+        <span><span className="text-zinc-300">2.</span> Buchholz <span className="text-zinc-600">(motståndarvinster)</span></span>
+        <span><span className="text-zinc-300">3.</span> Koppar träffade</span>
+      </div>
+
       {/* Flow Card — always-visible guidance + action */}
       <TournamentFlowCard
         tournament={tournament}
@@ -398,6 +408,8 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
         generating={generating}
         roundTime={roundTime}
         onRoundTimeChange={setRoundTime}
+        roundCount={roundCount}
+        onRoundCountChange={setRoundCount}
         onStartTournament={handleStartTournament}
         onGeneratePairings={handleGeneratePairings}
         onAdvanceRound={handleAdvanceRound}
@@ -457,7 +469,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
             liveBracket={liveBracket}
             knockoutResults={knockoutResults}
             champion={champion}
-            totalRounds={7}
+            totalRounds={tournament?.total_rounds ?? 7}
             status={status}
             onEditMatch={setEditingMatchId}
           />

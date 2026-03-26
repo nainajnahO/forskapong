@@ -20,7 +20,9 @@ interface Props {
   roundsMap: Map<number, Match[]>;
   generating: boolean;
   roundTime: string;
+  roundCount: number;
   onRoundTimeChange: (v: string) => void;
+  onRoundCountChange: (v: number) => void;
   onStartTournament: () => void;
   onGeneratePairings: () => void;
   onAdvanceRound: () => void;
@@ -53,6 +55,7 @@ function deriveFlowState(
   tournament: Tournament | null,
   teamsCount: number,
   roundsMap: Map<number, Match[]>,
+  totalRounds: number,
 ): FlowState {
   const status = tournament?.status ?? 'not_started';
   const currentRound = tournament?.current_round ?? 0;
@@ -68,7 +71,7 @@ function deriveFlowState(
     const allConfirmed = roundMatches.every((m) => m.confirmed);
     if (!allConfirmed) return 'swiss_in_progress';
 
-    if (currentRound >= 7) return 'swiss_done';
+    if (currentRound >= totalRounds) return 'swiss_done';
     return 'swiss_round_done';
   }
 
@@ -111,7 +114,9 @@ export default function TournamentFlowCard(props: Props) {
     roundsMap,
     generating,
     roundTime,
+    roundCount,
     onRoundTimeChange,
+    onRoundCountChange,
     onStartTournament,
     onGeneratePairings,
     onAdvanceRound,
@@ -124,10 +129,11 @@ export default function TournamentFlowCard(props: Props) {
     championName,
   } = props;
 
-  const flowState = deriveFlowState(tournament, teams.length, roundsMap);
+  const totalRounds = tournament?.total_rounds ?? roundCount;
+  const flowState = deriveFlowState(tournament, teams.length, roundsMap, totalRounds);
   const currentRound = tournament?.current_round ?? 0;
 
-  const config = getCardConfig(flowState, currentRound, roundsMap, championName);
+  const config = getCardConfig(flowState, currentRound, roundsMap, championName, totalRounds);
 
   return (
     <motion.div
@@ -181,6 +187,20 @@ export default function TournamentFlowCard(props: Props) {
 
           {/* Action area */}
           <div className="flex flex-wrap items-center gap-3">
+            {config.showRoundCountInput && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-zinc-500">Rundor:</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={15}
+                  value={roundCount}
+                  onChange={(e) => onRoundCountChange(Math.max(1, Math.min(15, Number(e.target.value))))}
+                  className="w-14 h-9 px-2 rounded-xl text-sm bg-white/[0.04] border border-white/[0.08] text-white text-center outline-none focus:border-brand-500"
+                />
+              </div>
+            )}
+
             {config.showTimeInput && (
               <input
                 type="time"
@@ -248,6 +268,7 @@ interface CardConfig {
   progress: { confirmed: number; total: number } | null;
   progressBarClass: string;
   showTimeInput: boolean;
+  showRoundCountInput: boolean;
   action: {
     label: string;
     handler: ActionHandler;
@@ -287,6 +308,7 @@ function getCardConfig(
   currentRound: number,
   roundsMap: Map<number, Match[]>,
   championName: string | null,
+  totalRounds: number,
 ): CardConfig {
   const base: CardConfig = {
     Icon: Clock,
@@ -300,6 +322,7 @@ function getCardConfig(
     progress: null,
     progressBarClass: 'bg-brand-500',
     showTimeInput: false,
+    showRoundCountInput: false,
     action: null,
   };
 
@@ -326,7 +349,8 @@ function getCardConfig(
         ...BRAND_THEME,
         Icon: Play,
         title: 'Steg 2: Starta turneringen',
-        subtitle: 'Alla lag är redo. Starta turneringen för att börja swiss-rundan.',
+        subtitle: 'Alla lag är redo. Välj antal swiss-rundor och starta turneringen.',
+        showRoundCountInput: true,
         action: { label: 'Starta turnering', handler: 'start', buttonClass: BRAND_PRIMARY_BTN },
       };
 
@@ -336,7 +360,7 @@ function getCardConfig(
         ...BRAND_THEME,
         Icon: Shuffle,
         title: `Runda ${currentRound}: Generera lottning`,
-        subtitle: `Generera matchlottning för runda ${currentRound} av 7.`,
+        subtitle: `Generera matchlottning för runda ${currentRound} av ${totalRounds}.`,
         showTimeInput: true,
         action: { label: 'Generera lottning', handler: 'generate_pairings', buttonClass: BRAND_PRIMARY_BTN },
       };

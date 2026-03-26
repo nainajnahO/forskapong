@@ -194,7 +194,7 @@ export default function DisplayPage() {
           liveBracket={liveBracket}
           knockoutResults={knockoutResults}
           champion={champion}
-          totalRounds={7}
+          totalRounds={tournament?.total_rounds ?? 7}
           status={status}
           currentRound={currentRound}
           large
