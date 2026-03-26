@@ -62,7 +62,6 @@ export default function DisplayPage() {
   }, []);
 
   useEffect(() => {
-    void loadData();
     const channel = supabase
       .channel('display')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament' }, () => loadData())
