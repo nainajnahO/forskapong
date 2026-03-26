@@ -238,16 +238,16 @@ function StandingsColumn({
   return (
     <div
       className={cn(
-        'flex-shrink-0 rounded-xl border border-white/[0.08] bg-white/[0.03] overflow-hidden',
-        large ? 'w-56' : 'w-44',
+        'flex-shrink-0 rounded-xl border border-white/[0.08] bg-white/[0.03] flex flex-col',
+        large ? 'w-56 overflow-hidden' : 'w-44 overflow-hidden',
       )}
     >
-      <div className="px-3 py-1.5 border-b border-white/[0.06] bg-white/[0.02]">
+      <div className="px-3 py-1.5 border-b border-white/[0.06] bg-white/[0.02] flex-shrink-0">
         <span className={cn('font-medium text-zinc-400', large ? 'text-sm' : 'text-xs')}>
           Ställning
         </span>
       </div>
-      <div className="px-2 py-1">
+      <div className={cn('px-2 py-1', large && 'overflow-y-auto flex-1 min-h-0')}>
         {standings.map((s) => {
           const inPlayoff = s.rank <= highlightTop;
           return (
@@ -316,29 +316,45 @@ export default function TournamentMapView({
             Swiss-rundor
           </h3>
           <div className={cn('flex gap-2', large ? 'items-stretch flex-1 min-h-0' : 'items-start')}>
-            <div className={cn('overflow-x-auto pb-2 flex-1 min-w-0', large && 'h-full')}>
-              <div className={cn('flex gap-2', large ? 'items-stretch h-full' : 'items-start')}>
-                  {allSwissRounds.map(([round, roundMatches]) => (
-                    <RoundColumn
-                      key={round}
-                      round={round}
-                      matches={roundMatches}
-                      teamNameMap={teamNameMap}
-                      dimmed={roundMatches.length === 0}
-                      onEditMatch={onEditMatch}
-                      large={large}
-                      currentRound={currentRound}
-                    />
-                  ))}
+            {large && hasKnockout && liveBracket ? (
+              <div className="relative rounded-2xl overflow-hidden flex-1 min-h-0">
+                <FluidBackground className="absolute inset-0" />
+                <div className="relative z-10 p-6 h-full flex items-center w-full">
+                  <div className="w-full">
+                  <KnockoutBracketView
+                    bracket={liveBracket}
+                    teamNameMap={teamNameMap}
+                    results={knockoutResults}
+                    champion={champion}
+                  />
+                  </div>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className={cn('overflow-x-auto pb-2 flex-1 min-w-0', large && 'h-full')}>
+                <div className={cn('flex gap-2', large ? 'items-stretch h-full' : 'items-start')}>
+                    {allSwissRounds.map(([round, roundMatches]) => (
+                      <RoundColumn
+                        key={round}
+                        round={round}
+                        matches={roundMatches}
+                        teamNameMap={teamNameMap}
+                        dimmed={roundMatches.length === 0}
+                        onEditMatch={onEditMatch}
+                        large={large}
+                        currentRound={currentRound}
+                      />
+                    ))}
+                </div>
+              </div>
+            )}
             <StandingsColumn standings={standings} highlightTop={8} large={large} />
           </div>
         </div>
       )}
 
       {/* Divider */}
-      {hasKnockout && hasSwiss && (
+      {hasKnockout && hasSwiss && !large && (
         <div className="flex items-center gap-3">
           <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/[0.12] to-transparent" />
           <span className="text-[10px] font-medium text-zinc-600 uppercase tracking-[0.2em]">
@@ -348,8 +364,8 @@ export default function TournamentMapView({
         </div>
       )}
 
-      {/* Knockout section */}
-      {liveBracket && (
+      {/* Knockout section (admin only — display page renders it inline above) */}
+      {liveBracket && !large && (
         <KnockoutBracketView
           bracket={liveBracket}
           teamNameMap={teamNameMap}
