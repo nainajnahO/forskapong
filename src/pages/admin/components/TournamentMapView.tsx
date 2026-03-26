@@ -165,7 +165,7 @@ function RoundColumn({
           >
             {colProgress > 0 && (
               <FluidBackground
-                className="absolute inset-x-0 top-0 h-[120px]"
+                className="absolute inset-0"
                 speed={40}
                 scale={0.8}
                 distortion={15}
