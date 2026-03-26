@@ -166,10 +166,12 @@ function RoundColumn({
       )}
       <div
         className={cn(
-          'rounded-xl border overflow-hidden flex flex-col flex-1',
+          'rounded-xl border overflow-hidden flex flex-col flex-1 transition-opacity',
           dimmed
             ? 'border-white/[0.04] bg-white/[0.01] opacity-40'
-            : 'border-white/[0.08] bg-white/[0.03]',
+            : showProgress && round !== currentRound
+              ? 'border-white/[0.06] bg-white/[0.02] opacity-50'
+              : 'border-white/[0.08] bg-white/[0.03]',
         )}
       >
       <div className="px-3 py-1.5 border-b border-white/[0.06] bg-white/[0.02] flex items-baseline justify-between">
