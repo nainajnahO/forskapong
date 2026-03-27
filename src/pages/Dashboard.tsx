@@ -462,19 +462,15 @@ export default function Dashboard() {
                 />
               </div>
             </div>
-            <div className="flex items-center gap-2 self-start">
-              <button
-                onClick={() => navigate('/scoreboard')}
-                className={cn(
-                  'text-xs px-4 py-2 rounded-lg font-medium transition-all duration-200 border hover:opacity-80',
-                  theme === 'dark'
-                    ? 'bg-brand-500/10 border-brand-500/20 text-brand-400'
-                    : 'bg-brand-50 border-brand-200 text-brand-600',
-                )}
-              >
-                Scoreboard
-              </button>
-            </div>
+            <button
+              onClick={() => navigate('/scoreboard')}
+              className={cn(
+                'text-sm transition-opacity hover:opacity-70 self-start',
+                themeText(theme, 'secondary'),
+              )}
+            >
+              Scoreboard →
+            </button>
           </motion.div>
 
           {/* ── Stats Row ───────────────────────────────── */}

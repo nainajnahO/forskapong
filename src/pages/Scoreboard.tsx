@@ -203,6 +203,26 @@ export default function Scoreboard() {
   return (
     <section className="relative w-full min-h-[calc(100vh-5rem)] pt-24 md:pt-28 pb-10 md:pb-16">
       <Container>
+        {/* ── Back link ───────────────────────────────── */}
+        {teamId && (
+          <motion.div
+            className="mb-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1 }}
+          >
+            <button
+              onClick={() => navigate('/play/dashboard')}
+              className={cn(
+                'text-sm transition-opacity hover:opacity-70',
+                themeText(theme, 'secondary'),
+              )}
+            >
+              ← Tillbaka till matchschemat
+            </button>
+          </motion.div>
+        )}
+
         {/* ── Header ──────────────────────────────────── */}
         <motion.div
           className="mb-8"
@@ -417,25 +437,6 @@ export default function Scoreboard() {
           </p>
         </motion.div>
 
-        {/* ── Back link ───────────────────────────────── */}
-        {teamId && (
-          <motion.div
-            className="text-center mt-8"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-          >
-            <button
-              onClick={() => navigate('/play/dashboard')}
-              className={cn(
-                'text-sm transition-opacity hover:opacity-70',
-                themeText(theme, 'secondary'),
-              )}
-            >
-              ← Tillbaka till matchschemat
-            </button>
-          </motion.div>
-        )}
       </Container>
     </section>
   );
