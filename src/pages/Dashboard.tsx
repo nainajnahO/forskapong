@@ -3,12 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { useTheme } from '@/contexts/useTheme';
 import { cn } from '@/lib/utils';
-import { themeText, themeGradientLine } from '@/lib/theme-utils';
+import { themeText } from '@/lib/theme-utils';
 
 import { supabase } from '@/lib/supabase';
 import type { Team, Match } from '@/lib/database.types';
 import Container from '../components/common/Container';
-import SectionLabel from '../components/common/SectionLabel';
 
 /* ─── Types ───────────────────────────────────────────────────── */
 
@@ -107,36 +106,6 @@ function matchToRound(match: MatchWithTeams, teamId: string): RoundDisplay {
     needsConfirmation,
     canReport,
   };
-}
-
-/* ─── Icons ───────────────────────────────────────────────────── */
-
-const iconBase = {
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  strokeWidth: 2,
-  strokeLinecap: 'round' as const,
-  strokeLinejoin: 'round' as const,
-};
-
-function ClockIcon() {
-  return (
-    <svg width={14} height={14} {...iconBase}>
-      <circle cx="12" cy="12" r="10" />
-      <polyline points="12 6 12 12 16 14" />
-    </svg>
-  );
-}
-
-function TableIcon() {
-  return (
-    <svg width={14} height={14} {...iconBase}>
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <path d="M3 9h18" />
-      <path d="M9 21V9" />
-    </svg>
-  );
 }
 
 /* ─── Player Name Input ──────────────────────────────────────── */
@@ -298,9 +267,6 @@ export default function Dashboard() {
   const totalPlayed = wins + losses;
   const winRate = totalPlayed > 0 ? Math.round((wins / totalPlayed) * 100) : 0;
 
-  const cardBg = theme === 'dark' ? 'bg-white/[0.03]' : 'bg-zinc-50';
-  const cardBorder = theme === 'dark' ? 'border-white/[0.06]' : 'border-zinc-200';
-
   /* ── Loading state ──────────────────────────────── */
   if (loading) {
     return (
@@ -341,104 +307,18 @@ export default function Dashboard() {
   return (
     <section className="relative w-full min-h-[calc(100vh-5rem)] pt-24 md:pt-28 pb-10 md:pb-16">
       <Container>
-        <div>
-          {/* ── Sticky Next Match Banner ────────────────── */}
-          {nextMatch && (
-            <motion.button
-              onClick={() => navigate(`/play/match/${nextMatch.matchId}`)}
-              className={cn(
-                'w-full rounded-2xl p-4 sm:p-5 border mb-8 text-left transition-all duration-500 cursor-pointer',
-                'hover:border-brand-500/50',
-                theme === 'dark'
-                  ? 'bg-brand-500/[0.06] border-brand-500/30'
-                  : 'bg-brand-50 border-brand-200',
-              )}
-              initial={{ opacity: 0, y: -12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, ease: 'easeOut' }}
-            >
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <span className="relative flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-brand-500" />
-                    </span>
-                  </div>
-                  <div>
-                    <p
-                      className={cn(
-                        'text-xs font-semibold uppercase tracking-wider mb-1',
-                        theme === 'dark' ? 'text-brand-400' : 'text-brand-600',
-                      )}
-                    >
-                      {nextMatch.needsConfirmation
-                        ? 'Bekräfta resultat'
-                        : `Nästa match — Runda ${nextMatch.round}`}
-                    </p>
-                    <div className="flex items-center gap-4 text-sm">
-                      {nextMatch.time && (
-                        <span className="inline-flex items-center gap-1.5 font-bold text-foreground">
-                          <ClockIcon />
-                          {nextMatch.time}
-                        </span>
-                      )}
-                      {nextMatch.table && (
-                        <span className="inline-flex items-center gap-1.5 font-bold text-foreground">
-                          <TableIcon />
-                          Bord {nextMatch.table}
-                        </span>
-                      )}
-                      {nextMatch.opponent && (
-                        <span className={themeText(theme, 'secondary')}>
-                          vs {nextMatch.opponent}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <svg
-                  width={20}
-                  height={20}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className={theme === 'dark' ? 'text-brand-400' : 'text-brand-600'}
-                >
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </div>
-            </motion.button>
-          )}
-
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4 }}
+        >
           {/* ── Header ──────────────────────────────────── */}
-          <motion.div
-            className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-10"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
-          >
+          <div className="flex items-start justify-between gap-4 mb-8">
             <div>
-              <SectionLabel variant="gradient">TURNERING</SectionLabel>
-              <div className="flex items-center gap-3 mt-1 flex-wrap">
-                <h1 className="font-display text-3xl md:text-4xl lg:text-5xl text-brand-500 tracking-wider hdr-text-fill">
-                  {team.name}
-                </h1>
-                <span
-                  className={cn(
-                    'inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-mono font-semibold tracking-wider border',
-                    theme === 'dark'
-                      ? 'bg-brand-500/10 text-brand-400 border-brand-500/20'
-                      : 'bg-brand-50 text-brand-600 border-brand-200',
-                  )}
-                >
-                  {code}
-                </span>
-              </div>
-              <div className="mt-2 flex items-center gap-2 flex-wrap">
+              <h1 className="font-display text-3xl md:text-4xl text-brand-500 tracking-wider hdr-text-fill">
+                {team.name}
+              </h1>
+              <div className="mt-1.5 flex items-center gap-2 flex-wrap">
                 <PlayerNameInput
                   value={player1}
                   onChange={setPlayer1}
@@ -462,311 +342,227 @@ export default function Dashboard() {
                 />
               </div>
             </div>
+            <span
+              className={cn(
+                'text-[10px] font-mono tracking-wider mt-2',
+                theme === 'dark' ? 'text-zinc-600' : 'text-zinc-400',
+              )}
+            >
+              {code}
+            </span>
+          </div>
+
+          {/* ── Stats line ─────────────────────────────── */}
+          <div className="flex items-center gap-5 mb-8 text-sm font-mono">
+            <span className="text-emerald-400">{wins}W</span>
+            <span className="text-red-400">{losses}L</span>
+            {totalPlayed > 0 && (
+              <span className={theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}>
+                {winRate}%
+              </span>
+            )}
             <button
               onClick={() => navigate('/scoreboard')}
               className={cn(
-                'text-sm transition-opacity hover:opacity-70 self-start',
+                'ml-auto text-xs transition-opacity hover:opacity-70',
                 themeText(theme, 'secondary'),
               )}
             >
               Scoreboard →
             </button>
-          </motion.div>
-
-          {/* ── Stats Row ───────────────────────────────── */}
-          <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-4">
-            {[
-              { label: 'Vinster', value: String(wins), accent: 'text-emerald-400' },
-              { label: 'Förluster', value: String(losses), accent: 'text-red-400' },
-              { label: 'Ranking', value: `—`, sub: '' },
-            ].map((stat, i) => (
-              <motion.div
-                key={stat.label}
-                className={cn(
-                  'rounded-2xl p-4 sm:p-5 border transition-colors duration-500',
-                  cardBg,
-                  cardBorder,
-                )}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.1 + i * 0.08, ease: 'easeOut' }}
-              >
-                <p className={cn('text-xs mb-1', themeText(theme, 'secondary'))}>{stat.label}</p>
-                <div className="flex items-baseline gap-1.5">
-                  <span
-                    className={cn(
-                      'text-2xl sm:text-3xl font-bold tracking-tight',
-                      stat.accent || 'text-foreground',
-                    )}
-                  >
-                    {stat.value}
-                  </span>
-                  {stat.sub && (
-                    <span
-                      className={cn(
-                        'text-xs',
-                        theme === 'dark' ? 'text-zinc-600' : 'text-zinc-400',
-                      )}
-                    >
-                      {stat.sub}
-                    </span>
-                  )}
-                </div>
-              </motion.div>
-            ))}
           </div>
 
-          {/* ── Win rate bar ─────────────────────────────── */}
-          {totalPlayed > 0 && (
-            <motion.div
+          {/* ── Next match ─────────────────────────────── */}
+          {nextMatch && (
+            <button
+              onClick={() => navigate(`/play/match/${nextMatch.matchId}`)}
               className={cn(
-                'rounded-2xl p-4 sm:p-5 border mb-10 transition-colors duration-500',
-                cardBg,
-                cardBorder,
+                'w-full text-left mb-8 py-3 px-4 rounded-lg transition-colors',
+                theme === 'dark'
+                  ? 'bg-brand-500/[0.06] hover:bg-brand-500/[0.1]'
+                  : 'bg-brand-50 hover:bg-brand-100',
               )}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.35, ease: 'easeOut' }}
             >
-              <div className="flex justify-between text-xs mb-2">
-                <span className={themeText(theme, 'secondary')}>Vinstprocent</span>
+              <div className="flex items-center gap-3">
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-500" />
+                </span>
                 <span
-                  className={cn('font-mono', theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400')}
+                  className={cn(
+                    'text-xs font-medium uppercase tracking-wider',
+                    theme === 'dark' ? 'text-brand-400' : 'text-brand-600',
+                  )}
                 >
-                  {winRate}%
+                  {nextMatch.needsConfirmation
+                    ? 'Bekräfta resultat'
+                    : `R${nextMatch.round}`}
+                </span>
+                <span className="text-sm text-foreground">
+                  vs {nextMatch.opponent}
+                </span>
+                <span className={cn('text-xs ml-auto', themeText(theme, 'secondary'))}>
+                  {[
+                    nextMatch.time,
+                    nextMatch.table ? `Bord ${nextMatch.table}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
                 </span>
               </div>
-              <div
-                className={cn(
-                  'h-2 rounded-full overflow-hidden',
-                  theme === 'dark' ? 'bg-white/[0.06]' : 'bg-zinc-200',
-                )}
-              >
-                <motion.div
-                  className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-400"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${winRate}%` }}
-                  transition={{ duration: 1, delay: 0.6, ease: 'easeOut' }}
-                />
-              </div>
-            </motion.div>
+            </button>
           )}
 
-          {/* ── Round Schedule ───────────────────────────── */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.45, ease: 'easeOut' }}
-          >
-            <h2 className={cn('text-sm font-semibold mb-4', themeText(theme, 'secondary'))}>
-              Matchschema
-            </h2>
+          {/* ── Divider ────────────────────────────────── */}
+          <div
+            className={cn(
+              'h-px mb-6',
+              theme === 'dark' ? 'bg-white/[0.06]' : 'bg-zinc-200',
+            )}
+          />
 
-            {rounds.length === 0 ? (
-              <div className={cn('rounded-2xl p-8 border text-center', cardBg, cardBorder)}>
-                <p className={themeText(theme, 'secondary')}>
-                  Inga matcher schemalagda ännu. Turneringen har inte börjat.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {rounds.map((round, i) => {
-                  const isCurrent = i === currentRoundIdx;
-                  const isPlayed = round.result !== null;
-                  const isWin = round.result === 'win';
-                  const isTbd = round.opponent === null;
+          {/* ── Match schedule ─────────────────────────── */}
+          <p className={cn('text-[10px] uppercase tracking-[0.2em] mb-4', themeText(theme, 'muted'))}>
+            Matchschema
+          </p>
 
-                  return (
-                    <motion.div
-                      key={round.matchId}
+          {rounds.length === 0 ? (
+            <p className={cn('text-sm py-8 text-center', themeText(theme, 'secondary'))}>
+              Inga matcher schemalagda ännu.
+            </p>
+          ) : (
+            <div
+              className={cn(
+                'divide-y',
+                theme === 'dark' ? 'divide-white/[0.04]' : 'divide-zinc-100',
+              )}
+            >
+              {rounds.map((round) => {
+                const isCurrent = rounds.indexOf(round) === currentRoundIdx;
+                const isPlayed = round.result !== null;
+                const isWin = round.result === 'win';
+                const isTbd = round.opponent === null;
+
+                return (
+                  <div
+                    key={round.matchId}
+                    className={cn(
+                      'flex items-center gap-4 py-3 px-1 transition-colors',
+                      isCurrent && 'cursor-pointer',
+                      isCurrent &&
+                        (theme === 'dark'
+                          ? 'bg-brand-500/[0.04] -mx-3 px-4 rounded-lg'
+                          : 'bg-brand-50/50 -mx-3 px-4 rounded-lg'),
+                      isTbd && 'opacity-40',
+                    )}
+                    onClick={
+                      isCurrent ? () => navigate(`/play/match/${round.matchId}`) : undefined
+                    }
+                  >
+                    {/* Round number */}
+                    <span
                       className={cn(
-                        'relative rounded-2xl p-4 sm:p-5 border transition-all duration-500',
-                        isCurrent ? 'cursor-pointer hover:border-brand-500/50' : '',
-                        cardBg,
+                        'text-xs font-mono w-6 shrink-0',
                         isCurrent
                           ? theme === 'dark'
-                            ? 'border-brand-500/40 shadow-[0_0_20px_rgba(var(--color-brand-500-rgb,99,102,241),0.08)]'
-                            : 'border-brand-300 shadow-sm'
-                          : cardBorder,
-                        isTbd && 'opacity-50',
+                            ? 'text-brand-400'
+                            : 'text-brand-600'
+                          : theme === 'dark'
+                            ? 'text-zinc-600'
+                            : 'text-zinc-400',
                       )}
-                      initial={{ opacity: 0, x: -12 }}
-                      animate={{ opacity: isTbd ? 0.5 : 1, x: 0 }}
-                      transition={{ duration: 0.4, delay: 0.5 + i * 0.07, ease: 'easeOut' }}
-                      onClick={
-                        isCurrent ? () => navigate(`/play/match/${round.matchId}`) : undefined
-                      }
                     >
-                      {/* Live indicator */}
-                      {isCurrent && !isTbd && (
-                        <div className="absolute top-4 right-4 sm:top-5 sm:right-5">
-                          <span className="relative flex h-2.5 w-2.5">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75" />
-                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand-500" />
-                          </span>
-                        </div>
+                      {round.round}
+                    </span>
+
+                    {/* Left accent for current */}
+                    {isCurrent && !isTbd && (
+                      <span className="relative flex h-1.5 w-1.5 shrink-0 -ml-2 mr-0.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-brand-500" />
+                      </span>
+                    )}
+
+                    {/* Opponent */}
+                    <span className="text-sm flex-1 truncate">
+                      {isTbd ? (
+                        <span
+                          className={cn(
+                            'italic',
+                            theme === 'dark' ? 'text-zinc-700' : 'text-zinc-400',
+                          )}
+                        >
+                          TBD
+                        </span>
+                      ) : (
+                        <span className="text-foreground">{round.opponent}</span>
                       )}
+                    </span>
 
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
-                        {/* Round badge + opponent (mobile) */}
-                        <div className="flex items-center gap-3 sm:min-w-[100px]">
-                          <span
-                            className={cn(
-                              'w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0',
-                              isCurrent && !isTbd
-                                ? 'bg-brand-500 text-white'
-                                : theme === 'dark'
-                                  ? 'bg-white/[0.06] text-zinc-400'
-                                  : 'bg-zinc-200 text-zinc-500',
-                            )}
-                          >
-                            R{round.round}
-                          </span>
-                          <p className="sm:hidden text-sm font-medium text-foreground">
-                            {isTbd ? (
-                              <span
-                                className={cn(
-                                  'italic',
-                                  theme === 'dark' ? 'text-zinc-600' : 'text-zinc-400',
-                                )}
-                              >
-                                Lottning ej gjord
-                              </span>
-                            ) : (
-                              <>vs {round.opponent}</>
-                            )}
-                          </p>
-                        </div>
-
-                        {/* Time & Table */}
-                        {!isTbd ? (
-                          <div className="flex items-center gap-4 text-xs">
-                            {round.time && (
-                              <span
-                                className={cn(
-                                  'inline-flex items-center gap-1.5',
-                                  themeText(theme, 'secondary'),
-                                )}
-                              >
-                                <ClockIcon />
-                                {round.time}
-                              </span>
-                            )}
-                            <span
-                              className={cn(
-                                'inline-flex items-center gap-1.5',
-                                themeText(theme, 'secondary'),
-                              )}
-                            >
-                              <TableIcon />
-                              Bord {round.table}
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-4 text-xs">
-                            <span
-                              className={cn(
-                                'italic',
-                                theme === 'dark' ? 'text-zinc-600' : 'text-zinc-400',
-                              )}
-                            >
-                              TBD
-                            </span>
-                          </div>
+                    {/* Meta: time & table */}
+                    {!isTbd && (
+                      <span
+                        className={cn(
+                          'hidden sm:block text-[11px] font-mono',
+                          theme === 'dark' ? 'text-zinc-600' : 'text-zinc-400',
                         )}
+                      >
+                        {[
+                          round.time,
+                          round.table ? `B${round.table}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+                    )}
 
-                        {/* Opponent (desktop) */}
-                        <p className="hidden sm:block text-sm font-medium flex-1">
-                          {isTbd ? (
-                            <span
-                              className={cn(
-                                'italic',
-                                theme === 'dark' ? 'text-zinc-600' : 'text-zinc-400',
-                              )}
-                            >
-                              Lottning ej gjord
-                            </span>
-                          ) : (
-                            <span className="text-foreground">vs {round.opponent}</span>
+                    {/* Result */}
+                    <span className="shrink-0 flex items-center gap-2">
+                      {isPlayed && round.scoreDisplay && (
+                        <span
+                          className={cn(
+                            'text-xs font-mono',
+                            theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400',
                           )}
-                        </p>
-
-                        {/* Score + Result */}
-                        <div className="flex items-center gap-3 sm:ml-auto">
-                          {isPlayed && round.scoreDisplay && (
-                            <span
-                              className={cn(
-                                'text-sm font-mono font-bold tracking-wider',
-                                theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700',
-                              )}
-                            >
-                              {round.scoreDisplay}
-                            </span>
+                        >
+                          {round.scoreDisplay}
+                        </span>
+                      )}
+                      {isPlayed ? (
+                        <span
+                          className={cn(
+                            'text-[10px] font-bold w-5 text-center',
+                            isWin ? 'text-emerald-400' : 'text-red-400',
                           )}
-
-                          {isPlayed ? (
-                            <span
-                              className={cn(
-                                'inline-flex items-center justify-center w-8 h-7 rounded-lg text-xs font-bold border',
-                                isWin
-                                  ? theme === 'dark'
-                                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20'
-                                    : 'bg-emerald-50 text-emerald-600 border-emerald-200'
-                                  : theme === 'dark'
-                                    ? 'bg-red-500/15 text-red-400 border-red-500/20'
-                                    : 'bg-red-50 text-red-600 border-red-200',
-                              )}
-                            >
-                              {isWin ? 'W' : 'L'}
-                            </span>
-                          ) : round.needsConfirmation ? (
-                            <span
-                              className={cn(
-                                'inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold border',
-                                theme === 'dark'
-                                  ? 'bg-amber-500/15 text-amber-400 border-amber-500/20'
-                                  : 'bg-amber-50 text-amber-600 border-amber-200',
-                              )}
-                            >
-                              Bekräfta
-                            </span>
-                          ) : (
-                            <span
-                              className={cn(
-                                'inline-flex items-center px-3 py-1 rounded-lg text-xs font-medium border',
-                                theme === 'dark'
-                                  ? 'bg-white/[0.04] text-zinc-500 border-white/[0.06]'
-                                  : 'bg-zinc-100 text-zinc-400 border-zinc-200',
-                              )}
-                            >
-                              {isTbd ? 'TBD' : 'Nästa match'}
-                            </span>
+                        >
+                          {isWin ? 'W' : 'L'}
+                        </span>
+                      ) : round.needsConfirmation ? (
+                        <span
+                          className={cn(
+                            'text-[10px] font-semibold uppercase tracking-wider',
+                            theme === 'dark' ? 'text-amber-400' : 'text-amber-600',
                           )}
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            )}
-          </motion.div>
-
-          {/* ── Footer ───────────────────────────────────── */}
-          <motion.div
-            className={cn('mt-12 h-px', themeGradientLine(theme))}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: [0.3, 0.6, 0.3] }}
-            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-          />
-          <p
-            className={cn(
-              'mt-4 text-center text-xs',
-              theme === 'dark' ? 'text-zinc-600' : 'text-zinc-400',
-            )}
-          >
-            Lottning sker efter varje runda (swiss-format)
-          </p>
-        </div>
+                        >
+                          Bekräfta
+                        </span>
+                      ) : !isTbd ? (
+                        <span
+                          className={cn(
+                            'text-[10px]',
+                            theme === 'dark' ? 'text-zinc-700' : 'text-zinc-300',
+                          )}
+                        >
+                          —
+                        </span>
+                      ) : null}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </motion.div>
       </Container>
     </section>
   );
