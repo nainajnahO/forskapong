@@ -308,63 +308,161 @@ export default function Dashboard() {
     <section className="relative w-full min-h-[calc(100vh-5rem)] pt-24 md:pt-28 pb-10 md:pb-16">
       <Container>
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4 }}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
         >
           {/* ── Header ──────────────────────────────────── */}
-          <div className="flex items-start justify-between gap-4 mb-8">
-            <div>
-              <h1 className="font-display text-3xl md:text-4xl text-brand-500 tracking-wider hdr-text-fill">
+          <div className="mb-10">
+            <div className="flex items-start justify-between gap-4">
+              <h1 className="font-display text-4xl md:text-5xl text-brand-500 tracking-wider hdr-text-fill">
                 {team.name}
               </h1>
-              <div className="mt-1.5 flex items-center gap-2 flex-wrap">
-                <PlayerNameInput
-                  value={player1}
-                  onChange={setPlayer1}
-                  onSave={savePlayerNames}
-                  placeholder="Spelare 1"
-                  focused={focusedField === 0}
-                  onFocus={() => setFocusedField(0)}
-                  onBlur={() => setFocusedField(null)}
-                  theme={theme}
-                />
-                <span className={cn('text-sm', themeText(theme, 'secondary'))}>&</span>
-                <PlayerNameInput
-                  value={player2}
-                  onChange={setPlayer2}
-                  onSave={savePlayerNames}
-                  placeholder="Spelare 2"
-                  focused={focusedField === 1}
-                  onFocus={() => setFocusedField(1)}
-                  onBlur={() => setFocusedField(null)}
-                  theme={theme}
-                />
-              </div>
+              <span
+                className={cn(
+                  'text-[10px] font-mono tracking-widest mt-3 px-2 py-0.5 rounded border',
+                  theme === 'dark'
+                    ? 'text-zinc-600 border-white/[0.06]'
+                    : 'text-zinc-400 border-zinc-200',
+                )}
+              >
+                {code}
+              </span>
             </div>
-            <span
-              className={cn(
-                'text-[10px] font-mono tracking-wider mt-2',
-                theme === 'dark' ? 'text-zinc-600' : 'text-zinc-400',
-              )}
-            >
-              {code}
-            </span>
+            <div className="mt-2 flex items-center gap-2 flex-wrap">
+              <PlayerNameInput
+                value={player1}
+                onChange={setPlayer1}
+                onSave={savePlayerNames}
+                placeholder="Spelare 1"
+                focused={focusedField === 0}
+                onFocus={() => setFocusedField(0)}
+                onBlur={() => setFocusedField(null)}
+                theme={theme}
+              />
+              <span className={cn('text-sm', themeText(theme, 'secondary'))}>&</span>
+              <PlayerNameInput
+                value={player2}
+                onChange={setPlayer2}
+                onSave={savePlayerNames}
+                placeholder="Spelare 2"
+                focused={focusedField === 1}
+                onFocus={() => setFocusedField(1)}
+                onBlur={() => setFocusedField(null)}
+                theme={theme}
+              />
+            </div>
           </div>
 
-          {/* ── Stats line ─────────────────────────────── */}
-          <div className="flex items-center gap-5 mb-8 text-sm font-mono">
-            <span className="text-emerald-400">{wins}W</span>
-            <span className="text-red-400">{losses}L</span>
+          {/* ── Stats ──────────────────────────────────── */}
+          <div className="flex items-end gap-8 mb-2">
+            <div>
+              <p className={cn('text-[10px] uppercase tracking-[0.15em] mb-1', themeText(theme, 'muted'))}>
+                Vinster
+              </p>
+              <p className="text-3xl font-bold tabular-nums text-emerald-400">{wins}</p>
+            </div>
+            <div>
+              <p className={cn('text-[10px] uppercase tracking-[0.15em] mb-1', themeText(theme, 'muted'))}>
+                Förluster
+              </p>
+              <p className="text-3xl font-bold tabular-nums text-red-400">{losses}</p>
+            </div>
             {totalPlayed > 0 && (
-              <span className={theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}>
-                {winRate}%
-              </span>
+              <div className="ml-auto text-right">
+                <p className={cn('text-[10px] uppercase tracking-[0.15em] mb-1', themeText(theme, 'muted'))}>
+                  Vinst%
+                </p>
+                <p className={cn('text-3xl font-bold tabular-nums', themeText(theme, 'primary'))}>
+                  {winRate}
+                  <span className={cn('text-lg', themeText(theme, 'muted'))}>%</span>
+                </p>
+              </div>
             )}
+          </div>
+
+          {/* ── Win rate bar ────────────────────────────── */}
+          {totalPlayed > 0 && (
+            <div
+              className={cn(
+                'h-1 rounded-full overflow-hidden mb-10',
+                theme === 'dark' ? 'bg-white/[0.06]' : 'bg-zinc-200',
+              )}
+            >
+              <motion.div
+                className="h-full rounded-full bg-brand-500"
+                initial={{ width: 0 }}
+                animate={{ width: `${winRate}%` }}
+                transition={{ duration: 0.8, ease: 'easeOut' }}
+              />
+            </div>
+          )}
+          {totalPlayed === 0 && <div className="mb-10" />}
+
+          {/* ── Next match ─────────────────────────────── */}
+          {nextMatch && (
+            <motion.button
+              onClick={() => navigate(`/play/match/${nextMatch.matchId}`)}
+              className={cn(
+                'w-full text-left mb-10 py-4 px-5 rounded-xl border-l-4 border-brand-500 transition-all',
+                theme === 'dark'
+                  ? 'bg-white/[0.03] hover:bg-white/[0.05]'
+                  : 'bg-zinc-50 hover:bg-zinc-100',
+              )}
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.4, delay: 0.15 }}
+            >
+              <div className="flex items-center gap-4">
+                <span className="relative flex h-2.5 w-2.5 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand-500" />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p
+                    className={cn(
+                      'text-[10px] font-semibold uppercase tracking-wider mb-0.5',
+                      theme === 'dark' ? 'text-brand-400' : 'text-brand-600',
+                    )}
+                  >
+                    {nextMatch.needsConfirmation
+                      ? 'Bekräfta resultat'
+                      : `Nästa match — Runda ${nextMatch.round}`}
+                  </p>
+                  <p className="text-base font-medium text-foreground truncate">
+                    vs {nextMatch.opponent}
+                  </p>
+                </div>
+                <div className={cn('text-right text-xs shrink-0', themeText(theme, 'secondary'))}>
+                  {nextMatch.time && <p>{nextMatch.time}</p>}
+                  {nextMatch.table && <p>Bord {nextMatch.table}</p>}
+                </div>
+                <svg
+                  width={16}
+                  height={16}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={cn('shrink-0', themeText(theme, 'muted'))}
+                >
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </div>
+            </motion.button>
+          )}
+
+          {/* ── Match schedule header ──────────────────── */}
+          <div className="flex items-center justify-between mb-4">
+            <p className={cn('text-[10px] uppercase tracking-[0.2em]', themeText(theme, 'muted'))}>
+              Matchschema
+            </p>
             <button
               onClick={() => navigate('/scoreboard')}
               className={cn(
-                'ml-auto text-xs transition-opacity hover:opacity-70',
+                'text-xs transition-opacity hover:opacity-70',
                 themeText(theme, 'secondary'),
               )}
             >
@@ -372,89 +470,47 @@ export default function Dashboard() {
             </button>
           </div>
 
-          {/* ── Next match ─────────────────────────────── */}
-          {nextMatch && (
-            <button
-              onClick={() => navigate(`/play/match/${nextMatch.matchId}`)}
-              className={cn(
-                'w-full text-left mb-8 py-3 px-4 rounded-lg transition-colors',
-                theme === 'dark'
-                  ? 'bg-brand-500/[0.06] hover:bg-brand-500/[0.1]'
-                  : 'bg-brand-50 hover:bg-brand-100',
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-500" />
-                </span>
-                <span
-                  className={cn(
-                    'text-xs font-medium uppercase tracking-wider',
-                    theme === 'dark' ? 'text-brand-400' : 'text-brand-600',
-                  )}
-                >
-                  {nextMatch.needsConfirmation
-                    ? 'Bekräfta resultat'
-                    : `R${nextMatch.round}`}
-                </span>
-                <span className="text-sm text-foreground">
-                  vs {nextMatch.opponent}
-                </span>
-                <span className={cn('text-xs ml-auto', themeText(theme, 'secondary'))}>
-                  {[
-                    nextMatch.time,
-                    nextMatch.table ? `Bord ${nextMatch.table}` : null,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </span>
-              </div>
-            </button>
-          )}
-
-          {/* ── Divider ────────────────────────────────── */}
-          <div
-            className={cn(
-              'h-px mb-6',
-              theme === 'dark' ? 'bg-white/[0.06]' : 'bg-zinc-200',
-            )}
-          />
-
-          {/* ── Match schedule ─────────────────────────── */}
-          <p className={cn('text-[10px] uppercase tracking-[0.2em] mb-4', themeText(theme, 'muted'))}>
-            Matchschema
-          </p>
-
+          {/* ── Match list ─────────────────────────────── */}
           {rounds.length === 0 ? (
-            <p className={cn('text-sm py-8 text-center', themeText(theme, 'secondary'))}>
+            <p className={cn('text-sm py-12 text-center', themeText(theme, 'secondary'))}>
               Inga matcher schemalagda ännu.
             </p>
           ) : (
-            <div
-              className={cn(
-                'divide-y',
-                theme === 'dark' ? 'divide-white/[0.04]' : 'divide-zinc-100',
-              )}
-            >
-              {rounds.map((round) => {
-                const isCurrent = rounds.indexOf(round) === currentRoundIdx;
+            <div className="space-y-1">
+              {rounds.map((round, i) => {
+                const isCurrent = i === currentRoundIdx;
                 const isPlayed = round.result !== null;
                 const isWin = round.result === 'win';
                 const isTbd = round.opponent === null;
 
+                const leftBorder = isPlayed
+                  ? isWin
+                    ? 'border-l-2 border-l-emerald-500'
+                    : 'border-l-2 border-l-red-500'
+                  : isCurrent && !isTbd
+                    ? 'border-l-2 border-l-brand-500'
+                    : 'border-l-2 border-l-transparent';
+
                 return (
-                  <div
+                  <motion.div
                     key={round.matchId}
                     className={cn(
-                      'flex items-center gap-4 py-3 px-1 transition-colors',
+                      'flex items-center gap-4 py-3 px-4 rounded-lg transition-all',
+                      leftBorder,
                       isCurrent && 'cursor-pointer',
                       isCurrent &&
                         (theme === 'dark'
-                          ? 'bg-brand-500/[0.04] -mx-3 px-4 rounded-lg'
-                          : 'bg-brand-50/50 -mx-3 px-4 rounded-lg'),
-                      isTbd && 'opacity-40',
+                          ? 'bg-brand-500/[0.05]'
+                          : 'bg-brand-50/60'),
+                      !isCurrent && !isTbd &&
+                        (theme === 'dark'
+                          ? 'hover:bg-white/[0.02]'
+                          : 'hover:bg-zinc-50'),
+                      isTbd && 'opacity-35',
                     )}
+                    initial={{ opacity: 0, x: -6 }}
+                    animate={{ opacity: isTbd ? 0.35 : 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: i * 0.04 }}
                     onClick={
                       isCurrent ? () => navigate(`/play/match/${round.matchId}`) : undefined
                     }
@@ -462,76 +518,58 @@ export default function Dashboard() {
                     {/* Round number */}
                     <span
                       className={cn(
-                        'text-xs font-mono w-6 shrink-0',
+                        'text-xs font-mono w-6 shrink-0 text-center',
                         isCurrent
                           ? theme === 'dark'
-                            ? 'text-brand-400'
-                            : 'text-brand-600'
-                          : theme === 'dark'
-                            ? 'text-zinc-600'
-                            : 'text-zinc-400',
+                            ? 'text-brand-400 font-bold'
+                            : 'text-brand-600 font-bold'
+                          : themeText(theme, 'muted'),
                       )}
                     >
                       {round.round}
                     </span>
 
-                    {/* Left accent for current */}
+                    {/* Live dot */}
                     {isCurrent && !isTbd && (
-                      <span className="relative flex h-1.5 w-1.5 shrink-0 -ml-2 mr-0.5">
+                      <span className="relative flex h-2 w-2 shrink-0">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-brand-500" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-500" />
                       </span>
                     )}
 
                     {/* Opponent */}
-                    <span className="text-sm flex-1 truncate">
+                    <span className={cn('text-sm flex-1 truncate', isCurrent && 'font-medium')}>
                       {isTbd ? (
-                        <span
-                          className={cn(
-                            'italic',
-                            theme === 'dark' ? 'text-zinc-700' : 'text-zinc-400',
-                          )}
-                        >
-                          TBD
-                        </span>
+                        <span className={themeText(theme, 'muted')}>TBD</span>
                       ) : (
                         <span className="text-foreground">{round.opponent}</span>
                       )}
                     </span>
 
-                    {/* Meta: time & table */}
+                    {/* Meta */}
                     {!isTbd && (
                       <span
                         className={cn(
-                          'hidden sm:block text-[11px] font-mono',
-                          theme === 'dark' ? 'text-zinc-600' : 'text-zinc-400',
+                          'hidden sm:flex items-center gap-3 text-[11px] font-mono shrink-0',
+                          themeText(theme, 'muted'),
                         )}
                       >
-                        {[
-                          round.time,
-                          round.table ? `B${round.table}` : null,
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
+                        {round.time && <span>{round.time}</span>}
+                        {round.table && <span>B{round.table}</span>}
                       </span>
                     )}
 
-                    {/* Result */}
-                    <span className="shrink-0 flex items-center gap-2">
+                    {/* Score + result */}
+                    <span className="shrink-0 flex items-center gap-2.5">
                       {isPlayed && round.scoreDisplay && (
-                        <span
-                          className={cn(
-                            'text-xs font-mono',
-                            theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400',
-                          )}
-                        >
+                        <span className={cn('text-xs font-mono tabular-nums', themeText(theme, 'secondary'))}>
                           {round.scoreDisplay}
                         </span>
                       )}
                       {isPlayed ? (
                         <span
                           className={cn(
-                            'text-[10px] font-bold w-5 text-center',
+                            'text-[10px] font-black w-5 text-center uppercase',
                             isWin ? 'text-emerald-400' : 'text-red-400',
                           )}
                         >
@@ -540,24 +578,19 @@ export default function Dashboard() {
                       ) : round.needsConfirmation ? (
                         <span
                           className={cn(
-                            'text-[10px] font-semibold uppercase tracking-wider',
-                            theme === 'dark' ? 'text-amber-400' : 'text-amber-600',
+                            'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded',
+                            theme === 'dark'
+                              ? 'text-amber-400 bg-amber-500/10'
+                              : 'text-amber-600 bg-amber-50',
                           )}
                         >
                           Bekräfta
                         </span>
                       ) : !isTbd ? (
-                        <span
-                          className={cn(
-                            'text-[10px]',
-                            theme === 'dark' ? 'text-zinc-700' : 'text-zinc-300',
-                          )}
-                        >
-                          —
-                        </span>
+                        <span className={cn('text-xs', themeText(theme, 'muted'))}>—</span>
                       ) : null}
                     </span>
-                  </div>
+                  </motion.div>
                 );
               })}
             </div>
