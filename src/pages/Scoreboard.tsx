@@ -332,7 +332,7 @@ export default function Scoreboard() {
                   </p>
                   <p
                     className={cn(
-                      'text-[11px] truncate hidden sm:block',
+                      'text-[11px] truncate',
                       themeText(theme, 'muted'),
                     )}
                   >
