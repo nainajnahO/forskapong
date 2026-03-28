@@ -45,36 +45,14 @@ export default function Hero() {
       <div
         ref={glowDivRef}
         className="absolute top-1/2 left-1/2 z-20 pointer-events-none"
-        style={{ opacity: 0, transform: 'translate(-50%, -50%) scale(0)', width: 200, height: 200 }}
+        style={{ opacity: 0, transform: 'translate(-50%, -50%) scale(0)', width: 400, height: 400 }}
       >
-        {/* Outer bloom */}
+        {/* Bloom — bright center with exponential falloff */}
         <div
           className="absolute inset-0 rounded-full"
           style={{
-            background: 'radial-gradient(circle, rgba(255,255,255,0.4) 0%, rgba(200,210,255,0.15) 30%, transparent 70%)',
-            filter: 'blur(24px)',
-          }}
-        />
-        {/* Inner halo */}
-        <div
-          className="absolute rounded-full"
-          style={{
-            inset: '20%',
-            background: 'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(220,225,255,0.3) 40%, transparent 70%)',
-            filter: 'blur(10px)',
-          }}
-        />
-        {/* Core point — HDR bright */}
-        <div
-          className="absolute hdr-star-core rounded-full"
-          style={{
-            width: 14,
-            height: 14,
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            background: '#fff',
-            boxShadow: '0 0 8px 4px rgba(255,255,255,1), 0 0 20px 8px rgba(255,255,255,0.7), 0 0 40px 16px rgba(200,210,255,0.4)',
+            background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.6) 5%, rgba(230,235,255,0.3) 15%, rgba(200,210,255,0.12) 30%, rgba(180,195,255,0.04) 50%, transparent 70%)',
+            filter: 'blur(20px)',
           }}
         />
       </div>

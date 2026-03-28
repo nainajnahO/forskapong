@@ -20,9 +20,9 @@ const INFLATE_DECAY = 0.6;
 
 const MAX_RIPPLES = 8;
 
-const GLOW_AMOUNT = 0.4;
+const GLOW_AMOUNT = 0.5;
 const GLOW_ATTACK = 8;
-const GLOW_DECAY = 0.8;
+const GLOW_DECAY = 0.3;
 
 const DIVE_CLICKS = 3;
 const DIVE_CLICK_WINDOW = 1.5;
