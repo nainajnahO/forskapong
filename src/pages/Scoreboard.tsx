@@ -123,6 +123,13 @@ export default function Scoreboard() {
 
   const teamId = sessionStorage.getItem('teamId');
 
+  // Redirect if not logged in
+  useEffect(() => {
+    if (!teamId) {
+      navigate('/play', { replace: true });
+    }
+  }, [teamId, navigate]);
+
   const [standings, setStandings] = useState<TeamStanding[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

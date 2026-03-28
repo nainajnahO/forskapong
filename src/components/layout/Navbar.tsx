@@ -76,6 +76,7 @@ export default function Navbar() {
   const isLoggedIn =
     location.pathname.startsWith('/play/dashboard') ||
     location.pathname.startsWith('/play/match') ||
+    location.pathname === '/scoreboard' ||
     location.pathname === '/admin';
 
   const handleLogout = useCallback(() => {
