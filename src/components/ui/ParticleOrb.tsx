@@ -244,7 +244,7 @@ export default function ParticleOrb({ onDiveChange, onDivePhase, onGlowUpdate, r
   });
 
   return (
-    <group>
+    <group position={[0, window.innerWidth >= 768 ? -0.3 : 0, 0]}>
       {/* Invisible sphere for raycasting clicks */}
       <mesh ref={hitSphereRef} onClick={handleClick}>
         <sphereGeometry args={[SPHERE_RADIUS * 1.1, 32, 32]} />
