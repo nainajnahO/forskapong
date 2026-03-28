@@ -17,7 +17,19 @@ interface LoginFormProps {
 }
 
 export default function LoginForm({ theme, side }: LoginFormProps) {
-  const [values, setValues] = useState<string[]>(Array(TOTAL_LENGTH).fill(''));
+  const [values, setValues] = useState<string[]>(() => {
+    // Check previous login first, then registration code
+    const session = sessionStorage.getItem('playCode');
+    if (session?.length === TOTAL_LENGTH) return session.split('');
+    try {
+      const reg = localStorage.getItem('forskopong_registered');
+      if (reg) {
+        const { code } = JSON.parse(reg) as { code: string };
+        if (code?.length === TOTAL_LENGTH) return code.split('');
+      }
+    } catch { /* ignore */ }
+    return Array(TOTAL_LENGTH).fill('');
+  });
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
