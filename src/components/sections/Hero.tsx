@@ -6,12 +6,13 @@ import Sponsors from './Sponsors';
 import Container from '../common/Container';
 import { useTheme } from '@/contexts/useTheme';
 import ParticleOrbCanvas from '../ui/ParticleOrbCanvas';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 export default function Hero() {
   const { backgroundVariant } = useTheme();
   const [diving, setDiving] = useState(false);
+  const orbHitRef = useRef<HTMLDivElement>(null!)
 
   return (
     <div className="relative w-full min-h-screen overflow-hidden bg-background transition-colors duration-500">
@@ -29,7 +30,7 @@ export default function Hero() {
 
       {/* Particle Orb — full hero overlay so particles aren't clipped */}
       <div className="absolute inset-0 z-20 pointer-events-none">
-        <ParticleOrbCanvas className="pointer-events-auto" onDiveChange={setDiving} />
+        <ParticleOrbCanvas onDiveChange={setDiving} eventSource={orbHitRef} />
       </div>
 
       {/* Content Container */}
@@ -42,8 +43,12 @@ export default function Hero() {
           {EVENT_INFO.name}
         </h1>
 
-        {/* Spacer for orb (keeps title and bottom bar spaced correctly) */}
-        <div className="w-[280px] h-[280px] md:w-[360px] md:h-[360px] my-2" />
+        {/* Orb interaction area — events are sourced from this element */}
+        <div
+          ref={orbHitRef}
+          className="relative z-30 w-[280px] h-[280px] md:w-[360px] md:h-[360px] my-2"
+          style={{ touchAction: 'none' }}
+        />
 
         {/* Bottom Info Bar */}
         <Container className={cn(
