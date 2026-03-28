@@ -8,9 +8,7 @@ import { themeText } from '@/lib/theme-utils';
 import { supabase } from '@/lib/supabase';
 import type { Team, Match } from '@/lib/database.types';
 import FluidBackground from '@/components/common/FluidBackground';
-import ParticleOrbCanvas from '@/components/ui/ParticleOrbCanvas';
 import StaticNoise from '@/components/common/StaticNoise';
-import ErrorBoundary from '@/components/common/ErrorBoundary';
 
 /* ─── Types ───────────────────────────────────────────────────── */
 
@@ -361,16 +359,7 @@ export default function Dashboard() {
 
         {/* ── Stats — brutalist W/L display ──── */}
         <div className="relative flex flex-col items-center justify-center py-6 md:py-8 mb-8">
-          {/* Particle orb atmospheric glow */}
-          <div className="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
-            <div className="w-[220px] h-[220px] md:w-[280px] md:h-[280px]">
-              <ErrorBoundary fallback={null}>
-                <ParticleOrbCanvas />
-              </ErrorBoundary>
-            </div>
-          </div>
-
-          <div className="relative z-10 text-center">
+          <div className="text-center">
             <p className="text-6xl sm:text-7xl md:text-8xl font-mono font-black tabular-nums tracking-tight leading-none">
               <span className="text-emerald-400">{wins}</span>
               <span className={cn('text-xl sm:text-2xl md:text-3xl align-top ml-1', themeText(theme, 'muted'))}>W</span>
