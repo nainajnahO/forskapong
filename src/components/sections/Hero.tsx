@@ -15,10 +15,15 @@ export default function Hero() {
   const { backgroundVariant } = useTheme();
   const [diving, setDiving] = useState(false);
   const [divePhase, setDivePhase] = useState<DivePhase>(null);
+  const heroRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const infoBarRef = useRef<HTMLDivElement>(null);
   const orbHitRef = useRef<HTMLDivElement>(null!);
   const glowDivRef = useRef<HTMLDivElement>(null);
   const loginRef = useRef<HTMLDivElement>(null);
   const returnSignalRef = useRef(false);
+  const [midpointY, setMidpointY] = useState<number | null>(null);
+  const [orbOffsetY, setOrbOffsetY] = useState(0);
 
   const handleGlowUpdate = useCallback((intensity: number) => {
     const el = glowDivRef.current;
@@ -40,6 +45,34 @@ export default function Hero() {
     }
   }, [divePhase]);
 
+  // Compute midpoint between title and info bar
+  useEffect(() => {
+    const compute = () => {
+      const hero = heroRef.current;
+      const title = titleRef.current;
+      const info = infoBarRef.current;
+      if (!hero || !title || !info) return;
+
+      const heroRect = hero.getBoundingClientRect();
+      const titleBottom = title.getBoundingClientRect().bottom - heroRect.top;
+      const infoTop = info.getBoundingClientRect().top - heroRect.top;
+      const mid = (titleBottom + infoTop) / 2;
+      setMidpointY(mid);
+
+      // Convert pixel offset from canvas center to 3D units
+      const canvasCenter = heroRect.height / 2;
+      const pixelOffset = mid - canvasCenter;
+      const fovRad = (40 * Math.PI) / 180;
+      const worldHeight = 2 * Math.tan(fovRad / 2) * 9; // cameraZ = 9, fov = 40
+      setOrbOffsetY((-pixelOffset / heroRect.height) * worldHeight);
+    };
+
+    compute();
+    const observer = new ResizeObserver(compute);
+    if (heroRef.current) observer.observe(heroRef.current);
+    return () => observer.disconnect();
+  }, []);
+
   // Escape key to dismiss
   useEffect(() => {
     if (divePhase !== 'hold') return;
@@ -51,7 +84,7 @@ export default function Hero() {
   }, [divePhase, dismissDive]);
 
   return (
-    <div className="relative w-full min-h-screen overflow-hidden bg-background transition-colors duration-500">
+    <div ref={heroRef} className="relative w-full min-h-screen overflow-hidden bg-background transition-colors duration-500">
       {/* Background - Switch based on background variant */}
       {backgroundVariant === 'framer' ? (
         <div className="absolute inset-0">
@@ -66,14 +99,14 @@ export default function Hero() {
 
       {/* Particle Orb — full hero overlay so particles aren't clipped */}
       <div className="absolute inset-0 z-20 pointer-events-none">
-        <ParticleOrbCanvas onDiveChange={setDiving} onDivePhase={handleDivePhase} onGlowUpdate={handleGlowUpdate} returnSignalRef={returnSignalRef} eventSource={orbHitRef} />
+        <ParticleOrbCanvas onDiveChange={setDiving} onDivePhase={handleDivePhase} onGlowUpdate={handleGlowUpdate} returnSignalRef={returnSignalRef} eventSource={orbHitRef} orbOffsetY={orbOffsetY} />
       </div>
 
-      {/* Star glow — HDR-enhanced center light, aligned with 3D orb center (canvas center) */}
+      {/* Star glow — HDR-enhanced center light, aligned at midpoint between title and info bar */}
       <div
         ref={glowDivRef}
-        className="absolute top-1/2 left-1/2 z-20 pointer-events-none"
-        style={{ opacity: 0, transform: 'translate(-50%, -50%) scale(0)', width: 400, height: 400 }}
+        className="absolute left-1/2 z-20 pointer-events-none"
+        style={{ opacity: 0, transform: 'translate(-50%, -50%) scale(0)', width: 400, height: 400, top: midpointY ?? '50%' }}
       >
         {/* Bloom — bright center with exponential falloff */}
         <div
@@ -96,9 +129,10 @@ export default function Hero() {
           <div
             ref={loginRef}
             className={cn(
-              'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-500 [&>div]:flex [&>div]:flex-col [&>div]:items-center',
+              'absolute left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-500 [&>div]:flex [&>div]:flex-col [&>div]:items-center',
               divePhase === 'hold' ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none',
             )}
+            style={{ top: midpointY ?? '50%' }}
           >
             <LoginForm theme="dark" side="right" />
           </div>
@@ -108,7 +142,7 @@ export default function Hero() {
       {/* Content Container */}
       <div className="relative z-10 h-screen flex flex-col items-center justify-center px-6 -mt-8 md:mt-0">
         {/* Main Title */}
-        <h1 className={cn(
+        <h1 ref={titleRef} className={cn(
           'relative z-30 text-5xl md:text-[6.5rem] font-display text-white hdr-white-fill uppercase tracking-wider text-center mb-0 px-1 pointer-events-none transition-all duration-700',
           diving && 'opacity-0 -translate-y-20',
         )}>
@@ -123,10 +157,11 @@ export default function Hero() {
         />
 
         {/* Bottom Info Bar */}
-        <Container className={cn(
+        <div ref={infoBarRef} className={cn(
           'absolute bottom-32 md:bottom-40 left-0 right-0 z-30 pointer-events-none transition-all duration-700',
           diving && 'opacity-0 translate-y-20',
         )}>
+        <Container>
           <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6 max-w-full">
             {/* Date */}
             <span className="text-white hdr-white-fill text-lg md:text-2xl font-light whitespace-nowrap">
@@ -142,6 +177,7 @@ export default function Hero() {
             </span>
           </div>
         </Container>
+        </div>
 
         {/* Sponsors Marquee */}
         <div className={cn(

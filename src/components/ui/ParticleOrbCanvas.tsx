@@ -11,9 +11,10 @@ interface ParticleOrbCanvasProps {
   onGlowUpdate?: (intensity: number) => void;
   returnSignalRef?: RefObject<boolean>;
   eventSource?: RefObject<HTMLElement>;
+  orbOffsetY?: number;
 }
 
-export default function ParticleOrbCanvas({ className, onDiveChange, onDivePhase, onGlowUpdate, returnSignalRef, eventSource }: ParticleOrbCanvasProps) {
+export default function ParticleOrbCanvas({ className, onDiveChange, onDivePhase, onGlowUpdate, returnSignalRef, eventSource, orbOffsetY = 0 }: ParticleOrbCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isVisible = useIsVisible(containerRef);
   const [diving, setDiving] = useState(false);
@@ -37,7 +38,7 @@ export default function ParticleOrbCanvas({ className, onDiveChange, onDivePhase
         eventSource={eventSource}
         eventPrefix="client"
       >
-        <ParticleOrb onDiveChange={handleDiveChange} onDivePhase={onDivePhase} onGlowUpdate={onGlowUpdate} returnSignalRef={returnSignalRef} />
+        <ParticleOrb onDiveChange={handleDiveChange} onDivePhase={onDivePhase} onGlowUpdate={onGlowUpdate} returnSignalRef={returnSignalRef} offsetY={orbOffsetY} />
         <OrbitControls
           enabled={!diving}
           enableZoom={false}

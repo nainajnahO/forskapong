@@ -41,9 +41,10 @@ interface ParticleOrbProps {
   onDivePhase?: (phase: DivePhase) => void;
   onGlowUpdate?: (intensity: number) => void;
   returnSignalRef?: RefObject<boolean>;
+  offsetY?: number;
 }
 
-export default function ParticleOrb({ onDiveChange, onDivePhase, onGlowUpdate, returnSignalRef }: ParticleOrbProps) {
+export default function ParticleOrb({ onDiveChange, onDivePhase, onGlowUpdate, returnSignalRef, offsetY = 0 }: ParticleOrbProps) {
   const pointsRef = useRef<THREE.Points>(null);
   const ripplesRef = useRef<Ripple[]>([]);
   const hitSphereRef = useRef<THREE.Mesh>(null);
@@ -244,7 +245,7 @@ export default function ParticleOrb({ onDiveChange, onDivePhase, onGlowUpdate, r
   });
 
   return (
-    <group position={[0, window.innerWidth >= 768 ? -0.3 : 0, 0]}>
+    <group position={[0, offsetY, 0]}>
       {/* Invisible sphere for raycasting clicks */}
       <mesh ref={hitSphereRef} onClick={handleClick}>
         <sphereGeometry args={[SPHERE_RADIUS * 1.1, 32, 32]} />
