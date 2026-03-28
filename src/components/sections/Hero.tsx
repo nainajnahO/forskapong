@@ -9,6 +9,7 @@ import ParticleOrbCanvas from '../ui/ParticleOrbCanvas';
 import type { DivePhase } from '../ui/ParticleOrb';
 import LoginForm from './schedule/LoginForm';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 
 export default function Hero() {
@@ -150,11 +151,30 @@ export default function Hero() {
         </h1>
 
         {/* Orb interaction area — events are sourced from this element */}
-        <div
-          ref={orbHitRef}
-          className="relative z-30 w-[280px] h-[280px] md:w-[360px] md:h-[360px] my-2"
-          style={{ touchAction: 'none' }}
-        />
+        <div className="relative my-2">
+          <div
+            ref={orbHitRef}
+            className="relative z-30 w-[280px] h-[280px] md:w-[360px] md:h-[360px]"
+            style={{ touchAction: 'none' }}
+          />
+          {/* Tap hint */}
+          <motion.div
+            className="absolute z-30 right-[-2rem] md:right-[-3rem] top-2 md:top-4 pointer-events-none"
+            initial={{ opacity: 0, y: 0 }}
+            animate={diving ? { opacity: 0, y: 20 } : { opacity: 1, y: 0 }}
+            transition={{ opacity: { delay: diving ? 0 : 1, duration: diving ? 0.5 : 0.4 }, y: { duration: 0.7 } }}
+          >
+            <motion.div
+              animate={{ y: [0, -6, 0] }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <p className="text-white font-display text-base md:text-lg tracking-wider mb-0 text-center">
+                Tap x3
+              </p>
+              <img src="/Arrow.png" alt="" className="w-10 md:w-14 -rotate-[10deg]" />
+            </motion.div>
+          </motion.div>
+        </div>
 
         {/* Bottom Info Bar */}
         <div ref={infoBarRef} className={cn(
