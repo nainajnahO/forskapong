@@ -6,13 +6,21 @@ import Sponsors from './Sponsors';
 import Container from '../common/Container';
 import { useTheme } from '@/contexts/useTheme';
 import ParticleOrbCanvas from '../ui/ParticleOrbCanvas';
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 export default function Hero() {
   const { backgroundVariant } = useTheme();
   const [diving, setDiving] = useState(false);
-  const orbHitRef = useRef<HTMLDivElement>(null!)
+  const orbHitRef = useRef<HTMLDivElement>(null!);
+  const glowDivRef = useRef<HTMLDivElement>(null);
+
+  const handleGlowUpdate = useCallback((intensity: number) => {
+    const el = glowDivRef.current;
+    if (!el) return;
+    el.style.opacity = String(intensity);
+    el.style.transform = `translate(-50%, -50%) scale(${0.3 + intensity * 0.7})`;
+  }, []);
 
   return (
     <div className="relative w-full min-h-screen overflow-hidden bg-background transition-colors duration-500">
@@ -30,7 +38,45 @@ export default function Hero() {
 
       {/* Particle Orb — full hero overlay so particles aren't clipped */}
       <div className="absolute inset-0 z-20 pointer-events-none">
-        <ParticleOrbCanvas onDiveChange={setDiving} eventSource={orbHitRef} />
+        <ParticleOrbCanvas onDiveChange={setDiving} onGlowUpdate={handleGlowUpdate} eventSource={orbHitRef} />
+      </div>
+
+      {/* Star glow — HDR-enhanced center light, aligned with 3D orb center (canvas center) */}
+      <div
+        ref={glowDivRef}
+        className="absolute top-1/2 left-1/2 z-20 pointer-events-none"
+        style={{ opacity: 0, transform: 'translate(-50%, -50%) scale(0)', width: 200, height: 200 }}
+      >
+        {/* Outer bloom */}
+        <div
+          className="absolute inset-0 rounded-full"
+          style={{
+            background: 'radial-gradient(circle, rgba(255,255,255,0.4) 0%, rgba(200,210,255,0.15) 30%, transparent 70%)',
+            filter: 'blur(24px)',
+          }}
+        />
+        {/* Inner halo */}
+        <div
+          className="absolute rounded-full"
+          style={{
+            inset: '20%',
+            background: 'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(220,225,255,0.3) 40%, transparent 70%)',
+            filter: 'blur(10px)',
+          }}
+        />
+        {/* Core point — HDR bright */}
+        <div
+          className="absolute hdr-star-core rounded-full"
+          style={{
+            width: 14,
+            height: 14,
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            background: '#fff',
+            boxShadow: '0 0 8px 4px rgba(255,255,255,1), 0 0 20px 8px rgba(255,255,255,0.7), 0 0 40px 16px rgba(200,210,255,0.4)',
+          }}
+        />
       </div>
 
       {/* Content Container */}

@@ -20,6 +20,10 @@ const INFLATE_DECAY = 0.6;
 
 const MAX_RIPPLES = 8;
 
+const GLOW_AMOUNT = 0.4;
+const GLOW_ATTACK = 8;
+const GLOW_DECAY = 0.8;
+
 const DIVE_CLICKS = 3;
 const DIVE_CLICK_WINDOW = 1.5;
 const DIVE_DURATION = 2.5;
@@ -33,14 +37,17 @@ interface Ripple {
 
 interface ParticleOrbProps {
   onDiveChange?: (diving: boolean) => void;
+  onGlowUpdate?: (intensity: number) => void;
 }
 
-export default function ParticleOrb({ onDiveChange }: ParticleOrbProps) {
+export default function ParticleOrb({ onDiveChange, onGlowUpdate }: ParticleOrbProps) {
   const pointsRef = useRef<THREE.Points>(null);
   const ripplesRef = useRef<Ripple[]>([]);
   const hitSphereRef = useRef<THREE.Mesh>(null);
   const inflateRef = useRef(0);
   const inflateTargetRef = useRef(0);
+  const glowValueRef = useRef(0);
+  const glowTargetRef = useRef(0);
   const clickTimesRef = useRef<number[]>([]);
   const diveRef = useRef<{ startTime: number; startPos: THREE.Vector3 } | null>(null);
   const divePendingRef = useRef(false);
@@ -87,6 +94,7 @@ export default function ParticleOrb({ onDiveChange }: ParticleOrbProps) {
       ripples.push({ origin: local, startTime: clock.elapsedTime });
       if (ripples.length > MAX_RIPPLES) ripples.shift();
       inflateTargetRef.current += INFLATE_AMOUNT;
+      glowTargetRef.current += GLOW_AMOUNT;
 
       // Track clicks for dive trigger
       const now = clock.elapsedTime;
@@ -124,6 +132,12 @@ export default function ParticleOrb({ onDiveChange }: ParticleOrbProps) {
     if (inflateTargetRef.current < 0.001) inflateTargetRef.current = 0;
     inflateRef.current += (inflateTargetRef.current - inflateRef.current) * (1 - Math.exp(-INFLATE_ATTACK * delta));
     const inflate = inflateRef.current;
+
+    // Glow spring: same pattern as inflate
+    glowTargetRef.current *= 1 - GLOW_DECAY * delta;
+    if (glowTargetRef.current < 0.001) glowTargetRef.current = 0;
+    glowValueRef.current += (glowTargetRef.current - glowValueRef.current) * (1 - Math.exp(-GLOW_ATTACK * delta));
+    onGlowUpdate?.(Math.min(glowValueRef.current, 1));
 
     // Prune expired ripples from the front (oldest first)
     const ripples = ripplesRef.current;

@@ -253,5 +253,11 @@ html {
   .bg-amber-500 {
     filter: brightness(1.2);
   }
+
+  .hdr-star-core {
+    background-image: url('./assets/hdr/white.avif');
+    background-size: 8px 8px;
+    filter: brightness(3);
+  }
 }
 

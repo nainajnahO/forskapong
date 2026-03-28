@@ -7,10 +7,11 @@ import ParticleOrb from './ParticleOrb';
 interface ParticleOrbCanvasProps {
   className?: string;
   onDiveChange?: (diving: boolean) => void;
+  onGlowUpdate?: (intensity: number) => void;
   eventSource?: RefObject<HTMLElement>;
 }
 
-export default function ParticleOrbCanvas({ className, onDiveChange, eventSource }: ParticleOrbCanvasProps) {
+export default function ParticleOrbCanvas({ className, onDiveChange, onGlowUpdate, eventSource }: ParticleOrbCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isVisible = useIsVisible(containerRef);
   const [diving, setDiving] = useState(false);
@@ -29,12 +30,12 @@ export default function ParticleOrbCanvas({ className, onDiveChange, eventSource
         frameloop={isVisible ? 'always' : 'never'}
         dpr={[1, 3]}
         gl={{ alpha: true, antialias: false, powerPreference: 'high-performance' }}
-        camera={{ position: [0, 0, 10], fov: 40 }}
+        camera={{ position: [0, 0, 9], fov: 40 }}
         style={{ background: 'transparent', pointerEvents: 'none' }}
         eventSource={eventSource}
         eventPrefix="client"
       >
-        <ParticleOrb onDiveChange={handleDiveChange} />
+        <ParticleOrb onDiveChange={handleDiveChange} onGlowUpdate={onGlowUpdate} />
         <OrbitControls
           enabled={!diving}
           enableZoom={false}
