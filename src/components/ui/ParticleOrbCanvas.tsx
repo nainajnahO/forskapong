@@ -2,16 +2,18 @@ import { useRef, useState, useCallback, type RefObject } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, AdaptiveDpr, AdaptiveEvents } from '@react-three/drei';
 import { useIsVisible } from '@/hooks/useIsVisible';
-import ParticleOrb from './ParticleOrb';
+import ParticleOrb, { type DivePhase } from './ParticleOrb';
 
 interface ParticleOrbCanvasProps {
   className?: string;
   onDiveChange?: (diving: boolean) => void;
+  onDivePhase?: (phase: DivePhase) => void;
   onGlowUpdate?: (intensity: number) => void;
+  returnSignalRef?: RefObject<boolean>;
   eventSource?: RefObject<HTMLElement>;
 }
 
-export default function ParticleOrbCanvas({ className, onDiveChange, onGlowUpdate, eventSource }: ParticleOrbCanvasProps) {
+export default function ParticleOrbCanvas({ className, onDiveChange, onDivePhase, onGlowUpdate, returnSignalRef, eventSource }: ParticleOrbCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isVisible = useIsVisible(containerRef);
   const [diving, setDiving] = useState(false);
@@ -35,7 +37,7 @@ export default function ParticleOrbCanvas({ className, onDiveChange, onGlowUpdat
         eventSource={eventSource}
         eventPrefix="client"
       >
-        <ParticleOrb onDiveChange={handleDiveChange} onGlowUpdate={onGlowUpdate} />
+        <ParticleOrb onDiveChange={handleDiveChange} onDivePhase={onDivePhase} onGlowUpdate={onGlowUpdate} returnSignalRef={returnSignalRef} />
         <OrbitControls
           enabled={!diving}
           enableZoom={false}

@@ -6,14 +6,19 @@ import Sponsors from './Sponsors';
 import Container from '../common/Container';
 import { useTheme } from '@/contexts/useTheme';
 import ParticleOrbCanvas from '../ui/ParticleOrbCanvas';
-import { useCallback, useRef, useState } from 'react';
+import type { DivePhase } from '../ui/ParticleOrb';
+import LoginForm from './schedule/LoginForm';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 export default function Hero() {
   const { backgroundVariant } = useTheme();
   const [diving, setDiving] = useState(false);
+  const [divePhase, setDivePhase] = useState<DivePhase>(null);
   const orbHitRef = useRef<HTMLDivElement>(null!);
   const glowDivRef = useRef<HTMLDivElement>(null);
+  const loginRef = useRef<HTMLDivElement>(null);
+  const returnSignalRef = useRef(false);
 
   const handleGlowUpdate = useCallback((intensity: number) => {
     const el = glowDivRef.current;
@@ -21,6 +26,29 @@ export default function Hero() {
     el.style.opacity = String(intensity);
     el.style.transform = `translate(-50%, -50%) scale(${0.3 + intensity * 0.7})`;
   }, []);
+
+  const handleDivePhase = useCallback((phase: DivePhase) => {
+    setDivePhase(phase);
+    if (phase === null) {
+      returnSignalRef.current = false;
+    }
+  }, []);
+
+  const dismissDive = useCallback(() => {
+    if (divePhase === 'hold') {
+      returnSignalRef.current = true;
+    }
+  }, [divePhase]);
+
+  // Escape key to dismiss
+  useEffect(() => {
+    if (divePhase !== 'hold') return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') dismissDive();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [divePhase, dismissDive]);
 
   return (
     <div className="relative w-full min-h-screen overflow-hidden bg-background transition-colors duration-500">
@@ -38,7 +66,7 @@ export default function Hero() {
 
       {/* Particle Orb — full hero overlay so particles aren't clipped */}
       <div className="absolute inset-0 z-20 pointer-events-none">
-        <ParticleOrbCanvas onDiveChange={setDiving} onGlowUpdate={handleGlowUpdate} eventSource={orbHitRef} />
+        <ParticleOrbCanvas onDiveChange={setDiving} onDivePhase={handleDivePhase} onGlowUpdate={handleGlowUpdate} returnSignalRef={returnSignalRef} eventSource={orbHitRef} />
       </div>
 
       {/* Star glow — HDR-enhanced center light, aligned with 3D orb center (canvas center) */}
@@ -56,6 +84,26 @@ export default function Hero() {
           }}
         />
       </div>
+
+      {/* Login form — appears during dive hold phase */}
+      {diving && (
+        <div
+          className="absolute inset-0 z-40"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) dismissDive();
+          }}
+        >
+          <div
+            ref={loginRef}
+            className={cn(
+              'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-500 [&>div]:flex [&>div]:flex-col [&>div]:items-center',
+              divePhase === 'hold' ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none',
+            )}
+          >
+            <LoginForm theme="dark" side="right" />
+          </div>
+        </div>
+      )}
 
       {/* Content Container */}
       <div className="relative z-10 h-screen flex flex-col items-center justify-center px-6 -mt-8 md:mt-0">

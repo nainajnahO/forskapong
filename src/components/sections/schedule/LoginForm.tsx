@@ -177,7 +177,7 @@ export default function LoginForm({ theme, side }: LoginFormProps) {
                   : val
                     ? 'border-brand-500/30'
                     : theme === 'dark'
-                      ? 'border-zinc-700/60'
+                      ? 'border-white/30'
                       : 'border-zinc-300',
               )}
             />
@@ -185,7 +185,7 @@ export default function LoginForm({ theme, side }: LoginFormProps) {
               <span
                 className={cn(
                   'absolute inset-0 flex items-center justify-center text-xs font-mono pointer-events-none',
-                  theme === 'dark' ? 'text-zinc-600' : 'text-zinc-400',
+                  theme === 'dark' ? 'text-white/30' : 'text-zinc-400',
                 )}
                 aria-hidden
               >
@@ -201,7 +201,7 @@ export default function LoginForm({ theme, side }: LoginFormProps) {
         className={cn(
           'text-[10px] font-mono tracking-[0.2em] mb-3',
           side === 'left' && 'md:text-right',
-          theme === 'dark' ? 'text-zinc-600' : 'text-zinc-400',
+          theme === 'dark' ? 'text-white/30' : 'text-zinc-400',
         )}
       >
         B O K · S I F

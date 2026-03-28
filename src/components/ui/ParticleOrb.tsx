@@ -1,4 +1,4 @@
-import { useRef, useMemo, useCallback } from 'react';
+import { useRef, useMemo, useCallback, type RefObject } from 'react';
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 
@@ -28,19 +28,22 @@ const DIVE_CLICKS = 3;
 const DIVE_CLICK_WINDOW = 1.5;
 const DIVE_DURATION = 2.5;
 const DIVE_TARGET_Z = 1;
-const DIVE_RETURN_DELAY = 0.8;
 
 interface Ripple {
   readonly origin: THREE.Vector3;
   readonly startTime: number;
 }
 
+export type DivePhase = 'in' | 'hold' | 'out' | null;
+
 interface ParticleOrbProps {
   onDiveChange?: (diving: boolean) => void;
+  onDivePhase?: (phase: DivePhase) => void;
   onGlowUpdate?: (intensity: number) => void;
+  returnSignalRef?: RefObject<boolean>;
 }
 
-export default function ParticleOrb({ onDiveChange, onGlowUpdate }: ParticleOrbProps) {
+export default function ParticleOrb({ onDiveChange, onDivePhase, onGlowUpdate, returnSignalRef }: ParticleOrbProps) {
   const pointsRef = useRef<THREE.Points>(null);
   const ripplesRef = useRef<Ripple[]>([]);
   const hitSphereRef = useRef<THREE.Mesh>(null);
@@ -49,8 +52,9 @@ export default function ParticleOrb({ onDiveChange, onGlowUpdate }: ParticleOrbP
   const glowValueRef = useRef(0);
   const glowTargetRef = useRef(0);
   const clickTimesRef = useRef<number[]>([]);
-  const diveRef = useRef<{ startTime: number; startPos: THREE.Vector3 } | null>(null);
+  const diveRef = useRef<{ startTime: number; startPos: THREE.Vector3; returnStartTime: number } | null>(null);
   const divePendingRef = useRef(false);
+  const currentPhaseRef = useRef<DivePhase>(null);
   const clock = useThree((s) => s.clock);
 
   const { geometry, basePositions } = useMemo(() => {
@@ -123,7 +127,7 @@ export default function ParticleOrb({ onDiveChange, onGlowUpdate }: ParticleOrbP
 
     // Initialize dive if pending
     if (divePendingRef.current) {
-      diveRef.current = { startTime: t, startPos: camera.position.clone() };
+      diveRef.current = { startTime: t, startPos: camera.position.clone(), returnStartTime: -1 };
       divePendingRef.current = false;
     }
 
@@ -188,30 +192,53 @@ export default function ParticleOrb({ onDiveChange, onGlowUpdate }: ParticleOrbP
     const dive = diveRef.current;
     if (dive) {
       const elapsed = t - dive.startTime;
-      const totalDuration = DIVE_DURATION + DIVE_RETURN_DELAY + DIVE_DURATION;
       const { startPos } = dive;
-      // Dive target: the orb center (origin), offset along the camera's original direction
       const dir = startPos.clone().normalize();
       const targetPos = dir.multiplyScalar(DIVE_TARGET_Z);
 
-      if (elapsed < DIVE_DURATION) {
-        // Phase 1: dive in — ease-in-out
-        const p = elapsed / DIVE_DURATION;
-        const ease = p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2;
-        camera.position.lerpVectors(startPos, targetPos, ease);
-      } else if (elapsed < DIVE_DURATION + DIVE_RETURN_DELAY) {
-        // Phase 2: hold inside
-        camera.position.copy(targetPos);
-      } else if (elapsed < totalDuration) {
-        // Phase 3: pull back out — ease-in-out
-        const p = (elapsed - DIVE_DURATION - DIVE_RETURN_DELAY) / DIVE_DURATION;
-        const ease = p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2;
-        camera.position.lerpVectors(targetPos, startPos, ease);
+      if (dive.returnStartTime < 0) {
+        // Phases 1 & 2: dive in then hold
+        if (elapsed < DIVE_DURATION) {
+          // Phase 1: dive in
+          if (currentPhaseRef.current !== 'in') {
+            currentPhaseRef.current = 'in';
+            onDivePhase?.('in');
+          }
+          const p = elapsed / DIVE_DURATION;
+          const ease = p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2;
+          camera.position.lerpVectors(startPos, targetPos, ease);
+        } else {
+          // Phase 2: hold indefinitely
+          if (currentPhaseRef.current !== 'hold') {
+            currentPhaseRef.current = 'hold';
+            onDivePhase?.('hold');
+          }
+          camera.position.copy(targetPos);
+
+          // Check return signal
+          if (returnSignalRef && returnSignalRef.current) {
+            dive.returnStartTime = t;
+          }
+        }
       } else {
-        // Done
-        camera.position.copy(startPos);
-        diveRef.current = null;
-        onDiveChange?.(false);
+        // Phase 3: pull back out
+        const returnElapsed = t - dive.returnStartTime;
+        if (returnElapsed < DIVE_DURATION) {
+          if (currentPhaseRef.current !== 'out') {
+            currentPhaseRef.current = 'out';
+            onDivePhase?.('out');
+          }
+          const p = returnElapsed / DIVE_DURATION;
+          const ease = p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2;
+          camera.position.lerpVectors(targetPos, startPos, ease);
+        } else {
+          // Done
+          camera.position.copy(startPos);
+          diveRef.current = null;
+          currentPhaseRef.current = null;
+          onDivePhase?.(null);
+          onDiveChange?.(false);
+        }
       }
     }
   });
