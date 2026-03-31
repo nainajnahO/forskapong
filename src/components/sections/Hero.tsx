@@ -168,8 +168,10 @@ export default function Hero() {
               animate={{ y: [0, -6, 0] }}
               transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
             >
-              <p className="text-white font-display text-base md:text-lg tracking-wider mb-0 text-center">
+              <p className="text-white font-display text-base md:text-lg tracking-wider mb-0 text-center leading-none md:leading-none">
                 Tap x3
+                <br />
+                to login
               </p>
               <img src="/Arrow.png" alt="" className="w-10 md:w-14 -rotate-[10deg]" />
             </motion.div>
