@@ -194,8 +194,8 @@ export default function TeamsTab() {
             <>
               <span className="text-center">V</span>
               <span className="text-center">F</span>
-              <span className="text-center" title="Buchholz">BH</span>
-              <span className="text-center">Cups</span>
+              <span className="text-center" title="Cup difference">Diff</span>
+              <span className="text-center">Cup +/-</span>
             </>
           ) : (
             <span className="text-center">V/F</span>
@@ -261,8 +261,12 @@ export default function TeamsTab() {
                   <>
                     <span className="text-emerald-400 text-center font-mono text-xs">{s?.wins ?? 0}</span>
                     <span className="text-red-400 text-center font-mono text-xs">{s?.losses ?? 0}</span>
-                    <span className="text-zinc-400 text-center font-mono text-xs">{s?.opponentWins ?? 0}</span>
-                    <span className="text-zinc-400 text-center font-mono text-xs">{s?.totalCupsHit ?? 0}</span>
+                    <span className="text-zinc-400 text-center font-mono text-xs">
+                      {s ? (s.cupDiff > 0 ? `+${s.cupDiff}` : s.cupDiff) : 0}
+                    </span>
+                    <span className="text-zinc-400 text-center font-mono text-xs">
+                      {s ? `${s.cupsFor}-${s.cupsAgainst}` : '0-0'}
+                    </span>
                   </>
                 ) : (
                   <span className="text-center text-xs">

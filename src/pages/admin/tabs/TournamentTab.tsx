@@ -8,6 +8,7 @@ import {
   generateKnockoutBracket,
   advanceKnockoutRound,
   calculateRankings,
+  detectUnresolvedCutoffTie,
   type MatchResult,
   type TeamStanding,
   type KnockoutBracket as KnockoutBracketType,
@@ -20,6 +21,7 @@ import TournamentMapView from '../components/TournamentMapView';
 import TournamentFlowCard from '../components/TournamentFlowCard';
 import DangerZone from '../components/DangerZone';
 import { dbMatchToResult, teamsToEngine } from '../lib/match-utils';
+import { decideKnockoutHomeTeam, orientSwissPairings } from '@/lib/home-away';
 import type { AdminTab } from '@/contexts/AdminTabContextDef';
 
 /* ─── Component ───────────────────────────────────────────────── */
@@ -39,12 +41,20 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   const [view, setView] = useState<'list' | 'map'>('list');
   const [roundTime, setRoundTime] = useState('');
   const [roundCount, setRoundCount] = useState(7);
+  const [manualRpsWinnerByKey, setManualRpsWinnerByKey] = useState<Record<string, string>>({});
+  const [savingRps, setSavingRps] = useState(false);
+
+  const getTiebreakKey = (cutoff: number, teamAId: string, teamBId: string): string => {
+    const [t1, t2] = [teamAId, teamBId].sort();
+    return `${cutoff}:${t1}-${t2}`;
+  };
 
   const loadData = useCallback(async () => {
-    const [tRes, teamsRes, matchesRes] = await Promise.all([
+    const [tRes, teamsRes, matchesRes, tiebreakRes] = await Promise.all([
       supabase.from('tournament').select('*').maybeSingle(),
       supabase.from('teams').select('*'),
       supabase.from('matches').select('*').order('round', { ascending: true }),
+      supabase.from('tiebreak_decisions').select('*'),
     ]);
 
     const t = tRes.data;
@@ -55,6 +65,14 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     if (t?.total_rounds) setRoundCount(t.total_rounds);
     setTeams(allTeams);
     setMatches(allMatches);
+    const decisionMap: Record<string, string> = {};
+    if (tiebreakRes.data) {
+      for (const d of tiebreakRes.data) {
+        const key = getTiebreakKey(d.cutoff, d.team1_id, d.team2_id);
+        decisionMap[key] = d.winner_team_id;
+      }
+    }
+    setManualRpsWinnerByKey(decisionMap);
 
     // Calculate standings
     const results = allMatches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
@@ -82,6 +100,56 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   const completedResults = matches
     .map(dbMatchToResult)
     .filter(Boolean) as MatchResult[];
+  const unresolvedCutoffTie = detectUnresolvedCutoffTie(standings, completedResults, 8);
+  const unresolvedPair =
+    unresolvedCutoffTie && unresolvedCutoffTie.teamIds.length === 2 ? unresolvedCutoffTie.teamIds : null;
+  const unresolvedKey = unresolvedPair ? getTiebreakKey(8, unresolvedPair[0], unresolvedPair[1]) : null;
+  const selectedRpsWinner = unresolvedKey ? manualRpsWinnerByKey[unresolvedKey] ?? null : null;
+
+  async function handleSelectRpsWinner(teamId: string): Promise<void> {
+    if (!unresolvedPair) return;
+    const [team1Id, team2Id] = [...unresolvedPair].sort();
+    setSavingRps(true);
+    try {
+      const { error } = await supabase.from('tiebreak_decisions').upsert(
+        {
+          cutoff: 8,
+          team1_id: team1Id,
+          team2_id: team2Id,
+          winner_team_id: teamId,
+        },
+        { onConflict: 'cutoff,team1_id,team2_id' },
+      );
+      if (error) throw error;
+      setManualRpsWinnerByKey((prev) => ({
+        ...prev,
+        [getTiebreakKey(8, team1Id, team2Id)]: teamId,
+      }));
+    } finally {
+      setSavingRps(false);
+    }
+  }
+
+  function getPlayoffQualifiedStandings(): TeamStanding[] {
+    if (!unresolvedPair || !selectedRpsWinner) return standings;
+    const [a, b] = unresolvedPair;
+    const loser = selectedRpsWinner === a ? b : a;
+    const ia = standings.findIndex((s) => s.id === a);
+    const ib = standings.findIndex((s) => s.id === b);
+    if (ia === -1 || ib === -1) return standings;
+    if (ia < ib && selectedRpsWinner === a) return standings;
+    if (ib < ia && selectedRpsWinner === b) return standings;
+
+    const copy = standings.map((s) => ({ ...s }));
+    const winnerStanding = copy.find((s) => s.id === selectedRpsWinner)!;
+    const loserStanding = copy.find((s) => s.id === loser)!;
+    copy[Math.min(ia, ib)] = winnerStanding;
+    copy[Math.max(ia, ib)] = loserStanding;
+    copy.forEach((s, i) => {
+      s.rank = i + 1;
+    });
+    return copy;
+  }
 
   // Group matches by round
   const roundsMap = new Map<number, Match[]>();
@@ -126,11 +194,14 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
         currentRound,
       );
 
-      // Insert matches
-      const inserts = pairings.pairings.map((p, i) => ({
+      const swissHistory = matches.filter((m) => m.round <= 7);
+      const orientedPairings = orientSwissPairings(pairings.pairings, swissHistory);
+
+      // team1_id = home team, team2_id = away team
+      const inserts = orientedPairings.map((p, i) => ({
         round: currentRound,
-        team1_id: p.team1Id,
-        team2_id: p.team2Id,
+        team1_id: p.homeTeamId,
+        team2_id: p.awayTeamId,
         table_number: i + 1,
         scheduled_time: roundTime || null,
       }));
@@ -175,22 +246,37 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   async function handleGenerateKnockout() {
     setGenerating(true);
     try {
-      const top8 = standings.slice(0, 8).map((s) => ({
+      if (unresolvedPair && !selectedRpsWinner) {
+        return;
+      }
+
+      const playoffStandings = getPlayoffQualifiedStandings();
+      const top8 = playoffStandings.slice(0, 8).map((s) => ({
         id: s.id,
         name: s.name,
         wins: s.wins,
         losses: s.losses,
       }));
+      const standingsRankMap = new Map(standings.map((s) => [s.id, s.rank]));
       const bracket = generateKnockoutBracket(top8);
 
-      // Insert QF matches as round 8
-      const qfInserts = bracket.quarterfinals.map((qf, i) => ({
+      // Insert QF matches as round 8 (first knockout round falls back to standings)
+      const qfInserts = bracket.quarterfinals.map((qf, i) => {
+        const orientation = decideKnockoutHomeTeam(
+          qf.team1Id!,
+          qf.team2Id!,
+          8,
+          matches,
+          standingsRankMap,
+        );
+        return {
         round: 8,
-        team1_id: qf.team1Id!,
-        team2_id: qf.team2Id!,
+        team1_id: orientation.homeTeamId,
+        team2_id: orientation.awayTeamId,
         table_number: i + 1,
         scheduled_time: roundTime || null,
-      }));
+      };
+      });
       const { error } = await supabase.from('matches').insert(qfInserts);
       if (error) throw error;
       setRoundTime('');
@@ -204,16 +290,20 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     if (!tournament) return;
     setGenerating(true);
     try {
+      const standingsRankMap = new Map(standings.map((s) => [s.id, s.rank]));
       const qfMatches = matches
         .filter((m) => m.round === 8 && m.confirmed)
         .sort((a, b) => (a.table_number ?? 0) - (b.table_number ?? 0));
       const qfWinners = qfMatches.map((m) => m.winner_id!);
       if (qfWinners.length !== 4) return;
 
-      // QF1 winner vs QF2 winner, QF3 winner vs QF4 winner
+      // QF1 winner vs QF2 winner, QF3 winner vs QF4 winner.
+      // Home team is decided by latest knockout performance.
+      const sf1 = decideKnockoutHomeTeam(qfWinners[0], qfWinners[1], 9, matches, standingsRankMap);
+      const sf2 = decideKnockoutHomeTeam(qfWinners[2], qfWinners[3], 9, matches, standingsRankMap);
       const sfInserts = [
-        { round: 9, team1_id: qfWinners[0], team2_id: qfWinners[1], table_number: 1, scheduled_time: roundTime || null },
-        { round: 9, team1_id: qfWinners[2], team2_id: qfWinners[3], table_number: 2, scheduled_time: roundTime || null },
+        { round: 9, team1_id: sf1.homeTeamId, team2_id: sf1.awayTeamId, table_number: 1, scheduled_time: roundTime || null },
+        { round: 9, team1_id: sf2.homeTeamId, team2_id: sf2.awayTeamId, table_number: 2, scheduled_time: roundTime || null },
       ];
       const { error } = await supabase.from('matches').insert(sfInserts);
       if (error) throw error;
@@ -228,16 +318,25 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     if (!tournament) return;
     setGenerating(true);
     try {
+      const standingsRankMap = new Map(standings.map((s) => [s.id, s.rank]));
       const sfMatches = matches
         .filter((m) => m.round === 9 && m.confirmed)
         .sort((a, b) => (a.table_number ?? 0) - (b.table_number ?? 0));
       const sfWinners = sfMatches.map((m) => m.winner_id!);
       if (sfWinners.length !== 2) return;
 
+      const finalOrientation = decideKnockoutHomeTeam(
+        sfWinners[0],
+        sfWinners[1],
+        10,
+        matches,
+        standingsRankMap,
+      );
+
       const { error } = await supabase.from('matches').insert({
         round: 10,
-        team1_id: sfWinners[0],
-        team2_id: sfWinners[1],
+        team1_id: finalOrientation.homeTeamId,
+        team2_id: finalOrientation.awayTeamId,
         table_number: 1,
         scheduled_time: roundTime || null,
       });
@@ -396,9 +495,39 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       <div className="flex items-center gap-4 px-3 py-2 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[11px] font-mono text-zinc-500">
         <span className="text-zinc-600 uppercase tracking-wider text-[10px]">Ranking</span>
         <span><span className="text-zinc-300">1.</span> Vinster</span>
-        <span><span className="text-zinc-300">2.</span> Buchholz <span className="text-zinc-600">(motståndarvinster)</span></span>
-        <span><span className="text-zinc-300">3.</span> Koppar träffade</span>
+        <span><span className="text-zinc-300">2.</span> Cup diff</span>
+        <span><span className="text-zinc-300">3.</span> Inbördes möte (2 lag)</span>
       </div>
+
+      {unresolvedPair && (
+        <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4 space-y-3">
+          <div className="text-sm text-amber-300">
+            ⚠ Oavgjort vid slutspelsgränsen (Topp 8). Dessa två lag är fortfarande lika efter
+            vinster, cup diff och inbördes möte.
+          </div>
+          <div className="text-xs text-amber-200/90">
+            Kör sten-sax-påse framför admins och välj vinnaren här:
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {unresolvedPair.map((teamId) => (
+              <button
+                key={teamId}
+                onClick={() => void handleSelectRpsWinner(teamId)}
+                disabled={savingRps}
+                className={cn(
+                  'px-3 py-1.5 rounded-lg text-xs border transition-all disabled:opacity-60',
+                  selectedRpsWinner === teamId
+                    ? 'bg-amber-400/20 border-amber-300/50 text-amber-100'
+                    : 'bg-white/[0.03] border-white/[0.1] text-zinc-300 hover:bg-white/[0.06]',
+                )}
+              >
+                {teamNameMap.get(teamId) ?? teamId}
+                {selectedRpsWinner === teamId ? ' (RPS-vinnare)' : ''}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Flow Card — always-visible guidance + action */}
       <TournamentFlowCard

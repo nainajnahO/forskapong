@@ -155,7 +155,8 @@ export const SHOWCASE_CONFIG = {
     },
     {
       text: 'Muggarna',
-      subtext: '1 omformation per match.\nRedemption tillåtet.\n-Studsprick? 2 bort\n-Parprick? 3 bort',
+      subtext:
+        '1 omformation per match.\nRedemption tillåtet.\nParskott i olika koppar: 2 koppar + ballback.\nParskott i samma kopp: ballback + 3 koppar.',
       position: ['20%', '15%'] as const,
     },
     {
