@@ -155,12 +155,13 @@ export const SHOWCASE_CONFIG = {
     },
     {
       text: 'Muggarna',
-      subtext: '1 omformation per match.\nRedemption tillåtet.\n-Studsprick? 2 bort\n-Parprick? 3 bort',
+      subtext:
+        '1 omformation per match\nRedemption tillåtet\nParskott i olika koppar: 2 koppar + ballback\nParskott i samma kopp: 3 koppar + ballback\nStuds: +1 kopp',
       position: ['20%', '15%'] as const,
     },
     {
-      text: 'Redo att spela?',
-      subtext: 'Vi ses den\n31:a Mars 2026',
+      text: 'Fler regler! (fråga domarna om dispyt)',
+      subtext: 'Inga trickshots\nBlåsa och slå (vid studs) är tillåtet\nVälter kopp pga boll eller försvarare: räknas som träffad\nTappad boll i egen kopp: räknas som träffad\nFörsvarare nudar icke studsad boll över bordet: räknas som träffad',
       position: ['25%', '50%'] as const,
     },
   ] as const,

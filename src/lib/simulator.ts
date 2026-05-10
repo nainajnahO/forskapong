@@ -24,7 +24,7 @@ export interface VerificationStats {
   totalMatches: number;
   maxByes: number;
   winDistribution: number[];
-  buchholzCorrelation: number;
+  cupDiffCorrelation: number;
   avgScoreDiffPerRound: number[];
 }
 
@@ -235,7 +235,7 @@ export function computeVerificationStats(
   teams: TournamentTeam[],
   allResults: MatchResult[],
   roundHistory: { round: number; results: MatchResult[] }[],
-  standings: { wins: number; opponentWins: number }[],
+  standings: { wins: number; cupDiff: number }[],
 ): VerificationStats {
   // Rematch counting
   const pairingCounts = new Map<string, number>();
@@ -275,10 +275,10 @@ export function computeVerificationStats(
     winDistribution.push(winCounts.get(i) ?? 0);
   }
 
-  // Buchholz correlation (Pearson r between wins and opponent wins)
+  // Correlation between wins and cup difference.
   const wins = standings.map((s) => s.wins);
-  const bh = standings.map((s) => s.opponentWins);
-  const buchholzCorrelation = pearsonR(wins, bh);
+  const cupDiff = standings.map((s) => s.cupDiff);
+  const cupDiffCorrelation = pearsonR(wins, cupDiff);
 
   // Average score differential per round
   const avgScoreDiffPerRound = roundHistory.map((rh) => {
@@ -295,7 +295,7 @@ export function computeVerificationStats(
     totalMatches: allResults.length,
     maxByes,
     winDistribution,
-    buchholzCorrelation,
+    cupDiffCorrelation,
     avgScoreDiffPerRound,
   };
 }

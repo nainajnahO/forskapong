@@ -5,6 +5,7 @@ import { useTheme } from '@/contexts/useTheme';
 import { cn } from '@/lib/utils';
 import { themeText } from '@/lib/theme-utils';
 import { supabase } from '@/lib/supabase';
+import { canAwayTeamConfirm, canHomeTeamReport } from '@/lib/home-away';
 import type { Team, Match } from '@/lib/database.types';
 import Container from '../components/common/Container';
 import SectionLabel from '../components/common/SectionLabel';
@@ -202,21 +203,24 @@ export default function MatchPage() {
   if (!teamId) return null;
 
   // ── Derived state ──────────────────────────────
-  const isTeam1 = match?.team1_id === teamId;
-  const ourTeam = match ? (isTeam1 ? match.team1 : match.team2) : null;
-  const theirTeam = match ? (isTeam1 ? match.team2 : match.team1) : null;
+  const isHomeTeam = match?.team1_id === teamId;
+  const isAwayTeam = match?.team2_id === teamId;
+  const ourTeam = match ? (isHomeTeam ? match.team1 : match.team2) : null;
+  const theirTeam = match ? (isHomeTeam ? match.team2 : match.team1) : null;
 
   const isPlayed = match?.winner_id !== null && match?.winner_id !== undefined;
   const isDisputed = match?.confirmed_by === 'disputed' && !match?.confirmed;
   const weWon = match?.winner_id === teamId;
-  const weLost = match?.loser_id === teamId;
   const weReported = match?.reported_by === teamId;
-  const needsOurConfirmation = weLost && !match?.confirmed && !weReported && !isDisputed;
+  const needsOurConfirmation = !!(match && canAwayTeamConfirm(match, teamId)) && !weReported && !isDisputed;
+  const canReport = !!(match && canHomeTeamReport(match, teamId));
+  const ourRoleLabel = isHomeTeam ? 'Hemmalag' : 'Bortalag';
+  const theirRoleLabel = isHomeTeam ? 'Bortalag' : 'Hemmalag';
 
   // Format score from our perspective
   const scoreDisplay =
     match?.score_team1 != null && match?.score_team2 != null
-      ? `${isTeam1 ? match.score_team1 : match.score_team2}–${isTeam1 ? match.score_team2 : match.score_team1}`
+      ? `${isHomeTeam ? match.score_team1 : match.score_team2}–${isHomeTeam ? match.score_team2 : match.score_team1}`
       : null;
 
   const cardBg = theme === 'dark' ? 'bg-white/[0.03]' : 'bg-zinc-50';
@@ -226,11 +230,14 @@ export default function MatchPage() {
   // Cups hit: winner always = 6, loser = loserCups (0–5)
   // score_team1/score_team2 = cups HIT by that team
   const handleReport = async (weAreWinner: boolean) => {
-    if (!match || !teamId) return;
+    if (!match || !teamId || !isHomeTeam) {
+      setSubmitError('Endast hemmalaget kan rapportera resultatet.');
+      return;
+    }
     setIsSubmitting(true);
     setSubmitError('');
 
-    const opponentId = isTeam1 ? match.team2_id : match.team1_id;
+    const opponentId = isHomeTeam ? match.team2_id : match.team1_id;
     const winnerId = weAreWinner ? teamId : opponentId;
     const loserId = weAreWinner ? opponentId : teamId;
 
@@ -249,7 +256,9 @@ export default function MatchPage() {
         score_team2: scoreTeam2,
         reported_by: teamId,
       })
-      .eq('id', match.id);
+      .eq('id', match.id)
+      .eq('team1_id', teamId)
+      .is('winner_id', null);
 
     if (updateError) {
       setSubmitError('Kunde inte spara resultatet. Försök igen.');
@@ -264,16 +273,22 @@ export default function MatchPage() {
 
   // ── Confirm result ─────────────────────────────
   const handleConfirm = async () => {
-    if (!match) return;
+    if (!match || !isAwayTeam) {
+      setSubmitError('Endast bortalaget kan bekräfta resultatet.');
+      return;
+    }
     setSubmitError('');
 
     const { error: updateError } = await supabase
       .from('matches')
       .update({
         confirmed: true,
-        confirmed_by: 'loser',
+        confirmed_by: 'away',
       })
-      .eq('id', match.id);
+      .eq('id', match.id)
+      .eq('team2_id', teamId)
+      .eq('reported_by', match.team1_id)
+      .eq('confirmed', false);
 
     if (updateError) {
       setSubmitError('Kunde inte bekräfta. Försök igen.');
@@ -285,13 +300,19 @@ export default function MatchPage() {
 
   // ── Dispute ────────────────────────────────────
   const handleDispute = async () => {
-    if (!match) return;
+    if (!match || !isAwayTeam) {
+      setSubmitError('Endast bortalaget kan disputera resultatet.');
+      return;
+    }
     setSubmitError('');
 
     const { error: updateError } = await supabase
       .from('matches')
       .update({ confirmed_by: 'disputed' })
-      .eq('id', match.id);
+      .eq('id', match.id)
+      .eq('team2_id', teamId)
+      .eq('reported_by', match.team1_id)
+      .eq('confirmed', false);
 
     if (updateError) {
       setSubmitError('Kunde inte disputera. Försök igen.');
@@ -388,6 +409,9 @@ export default function MatchPage() {
                     ? `${ourTeam.player1} & ${ourTeam.player2}`
                     : ourTeam.player1 || ourTeam.player2 || '–'}
                 </p>
+                <p className={cn('text-[11px] mt-1 uppercase tracking-wider', themeText(theme, 'secondary'))}>
+                  {ourRoleLabel}
+                </p>
               </div>
 
               <span
@@ -412,6 +436,9 @@ export default function MatchPage() {
                   {theirTeam.player1 && theirTeam.player2
                     ? `${theirTeam.player1} & ${theirTeam.player2}`
                     : theirTeam.player1 || theirTeam.player2 || '–'}
+                </p>
+                <p className={cn('text-[11px] mt-1 uppercase tracking-wider', themeText(theme, 'secondary'))}>
+                  {theirRoleLabel}
                 </p>
               </div>
             </div>
@@ -520,8 +547,8 @@ export default function MatchPage() {
 
                 <p className={cn('text-xs', themeText(theme, 'secondary'))}>
                   {weReported
-                    ? 'Du rapporterade detta resultat. Väntar på att motståndaren bekräftar.'
-                    : 'Motståndaren har rapporterat resultatet. Väntar på bekräftelse.'}
+                    ? 'Du rapporterade detta resultat. Väntar på att bortalaget bekräftar.'
+                    : 'Hemmalaget har rapporterat resultatet. Väntar på bortalagets bekräftelse.'}
                 </p>
               </div>
             )}
@@ -530,7 +557,7 @@ export default function MatchPage() {
             {needsOurConfirmation && (
               <div className="text-center">
                 <p className={cn('text-sm mb-2', themeText(theme, 'secondary'))}>
-                  Motståndarlaget rapporterade:
+                  Hemmalaget rapporterade:
                 </p>
 
                 {scoreDisplay && (
@@ -568,10 +595,10 @@ export default function MatchPage() {
             )}
 
             {/* ─── STATE: Not played yet — report ─────── */}
-            {!isPlayed && step === 'idle' && (
+            {canReport && step === 'idle' && (
               <div className="text-center">
                 <p className={cn('text-sm mb-6', themeText(theme, 'secondary'))}>
-                  Rapportera matchresultatet efter att ni spelat klart.
+                  Du spelar som hemmalag. Rapportera matchresultatet efter att ni spelat klart.
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -602,8 +629,17 @@ export default function MatchPage() {
               </div>
             )}
 
+            {!isPlayed && !canReport && (
+              <div className="text-center">
+                <p className={cn('text-sm', themeText(theme, 'secondary'))}>
+                  Du spelar som bortalag. Vänta på att hemmalaget rapporterar resultatet, sedan
+                  bekräftar ni eller disputerar.
+                </p>
+              </div>
+            )}
+
             {/* ─── STATE: Score picker (won — how many did THEY hit?) ── */}
-            {!isPlayed && step === 'won' && (
+            {canReport && step === 'won' && (
               <div>
                 <p className={cn('text-sm text-center mb-2 font-semibold text-emerald-400')}>
                   Ni vann!
@@ -666,7 +702,7 @@ export default function MatchPage() {
             )}
 
             {/* ─── STATE: Score picker (lost — how many did WE hit?) ── */}
-            {!isPlayed && step === 'lost' && (
+            {canReport && step === 'lost' && (
               <div>
                 <p className={cn('text-sm text-center mb-2 font-semibold text-red-400')}>
                   Ni förlorade
@@ -746,7 +782,7 @@ export default function MatchPage() {
                 <div className="text-4xl mb-3">✅</div>
                 <p className="text-sm font-semibold text-foreground mb-1">Resultat rapporterat!</p>
                 <p className={cn('text-xs', themeText(theme, 'secondary'))}>
-                  Väntar på att motståndarlaget bekräftar.
+                  Väntar på att bortalaget bekräftar.
                 </p>
               </div>
             )}

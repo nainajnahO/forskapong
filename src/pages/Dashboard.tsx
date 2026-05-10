@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { useTheme } from '@/contexts/useTheme';
 import { cn } from '@/lib/utils';
 import { themeText } from '@/lib/theme-utils';
+import { canAwayTeamConfirm, canHomeTeamReport } from '@/lib/home-away';
 
 import { supabase } from '@/lib/supabase';
 import type { Team, Match } from '@/lib/database.types';
@@ -29,6 +30,7 @@ interface RoundDisplay {
   confirmed: boolean;
   needsConfirmation: boolean;
   canReport: boolean;
+  isHomeTeam: boolean;
 }
 
 /* ─── Data fetching ───────────────────────────────────────────── */
@@ -74,9 +76,8 @@ function matchToRound(match: MatchWithTeams, teamId: string): RoundDisplay {
   if (match.winner_id === teamId) result = 'win';
   else if (match.loser_id === teamId) result = 'loss';
 
-  const needsConfirmation =
-    match.loser_id === teamId && !match.confirmed && match.reported_by !== null;
-  const canReport = match.winner_id === null && !isTbd;
+  const needsConfirmation = canAwayTeamConfirm(match, teamId);
+  const canReport = canHomeTeamReport(match, teamId) && !isTbd;
 
   let scoreDisplay: string | null = null;
   if (match.score_team1 !== null && match.score_team2 !== null) {
@@ -97,6 +98,7 @@ function matchToRound(match: MatchWithTeams, teamId: string): RoundDisplay {
     confirmed: match.confirmed,
     needsConfirmation,
     canReport,
+    isHomeTeam: match.team1_id === teamId,
   };
 }
 
@@ -238,7 +240,9 @@ export default function Dashboard() {
 
   if (!teamId || !code) return null;
 
-  const currentRoundIdx = rounds.findIndex((r) => r.canReport || r.needsConfirmation);
+  const currentRoundIdx = rounds.findIndex(
+    (r) => r.canReport || r.needsConfirmation || (r.result === null && !r.confirmed),
+  );
   const wins = rounds.filter((r) => r.result === 'win').length;
   const losses = rounds.filter((r) => r.result === 'loss').length;
   const totalPlayed = wins + losses;
@@ -464,6 +468,7 @@ export default function Dashboard() {
                       </p>
                       <p className={cn('text-[11px] mt-0.5 ml-4', themeText(theme, 'muted'))}>
                         Runda {round.round}
+                        <span className="ml-2">{round.isHomeTeam ? 'Hemma' : 'Borta'}</span>
                         {isCurrent && (
                           <span
                             className={cn(
@@ -483,7 +488,11 @@ export default function Dashboard() {
                             'hover:decoration-brand-500/60 transition-colors',
                           )}
                         >
-                          {round.needsConfirmation ? 'Bekräfta resultat →' : 'Rapportera →'}
+                          {round.needsConfirmation
+                            ? 'Bekräfta resultat →'
+                            : round.canReport
+                              ? 'Rapportera →'
+                              : 'Visa match →'}
                         </button>
                       )}
                     </div>

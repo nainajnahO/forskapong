@@ -126,6 +126,58 @@ export interface Database {
           },
         ];
       };
+      tiebreak_decisions: {
+        Row: {
+          id: string;
+          cutoff: number;
+          team1_id: string;
+          team2_id: string;
+          winner_team_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          cutoff: number;
+          team1_id: string;
+          team2_id: string;
+          winner_team_id: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          cutoff?: number;
+          team1_id?: string;
+          team2_id?: string;
+          winner_team_id?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'tiebreak_decisions_team1_id_fkey';
+            columns: ['team1_id'];
+            isOneToOne: false;
+            referencedRelation: 'teams';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'tiebreak_decisions_team2_id_fkey';
+            columns: ['team2_id'];
+            isOneToOne: false;
+            referencedRelation: 'teams';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'tiebreak_decisions_winner_team_id_fkey';
+            columns: ['winner_team_id'];
+            isOneToOne: false;
+            referencedRelation: 'teams';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       tournament: {
         Row: {
           id: number;
