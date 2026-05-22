@@ -89,6 +89,11 @@ export default function SwissRoundCard({
         }
 
         const result = getResult(p);
+        const dbMatch = matches?.find(
+          (m) =>
+            (m.team1_id === p.team1Id && m.team2_id === p.team2Id) ||
+            (m.team1_id === p.team2Id && m.team2_id === p.team1Id),
+        );
         const revealed = revealedCount != null ? (i < showCount && !!result) : !!result;
         const t1Won = revealed && result!.winnerId === p.team1Id;
         const t2Won = revealed && result!.winnerId === p.team2Id;
@@ -116,6 +121,11 @@ export default function SwissRoundCard({
             </span>
             <span className="text-center font-mono text-zinc-400">
               {revealed ? `${result!.scoreTeam1}–${result!.scoreTeam2}` : '–'}
+              {dbMatch && (
+                <span className="block text-[10px] text-zinc-600">
+                  P{dbMatch.wave} · B{dbMatch.table_number ?? '—'}
+                </span>
+              )}
             </span>
             <span className={cn('truncate text-right', teamColor(t2Won))}>
               {teamNameMap.get(p.team2Id) ?? p.team2Id}

@@ -37,8 +37,12 @@ export default function TeamFormModal({ team, onClose, onSaved }: Props) {
           .eq('id', team.id);
         if (err) throw err;
       } else {
-        const { error: err } = await supabase.rpc('register_team', {
-          team_name: name.trim(),
+        const adminCode = sessionStorage.getItem('adminCode');
+        if (!adminCode) throw new Error('Logga in som admin igen');
+
+        const { error: err } = await supabase.rpc('bulk_register_teams', {
+          team_names: [name.trim()],
+          admin_code: adminCode,
         });
         if (err) throw err;
       }

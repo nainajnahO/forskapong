@@ -82,6 +82,9 @@ function MatchRow({
       <span className={cn('text-right', !t1Won ? 'text-emerald-400 font-medium' : 'text-zinc-600')}>
         {t2Name}
       </span>
+      <span className="col-span-3 text-[10px] text-zinc-600 font-mono text-center">
+        P{match.wave} · B{match.table_number ?? '—'}
+      </span>
     </div>
   ) : (
     <div
@@ -102,6 +105,9 @@ function MatchRow({
       </span>
       <span className={!t1Won ? 'text-emerald-400 font-medium' : 'text-zinc-600'}>
         {t2Name}
+      </span>
+      <span className="text-[10px] text-zinc-600 font-mono ml-1">
+        P{match.wave}·B{match.table_number ?? '—'}
       </span>
     </div>
   );
@@ -203,7 +209,13 @@ function RoundColumn({
       </div>
       <div className={cn('px-2 py-1.5', large ? 'flex-1 flex flex-col' : 'space-y-px')}>
         {matches.length > 0 ? (
-          matches.map((m) => (
+          [...matches]
+            .sort((a, b) => {
+              const waveDelta = a.wave - b.wave;
+              if (waveDelta !== 0) return waveDelta;
+              return (a.table_number ?? 0) - (b.table_number ?? 0);
+            })
+            .map((m) => (
             <div key={m.id} className={cn(large && 'flex-1 flex items-center')}>
               <MatchRow
                 match={m}
@@ -212,7 +224,7 @@ function RoundColumn({
                 large={large}
               />
             </div>
-          ))
+            ))
         ) : (
           <div className={cn('text-zinc-700 py-2 text-center', large ? 'text-sm' : 'text-[11px]')}>
             Ej lottad

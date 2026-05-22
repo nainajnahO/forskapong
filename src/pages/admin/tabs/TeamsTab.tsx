@@ -6,6 +6,7 @@ import type { Team, Match } from '@/lib/database.types';
 import { calculateRankings, type MatchResult } from '@/lib/tournament-engine';
 import { dbMatchToResult, teamsToEngine } from '../lib/match-utils';
 import TeamFormModal from '../components/TeamFormModal';
+import TeamBulkImportModal from '../components/TeamBulkImportModal';
 import DeleteConfirmModal from '../components/DeleteConfirmModal';
 import TypedConfirmModal from '../components/TypedConfirmModal';
 
@@ -16,6 +17,7 @@ export default function TeamsTab() {
   const [loading, setLoading] = useState(true);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [deletingTeam, setDeletingTeam] = useState<Team | null>(null);
   const [showBulkDelete, setShowBulkDelete] = useState(false);
 
@@ -136,6 +138,15 @@ export default function TeamsTab() {
           )}
         >
           <span className="hdr-white-fill">+ Skapa lag</span>
+        </button>
+        <button
+          onClick={() => setShowImport(true)}
+          className={cn(
+            'h-10 px-4 rounded-xl text-sm font-medium transition-all whitespace-nowrap',
+            'border border-white/[0.08] text-zinc-200 hover:bg-white/[0.06]',
+          )}
+        >
+          Importera lag
         </button>
       </div>
 
@@ -325,6 +336,16 @@ export default function TeamsTab() {
           onSaved={() => {
             setShowCreate(false);
             setEditingTeam(null);
+            loadData();
+          }}
+        />
+      )}
+
+      {showImport && (
+        <TeamBulkImportModal
+          existingTeams={teams}
+          onClose={() => setShowImport(false)}
+          onImported={() => {
             loadData();
           }}
         />

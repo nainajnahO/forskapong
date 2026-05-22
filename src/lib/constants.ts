@@ -335,22 +335,6 @@ export const EXPLODED_VIEW_TITLE = {
 // Background
 export const FRAMER_BACKGROUND_URL = 'https://incomplete-listening-378233.framer.app' as const;
 
-// Swish Payment
-export const SWISH_NUMBER = '0736990412' as const;
-export const SWISH_AMOUNT = 99 as const;
-
-const SWISH_PAYEE = SWISH_NUMBER.replace(/^0/, '+46');
-
-export function buildSwishUrl(code: string): string {
-  const data = {
-    version: 1,
-    payee: { value: SWISH_PAYEE },
-    amount: { value: SWISH_AMOUNT },
-    message: { value: `Forskåpong - ${code.slice(0, 3)}.${code.slice(3)}`, editable: true },
-  };
-  return `swish://payment?data=${encodeURIComponent(JSON.stringify(data))}`;
-}
-
 // Hall of Fame Avatars
 export const HALL_OF_FAME_AVATARS = [
   {

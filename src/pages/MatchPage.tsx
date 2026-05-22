@@ -461,6 +461,9 @@ export default function MatchPage() {
                   Bord {match.table_number}
                 </span>
               )}
+              <span className={cn('inline-flex items-center gap-1.5', themeText(theme, 'secondary'))}>
+                Spelpass {match.wave}
+              </span>
             </div>
           </motion.div>
 

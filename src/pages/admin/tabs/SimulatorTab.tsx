@@ -513,6 +513,7 @@ function simResultToMatch(r: MatchResult, round: number, idx: number): Match {
   return {
     id: `sim-${round}-${idx}`,
     round,
+    wave: 1,
     team1_id: r.team1Id,
     team2_id: r.team2Id,
     winner_id: r.winnerId,

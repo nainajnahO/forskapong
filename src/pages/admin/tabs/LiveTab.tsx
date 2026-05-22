@@ -67,7 +67,9 @@ function MatchRow({ match, teamNameMap, editingMatchId, onEdit, onSaved }: Match
       )}
     >
       <div className="flex items-center gap-3">
-        <span className="text-xs text-zinc-600 font-mono">R{match.round}</span>
+        <span className="text-xs text-zinc-600 font-mono">
+          R{match.round} · P{match.wave} · B{match.table_number ?? '—'}
+        </span>
         <span className="text-sm text-white">{t1} vs {t2}</span>
       </div>
       <div className="flex items-center gap-3">
@@ -100,7 +102,12 @@ export default function LiveTab({ onTabChange }: LiveTabProps) {
     const [tRes, teamsRes, matchesRes] = await Promise.all([
       supabase.from('tournament').select('*').maybeSingle(),
       supabase.from('teams').select('*'),
-      supabase.from('matches').select('*').order('round', { ascending: true }),
+      supabase
+        .from('matches')
+        .select('*')
+        .order('round', { ascending: true })
+        .order('wave', { ascending: true })
+        .order('table_number', { ascending: true }),
     ]);
 
     setTournament(tRes.data);
@@ -125,6 +132,7 @@ export default function LiveTab({ onTabChange }: LiveTabProps) {
 
   const teamNameMap = new Map(teams.map((t) => [t.id, t.name]));
   const currentRound = tournament?.current_round ?? 0;
+  const totalRounds = tournament?.total_rounds ?? 7;
   const status = tournament?.status ?? 'not_started';
 
   const currentRoundMatches = matches.filter((m) => m.round === currentRound);
@@ -174,7 +182,7 @@ export default function LiveTab({ onTabChange }: LiveTabProps) {
       <div className="flex flex-wrap gap-3">
         {[
           { label: 'Registrerade lag', value: teams.length },
-          { label: `Runda ${currentRound} av 7`, value: status === 'knockout' ? 'Slutspel' : `${confirmedCurrent}/${totalCurrent}` },
+          { label: `Runda ${currentRound} av ${totalRounds}`, value: status === 'knockout' ? 'Slutspel' : `${confirmedCurrent}/${totalCurrent}` },
           { label: 'Matcher totalt', value: matches.length },
         ].map((stat) => (
           <div

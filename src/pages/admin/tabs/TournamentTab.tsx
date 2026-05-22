@@ -23,6 +23,7 @@ import DangerZone from '../components/DangerZone';
 import { dbMatchToResult, teamsToEngine } from '../lib/match-utils';
 import { decideKnockoutHomeTeam, orientSwissPairings } from '@/lib/home-away';
 import type { AdminTab } from '@/contexts/AdminTabContextDef';
+import { assignTablesAndWaves, getWaveCount, normalizeTableCount } from '@/lib/table-scheduling';
 
 /* ─── Component ───────────────────────────────────────────────── */
 
@@ -41,6 +42,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   const [view, setView] = useState<'list' | 'map'>('list');
   const [roundTime, setRoundTime] = useState('');
   const [roundCount, setRoundCount] = useState(7);
+  const [tableCount, setTableCount] = useState(16);
   const [manualRpsWinnerByKey, setManualRpsWinnerByKey] = useState<Record<string, string>>({});
   const [savingRps, setSavingRps] = useState(false);
 
@@ -53,7 +55,12 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     const [tRes, teamsRes, matchesRes, tiebreakRes] = await Promise.all([
       supabase.from('tournament').select('*').maybeSingle(),
       supabase.from('teams').select('*'),
-      supabase.from('matches').select('*').order('round', { ascending: true }),
+      supabase
+        .from('matches')
+        .select('*')
+        .order('round', { ascending: true })
+        .order('wave', { ascending: true })
+        .order('table_number', { ascending: true }),
       supabase.from('tiebreak_decisions').select('*'),
     ]);
 
@@ -63,6 +70,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
 
     setTournament(t);
     if (t?.total_rounds) setRoundCount(t.total_rounds);
+    if (t?.table_count) setTableCount(t.table_count);
     setTeams(allTeams);
     setMatches(allMatches);
     const decisionMap: Record<string, string> = {};
@@ -170,12 +178,13 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
         await supabase.from('tournament').insert({
           current_round: 1,
           total_rounds: roundCount,
+          table_count: tableCount,
           status: 'swiss',
         });
       } else {
         await supabase
           .from('tournament')
-          .update({ current_round: 1, total_rounds: roundCount, status: 'swiss' })
+          .update({ current_round: 1, total_rounds: roundCount, table_count: tableCount, status: 'swiss' })
           .eq('id', tournament.id);
       }
       await loadData();
@@ -187,6 +196,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   async function handleGeneratePairings() {
     setGenerating(true);
     try {
+      const activeTableCount = normalizeTableCount(tournament?.table_count ?? tableCount);
       const engineTeams = teamsToEngine(teams, completedResults);
       const pairings = generateSwissPairings(
         engineTeams,
@@ -194,15 +204,17 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
         currentRound,
       );
 
-      const swissHistory = matches.filter((m) => m.round <= 7);
+      const swissHistory = matches.filter((m) => m.round <= (tournament?.total_rounds ?? roundCount));
       const orientedPairings = orientSwissPairings(pairings.pairings, swissHistory);
+      const scheduledPairings = assignTablesAndWaves(orientedPairings, activeTableCount);
 
       // team1_id = home team, team2_id = away team
-      const inserts = orientedPairings.map((p, i) => ({
+      const inserts = scheduledPairings.map((p) => ({
         round: currentRound,
+        wave: p.wave,
         team1_id: p.homeTeamId,
         team2_id: p.awayTeamId,
-        table_number: i + 1,
+        table_number: p.tableNumber,
         scheduled_time: roundTime || null,
       }));
 
@@ -246,6 +258,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   async function handleGenerateKnockout() {
     setGenerating(true);
     try {
+      const activeTableCount = normalizeTableCount(tournament?.table_count ?? tableCount);
       if (unresolvedPair && !selectedRpsWinner) {
         return;
       }
@@ -261,7 +274,8 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       const bracket = generateKnockoutBracket(top8);
 
       // Insert QF matches as round 8 (first knockout round falls back to standings)
-      const qfInserts = bracket.quarterfinals.map((qf, i) => {
+      const qfScheduled = assignTablesAndWaves(bracket.quarterfinals, activeTableCount);
+      const qfInserts = qfScheduled.map((qf) => {
         const orientation = decideKnockoutHomeTeam(
           qf.team1Id!,
           qf.team2Id!,
@@ -270,12 +284,13 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
           standingsRankMap,
         );
         return {
-        round: 8,
-        team1_id: orientation.homeTeamId,
-        team2_id: orientation.awayTeamId,
-        table_number: i + 1,
-        scheduled_time: roundTime || null,
-      };
+          round: 8,
+          wave: qf.wave,
+          team1_id: orientation.homeTeamId,
+          team2_id: orientation.awayTeamId,
+          table_number: qf.tableNumber,
+          scheduled_time: roundTime || null,
+        };
       });
       const { error } = await supabase.from('matches').insert(qfInserts);
       if (error) throw error;
@@ -290,10 +305,15 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     if (!tournament) return;
     setGenerating(true);
     try {
+      const activeTableCount = normalizeTableCount(tournament.table_count ?? tableCount);
       const standingsRankMap = new Map(standings.map((s) => [s.id, s.rank]));
       const qfMatches = matches
         .filter((m) => m.round === 8 && m.confirmed)
-        .sort((a, b) => (a.table_number ?? 0) - (b.table_number ?? 0));
+        .sort((a, b) => {
+          const waveDelta = a.wave - b.wave;
+          if (waveDelta !== 0) return waveDelta;
+          return (a.table_number ?? 0) - (b.table_number ?? 0);
+        });
       const qfWinners = qfMatches.map((m) => m.winner_id!);
       if (qfWinners.length !== 4) return;
 
@@ -301,10 +321,15 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       // Home team is decided by latest knockout performance.
       const sf1 = decideKnockoutHomeTeam(qfWinners[0], qfWinners[1], 9, matches, standingsRankMap);
       const sf2 = decideKnockoutHomeTeam(qfWinners[2], qfWinners[3], 9, matches, standingsRankMap);
-      const sfInserts = [
-        { round: 9, team1_id: sf1.homeTeamId, team2_id: sf1.awayTeamId, table_number: 1, scheduled_time: roundTime || null },
-        { round: 9, team1_id: sf2.homeTeamId, team2_id: sf2.awayTeamId, table_number: 2, scheduled_time: roundTime || null },
-      ];
+      const sfScheduled = assignTablesAndWaves([sf1, sf2], activeTableCount);
+      const sfInserts = sfScheduled.map((sf) => ({
+        round: 9,
+        wave: sf.wave,
+        team1_id: sf.homeTeamId,
+        team2_id: sf.awayTeamId,
+        table_number: sf.tableNumber,
+        scheduled_time: roundTime || null,
+      }));
       const { error } = await supabase.from('matches').insert(sfInserts);
       if (error) throw error;
       setRoundTime('');
@@ -318,10 +343,15 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     if (!tournament) return;
     setGenerating(true);
     try {
+      const activeTableCount = normalizeTableCount(tournament.table_count ?? tableCount);
       const standingsRankMap = new Map(standings.map((s) => [s.id, s.rank]));
       const sfMatches = matches
         .filter((m) => m.round === 9 && m.confirmed)
-        .sort((a, b) => (a.table_number ?? 0) - (b.table_number ?? 0));
+        .sort((a, b) => {
+          const waveDelta = a.wave - b.wave;
+          if (waveDelta !== 0) return waveDelta;
+          return (a.table_number ?? 0) - (b.table_number ?? 0);
+        });
       const sfWinners = sfMatches.map((m) => m.winner_id!);
       if (sfWinners.length !== 2) return;
 
@@ -333,11 +363,13 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
         standingsRankMap,
       );
 
+      const [finalSlot] = assignTablesAndWaves([finalOrientation], activeTableCount);
       const { error } = await supabase.from('matches').insert({
         round: 10,
-        team1_id: finalOrientation.homeTeamId,
-        team2_id: finalOrientation.awayTeamId,
-        table_number: 1,
+        wave: finalSlot.wave,
+        team1_id: finalSlot.homeTeamId,
+        team2_id: finalSlot.awayTeamId,
+        table_number: finalSlot.tableNumber,
         scheduled_time: roundTime || null,
       });
       if (error) throw error;
@@ -436,6 +468,10 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
 
   const championName = champion ? teamNameMap.get(champion) ?? null : null;
   const disputed = matches.filter((m) => m.confirmed_by === 'disputed' && !m.confirmed);
+  const schedulePreview = {
+    matchCount: Math.floor(teams.length / 2),
+    waveCount: getWaveCount(Math.floor(teams.length / 2), tableCount),
+  };
 
   function handleMatchSaved(): void {
     setEditingMatchId(null);
@@ -538,7 +574,10 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
         roundTime={roundTime}
         onRoundTimeChange={setRoundTime}
         roundCount={roundCount}
+        tableCount={tableCount}
+        schedulePreview={schedulePreview}
         onRoundCountChange={setRoundCount}
+        onTableCountChange={setTableCount}
         onStartTournament={handleStartTournament}
         onGeneratePairings={handleGeneratePairings}
         onAdvanceRound={handleAdvanceRound}
@@ -578,7 +617,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
                       {teamNameMap.get(m.team2_id) ?? '?'}
                     </span>
                     <span className="text-xs text-amber-400">
-                      R{m.round} · {m.score_team1}–{m.score_team2} · Klicka för att avgöra
+                      R{m.round} · P{m.wave} · B{m.table_number ?? '—'} · {m.score_team1}–{m.score_team2} · Klicka för att avgöra
                     </span>
                   </button>
                 )}
@@ -692,6 +731,9 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
                               >
                                 {teamNameMap.get(m.team2_id) ?? m.team2_id}
                               </span>
+                              <span className="col-span-3 text-center text-[11px] text-zinc-600 font-mono">
+                                P{m.wave} · B{m.table_number ?? '—'}
+                              </span>
                             </button>
                           ),
                         )}
@@ -702,11 +744,11 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
           )}
 
           {/* Swiss rounds */}
-          {rounds.filter(([r]) => r <= 7).length > 0 && (
+          {rounds.filter(([r]) => r <= (tournament?.total_rounds ?? roundCount)).length > 0 && (
             <div className="space-y-4">
               <h3 className="text-sm font-medium text-zinc-400">Swiss-rundor</h3>
               {rounds
-                .filter(([r]) => r <= 7)
+                .filter(([r]) => r <= (tournament?.total_rounds ?? roundCount))
                 .reverse()
                 .map(([round, roundMatches]) => (
                   <SwissRoundCard

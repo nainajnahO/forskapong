@@ -11,7 +11,6 @@ import { AdminTabProvider } from '@/contexts/AdminTabContext';
 import { VENUE_MAP_CONFIG } from '@/lib/constants';
 
 const VenueMap = lazy(() => import('./components/sections/VenueMap'));
-const TicketsComingSoon = lazy(() => import('./components/sections/TicketsComingSoon'));
 const Play = lazy(() => import('./pages/Play'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const MatchPage = lazy(() => import('./pages/MatchPage'));
@@ -31,11 +30,6 @@ function HomePage() {
       <ErrorBoundary>
         <Suspense fallback={<div style={{ height: `${VENUE_MAP_CONFIG.scrollPages * 100}vh` }} />}>
           <VenueMap id="venue" />
-        </Suspense>
-      </ErrorBoundary>
-      <ErrorBoundary>
-        <Suspense fallback={<div className="py-16 md:py-24" />}>
-          <TicketsComingSoon id="tickets" />
         </Suspense>
       </ErrorBoundary>
     </>

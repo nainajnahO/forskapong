@@ -11,6 +11,7 @@ function makeMatch(overrides: Partial<Match>): Match {
   return {
     id: overrides.id ?? crypto.randomUUID(),
     round: overrides.round ?? 1,
+    wave: overrides.wave ?? 1,
     team1_id: overrides.team1_id ?? 't1',
     team2_id: overrides.team2_id ?? 't2',
     table_number: overrides.table_number ?? 1,

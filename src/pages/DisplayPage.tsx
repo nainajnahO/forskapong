@@ -54,7 +54,12 @@ export default function DisplayPage() {
     const [tRes, teamsRes, matchesRes] = await Promise.all([
       supabase.from('tournament').select('*').maybeSingle(),
       supabase.from('teams').select('*'),
-      supabase.from('matches').select('*').order('round', { ascending: true }),
+      supabase
+        .from('matches')
+        .select('*')
+        .order('round', { ascending: true })
+        .order('wave', { ascending: true })
+        .order('table_number', { ascending: true }),
     ]);
     setTournament(tRes.data);
     setTeams(teamsRes.data ?? []);

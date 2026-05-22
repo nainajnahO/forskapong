@@ -43,6 +43,7 @@ export interface Database {
         Row: {
           id: string;
           round: number;
+          wave: number;
           team1_id: string;
           team2_id: string;
           table_number: number | null;
@@ -59,6 +60,7 @@ export interface Database {
         Insert: {
           id?: string;
           round: number;
+          wave?: number;
           team1_id: string;
           team2_id: string;
           table_number?: number | null;
@@ -75,6 +77,7 @@ export interface Database {
         Update: {
           id?: string;
           round?: number;
+          wave?: number;
           team1_id?: string;
           team2_id?: string;
           table_number?: number | null;
@@ -183,18 +186,21 @@ export interface Database {
           id: number;
           current_round: number;
           total_rounds: number;
+          table_count: number;
           status: string;
         };
         Insert: {
           id?: number;
           current_round?: number;
           total_rounds?: number;
+          table_count?: number;
           status?: string;
         };
         Update: {
           id?: number;
           current_round?: number;
           total_rounds?: number;
+          table_count?: number;
           status?: string;
         };
         Relationships: [];
@@ -204,6 +210,10 @@ export interface Database {
       [_ in never]: never;
     };
     Functions: {
+      bulk_register_teams: {
+        Args: { team_names: string[]; admin_code: string };
+        Returns: { id: string; code: string; name: string }[];
+      };
       register_team: {
         Args: { team_name: string };
         Returns: { id: string; code: string; name: string }[];

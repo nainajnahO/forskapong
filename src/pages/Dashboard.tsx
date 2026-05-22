@@ -20,6 +20,7 @@ interface MatchWithTeams extends Match {
 
 interface RoundDisplay {
   round: number;
+  wave: number;
   matchId: string;
   time: string | null;
   table: number | null;
@@ -46,7 +47,9 @@ async function fetchMatches(teamId: string): Promise<MatchWithTeams[]> {
     .from('matches')
     .select('*')
     .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
-    .order('round', { ascending: true });
+    .order('round', { ascending: true })
+    .order('wave', { ascending: true })
+    .order('table_number', { ascending: true });
   if (matchError) throw matchError;
   if (!matches || matches.length === 0) return [];
 
@@ -88,6 +91,7 @@ function matchToRound(match: MatchWithTeams, teamId: string): RoundDisplay {
 
   return {
     round: match.round,
+    wave: match.wave,
     matchId: match.id,
     time: match.scheduled_time,
     table: match.table_number,
@@ -446,6 +450,7 @@ export default function Dashboard() {
                       )}
                     >
                       <span>{round.time ?? '——:——'}</span>
+                      <span className="sm:block">{`P${round.wave}`}</span>
                       <span className="sm:block">{round.table ? `B${round.table}` : '——'}</span>
                     </div>
 
@@ -467,7 +472,8 @@ export default function Dashboard() {
                         )}
                       </p>
                       <p className={cn('text-[11px] mt-0.5 ml-4', themeText(theme, 'muted'))}>
-                        Runda {round.round}
+                        {round.round >= 8 ? 'Slutspel' : 'Gruppspel'} runda {round.round}
+                        <span className="ml-2">Spelpass {round.wave}</span>
                         <span className="ml-2">{round.isHomeTeam ? 'Hemma' : 'Borta'}</span>
                         {isCurrent && (
                           <span
