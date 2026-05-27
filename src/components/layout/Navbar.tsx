@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowUpRight, Flame, LogOut, Waves } from 'lucide-react';
-import logo from '../../assets/logo.webp';
-import logoHdr from '../../assets/hdr/logo.avif';
 import { NAV_LINKS, NAV_RESPONSIVE_OFFSETS } from '@/lib/constants';
 import { useAdminTab } from '@/contexts/useAdminTab';
 import { ADMIN_TABS } from '@/contexts/AdminTabContextDef';
@@ -47,13 +45,13 @@ function NavbarEasterEgg({
       }}
     >
       <img
-        src="/IMG_3365.jpeg"
+        src="/GS.png"
         alt=""
         draggable={false}
         className="absolute inset-0 w-full h-full object-cover object-[center_34%]"
       />
       {/* Invisible CTA replica to match exact dimensions */}
-      <span className="invisible">{isLoggedIn ? 'Tillbaka' : <><span className="hidden lg:inline">Anmälan</span><span className="lg:hidden">Anmäl</span></>}</span>
+      <span className="invisible">{isLoggedIn ? 'Tillbaka' : 'Spela'}</span>
       <div className="w-10 h-10 -my-1 -mr-1 invisible flex-shrink-0" />
     </div>
   );
@@ -189,16 +187,25 @@ export default function Navbar() {
                 willChange: 'transform',
               }}
             >
-              <a href="#" draggable={false} onClick={handleLogoClick}>
-                <picture>
-                  <source srcSet={logoHdr} media="(dynamic-range: high)" type="image/avif" />
-                  <img
-                    src={logo}
-                    alt="Forsränningen Logo"
-                    draggable={false}
-                    className="h-9 lg:h-10 w-auto cursor-pointer hdr-img-fill"
-                  />
-                </picture>
+              <a
+                href="#"
+                draggable={false}
+                onClick={handleLogoClick}
+                className="flex items-center gap-2 lg:gap-3 cursor-pointer"
+                aria-label="TentaFestivalen Beerpong"
+              >
+                <img
+                  src="/logotyp_original.png"
+                  alt=""
+                  draggable={false}
+                  className="h-9 lg:h-10 w-auto"
+                />
+                <img
+                  src="/TENTAFESTIVALEN vit.png"
+                  alt="TentaFestivalen"
+                  draggable={false}
+                  className="hidden sm:block h-3 lg:h-4 w-auto"
+                />
               </a>
             </div>
 
@@ -262,7 +269,7 @@ export default function Navbar() {
               {/* CTA Button - mobile: only when scrolled, desktop: always visible */}
               <button
                 ref={ctaRef}
-                onClick={isLoggedIn ? handleLogout : () => handleNavClick('#tickets')}
+                onClick={isLoggedIn ? handleLogout : () => navigate('/play')}
                 className="flex items-center justify-between gap-3 pl-6 pr-2 py-2 bg-white hdr-bg-white text-black font-semibold rounded-full hover:bg-zinc-100 absolute lg:relative right-0 lg:right-auto"
                 style={{
                   transform: isScrolled
@@ -281,10 +288,7 @@ export default function Navbar() {
                 {isLoggedIn ? (
                   <span>Tillbaka</span>
                 ) : (
-                  <>
-                    <span className="hidden lg:inline">Anmälan</span>
-                    <span className="lg:hidden">Anmäl</span>
-                  </>
+                  <span>Spela</span>
                 )}
                 <div className="w-10 h-10 -my-1 -mr-1 bg-brand-500 rounded-full flex items-center justify-center flex-shrink-0 hdr-dot-fill">
                   {isLoggedIn ? (

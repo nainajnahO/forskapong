@@ -46,7 +46,7 @@ export default function About({ id }: AboutProps) {
         <div ref={imgRef} className="w-full h-96 rounded-2xl overflow-hidden">
           <motion.img
             src="/event-photo.webp"
-            alt="Forskåpong event"
+            alt="TentaFestivalen Beerpong event"
             className="w-full h-[130%] object-cover"
             style={{ y: imgY }}
           />

@@ -2,16 +2,15 @@
 export const SECTION_PADDING = 'py-16 md:py-24' as const;
 
 // Event Date (used for countdown + scoreboard gate)
-export const EVENT_DATE = new Date('2026-03-31T18:00:00+02:00');
+export const EVENT_DATE = new Date('2026-06-06T17:00:00+02:00');
 
 // Event Information
 export const EVENT_INFO = {
-  name: 'Forskåpong 2026',
-  edition: '76:e',
-  date: '31 Mars 2026',
-  time: '18:00',
+  name: 'TentaFestivalen Beerpong',
+  date: '6 Juni 2026',
+  time: '17:00',
   location: 'Uppsala, Sweden',
-  venue: 'Bridgens Hus',
+  venue: 'Bryggan Sommarklubb',
 } as const;
 
 // Navigation Links
@@ -29,86 +28,75 @@ export const FOOTER_LINKS = [
   { label: 'Kontakt', href: '#contact' },
 ] as const;
 
-// Hero Section
-export const HERO_ROTATING_WORDS = ['Enheter', 'Bra kast', 'Armbåge', '99 kr'] as const;
-
-// Attendee Categories
-export const ATTENDEE_CATEGORIES = [
-  { name: 'Forskå', highlighted: true },
-  { name: 'Gamla Forskå', highlighted: false },
-  { name: 'Uncs', highlighted: false },
-  { name: 'Prehistorical Uncs', highlighted: false },
-] as const;
-
 // About Section
+// TODO: Skriv om denna text för TentaFestivalen Beerpong.
 export const ABOUT_CONTENT = {
   title: 'Årets Mest Hypade',
   titleHighlight: 'Event',
   description1:
-    'Forskåpong är en årlig beer pong-turnering som samlar forskåare från när och fjärran för en kväll fylld av tävling, gemenskap och glädje. Detta är 76:e gången vi arrangerar detta legendariska event som har blivit en älskad tradition.',
+    '⚠️ TEXTEN HÄR BEHÖVER UPPDATERAS. Detta är en platshållare för TentaFestivalen Beerpong — skriv om de två styckena så de beskriver det nya eventet.',
   description2:
-    'Varje lag tävlar i spännande matcher genom kvällen, med en kommentator som håller stämningen på topp. Oavsett om du är nybörjare eller erfaren spelare, garanterar vi en oförglömlig upplevelse.',
+    '⚠️ Platshållartext — fyll i andra stycket med information om matcher, stämning och vad besökarna kan förvänta sig av kvällen på Bryggan Sommarklubb.',
 } as const;
 
 // Schedule Data
 export const SCHEDULE_PHASES = [
   {
-    name: 'Öppnar',
-    startTime: '18:00',
+    name: 'Anmälan',
+    startTime: '17:00',
     events: [
       {
-        time: '18:00-18:40',
-        title: 'Mingel',
-        description: 'Dörrna öppnas och alla är välkommna till skönt häng!',
+        time: '17:00-17:30',
+        title: 'Anmälan',
+        description: 'Kom och hämta ut er lags kod och enheter.',
       },
       {
-        time: '18:45',
-        title: 'Välkomstceremoni',
-        description: 'Projektledarna hälsar alla varmt välkommna.',
+        time: '17:30',
+        title: 'Domare',
+        description: 'Sam & David',
         italic: true,
-        speakers: [
-          { name: '(W)ebb24', title: 'CEO, Hjälpis' },
-          { name: '(W)ebb25', title: "CTO, Hjälpis" },
-        ],
       },
     ],
   },
   {
-    name: 'Avspark',
-    startTime: '18:55',
+    name: 'Spel',
+    startTime: '17:45',
     events: [
       {
-        time: '18:55',
-        title: 'Skotten i Mikrorummet',
-        description: 'Forskåpongen går av stapeln för 76:e gången.',
-        bold: true,
-      },
-      {
-        time: '19:00-21:30',
-        title: 'Spelchemat',
-        description:
-          'Skriv in din 6-teckens kod för att se era matcher.',
+        time: '17:45-18:30',
+        title: 'Gruppspel',
+        description: 'Skriv in din 6-teckens kod för att se era matcher.',
         bold: true,
         type: 'login' as const,
-        speakers: [{ name: 'Aria Assadi', title: 'Sportkommentator' }],
       },
-    ],
-  },
-  {
-    name: 'Utgång',
-    startTime: '21:40',
-    events: [
       {
-        time: '21:45-22:00',
-        title: 'Prisutdelning',
+        time: '18:30-19:30',
+        title: 'Slutspel',
         description: '',
         bold: true,
       },
       {
-        time: '22:30',
-        title: 'Utvisning',
-        description: 'Förbud att stanna kvar. Vi drar till gähda istället.',
-        italic: true,
+        time: '19:30-19:45',
+        title: 'Semi-Final',
+        description: '',
+        bold: true,
+      },
+      {
+        time: '19:45-20:00',
+        title: 'Final',
+        description: 'Stanna kvar och heja, samt se prisutdelningen!',
+        bold: true,
+      },
+    ],
+  },
+  {
+    name: 'Klubb',
+    startTime: '20:00',
+    events: [
+      {
+        time: '20:00-02:00',
+        title: 'Klubb',
+        description: 'Nu kommer alla andra in på klubben som vanligt!',
       },
     ],
   },
@@ -160,13 +148,16 @@ export const SHOWCASE_CONFIG = {
     },
     {
       text: 'Redo att spela?',
-      subtext: 'Vi ses den\n31:a Mars 2026',
+      subtext: 'Vi ses den\n6:e Juni 2026',
       position: ['25%', '50%'] as const,
     },
   ] as const,
 } as const;
 
 // Venue Map Configuration
+// TODO: Coordinates + flyover waypoints still point to Ångström/Mikrorummet (old venue).
+// New venue is Bryggan Sommarklubb (Uppsala) — update venue lng/lat and rebuild the
+// cameraWaypoints flyover for the new location.
 export const VENUE_MAP_CONFIG = {
   scrollPages: 5,
   mapStyle: 'mapbox://styles/mapbox/dark-v11',
@@ -296,14 +287,14 @@ export const VENUE_MAP_CONFIG = {
       position: ['15%', '50%'] as const,
     },
     {
-      text: 'Ångström',
-      subtext: 'Mikrorummet',
+      text: 'Bryggan',
+      subtext: 'Sommarklubb',
       scrollRange: [0.4, 0.75] as const,
       position: ['20%', '30%'] as const,
     },
     {
       text: 'Vi ses här!',
-      subtext: '31 Mars 2026' + '\n kl 18:00',
+      subtext: '6 Juni 2026' + '\n kl 17:00',
       scrollRange: [0.75, 1.0] as const,
       position: ['25%', '70%'] as const,
     },
@@ -311,9 +302,15 @@ export const VENUE_MAP_CONFIG = {
 } as const;
 
 // Sponsors
+// TODO: add logo files for Monster and Zura under public/sponsors/ and wire up `logo` paths.
 export const SPONSORS: readonly { name: string; logo?: string; text?: string; href?: string }[] = [
-  { name: 'CTF', logo: '/sponsors/logotyp_CTF_transparent_inverterad.PNG', href: 'https://www.instagram.com/tentafestivalen/' },
-  { name: 'Impact Solution', logo: '/sponsors/logo-vit-text-trans.png.webp', href: 'https://impactsolution.se' },
+  {
+    name: 'TentaFestivalen',
+    logo: '/sponsors/logotyp_CTF_transparent_inverterad.PNG',
+    href: 'https://www.instagram.com/tentafestivalen/',
+  },
+  { name: 'Monster', text: 'Monster' },
+  { name: 'Zura', text: 'Zura' },
 ];
 
 // Navbar Responsive Offsets (rem)
@@ -333,38 +330,3 @@ export const EXPLODED_VIEW_TITLE = {
 
 // Background
 export const FRAMER_BACKGROUND_URL = 'https://incomplete-listening-378233.framer.app' as const;
-
-// Swish Payment
-export const SWISH_NUMBER = '0736990412' as const;
-export const SWISH_AMOUNT = 99 as const;
-
-const SWISH_PAYEE = SWISH_NUMBER.replace(/^0/, '+46');
-
-export function buildSwishUrl(code: string): string {
-  const data = {
-    version: 1,
-    payee: { value: SWISH_PAYEE },
-    amount: { value: SWISH_AMOUNT },
-    message: { value: `Forskåpong - ${code.slice(0, 3)}.${code.slice(3)}`, editable: true },
-  };
-  return `swish://payment?data=${encodeURIComponent(JSON.stringify(data))}`;
-}
-
-// Hall of Fame Avatars
-export const HALL_OF_FAME_AVATARS = [
-  {
-    src: '/avatar-hall.webp',
-    fallback: 'HÅ',
-    tooltip: 'Håll',
-  },
-  {
-    src: '/avatar-forskarl.webp',
-    fallback: 'FK',
-    tooltip: 'Forskarl',
-  },
-  {
-    src: '/avatar-fest.webp',
-    fallback: 'FE',
-    tooltip: 'Fest',
-  },
-] as const;
