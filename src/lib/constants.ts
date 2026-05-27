@@ -311,11 +311,11 @@ export const VENUE_MAP_CONFIG = {
 export const SPONSORS: readonly { name: string; logo?: string; text?: string; href?: string }[] = [
   {
     name: 'TentaFestivalen',
-    logo: '/sponsors/logotyp_CTF_transparent_inverterad.PNG',
+    logo: '/sponsors/logotyp_transparent_vit_tjock.png',
     href: 'https://www.instagram.com/tentafestivalen/',
   },
   { name: 'Monster', logo: '/sponsors/monster.png', href: 'https://www.instagram.com/monsterenergy/' },
-  { name: 'Zura', text: 'Zura', href: 'https://www.instagram.com/zurasverige/' },
+  { name: 'Zura', logo: '/sponsors/zura.png', href: 'https://www.instagram.com/zurasverige/' },
 ];
 
 // Navbar Responsive Offsets (rem)
