@@ -158,7 +158,7 @@ export default function DisplayPage() {
       <div className="h-screen bg-zinc-950 flex items-center justify-center">
         <div className="text-center">
           <p className="text-4xl mb-4">🏓</p>
-          <p className="text-2xl font-bold text-white tracking-tight">Forskåpong</p>
+          <p className="text-2xl font-bold text-white tracking-tight">TentaFestivalen Beerpong</p>
           <p className="text-zinc-600 mt-2">Turneringen har inte startat ännu</p>
         </div>
       </div>
@@ -170,7 +170,7 @@ export default function DisplayPage() {
       {/* Header */}
       <div className="flex items-center justify-between px-8 py-5">
         <div className="flex items-center gap-4">
-          <h1 className="text-xl font-bold text-white tracking-tight">Forskåpong</h1>
+          <h1 className="text-xl font-bold text-white tracking-tight">TentaFestivalen Beerpong</h1>
           <div
             className={cn(
               'px-3 py-1 rounded-full text-xs font-medium border',

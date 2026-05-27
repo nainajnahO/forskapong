@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowUpRight, Flame, LogOut, Waves } from 'lucide-react';
-import logo from '../../assets/logo.webp';
-import logoHdr from '../../assets/hdr/logo.avif';
 import { NAV_LINKS, NAV_RESPONSIVE_OFFSETS } from '@/lib/constants';
 import { useAdminTab } from '@/contexts/useAdminTab';
 import { ADMIN_TABS } from '@/contexts/AdminTabContextDef';
@@ -47,7 +45,7 @@ function NavbarEasterEgg({
       }}
     >
       <img
-        src="/IMG_3365.jpeg"
+        src="/GS.png"
         alt=""
         draggable={false}
         className="absolute inset-0 w-full h-full object-cover object-[center_34%]"
@@ -189,16 +187,25 @@ export default function Navbar() {
                 willChange: 'transform',
               }}
             >
-              <a href="#" draggable={false} onClick={handleLogoClick}>
-                <picture>
-                  <source srcSet={logoHdr} media="(dynamic-range: high)" type="image/avif" />
-                  <img
-                    src={logo}
-                    alt="Forsränningen Logo"
-                    draggable={false}
-                    className="h-9 lg:h-10 w-auto cursor-pointer hdr-img-fill"
-                  />
-                </picture>
+              <a
+                href="#"
+                draggable={false}
+                onClick={handleLogoClick}
+                className="flex items-center gap-2 lg:gap-3 cursor-pointer"
+                aria-label="TentaFestivalen Beerpong"
+              >
+                <img
+                  src="/logotyp_original.png"
+                  alt=""
+                  draggable={false}
+                  className="h-9 lg:h-10 w-auto"
+                />
+                <img
+                  src="/TENTAFESTIVALEN vit.png"
+                  alt="TentaFestivalen"
+                  draggable={false}
+                  className="hidden sm:block h-5 lg:h-6 w-auto"
+                />
               </a>
             </div>
 

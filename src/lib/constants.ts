@@ -2,16 +2,15 @@
 export const SECTION_PADDING = 'py-16 md:py-24' as const;
 
 // Event Date (used for countdown + scoreboard gate)
-export const EVENT_DATE = new Date('2026-03-31T18:00:00+02:00');
+export const EVENT_DATE = new Date('2026-06-06T17:00:00+02:00');
 
 // Event Information
 export const EVENT_INFO = {
-  name: 'Forskåpong 2026',
-  edition: '76:e',
-  date: '31 Mars 2026',
-  time: '18:00',
+  name: 'TentaFestivalen Beerpong',
+  date: '6 Juni 2026',
+  time: '17:00',
   location: 'Uppsala, Sweden',
-  venue: 'Bridgens Hus',
+  venue: 'Bryggan Sommarklubb',
 } as const;
 
 // Navigation Links
@@ -29,86 +28,64 @@ export const FOOTER_LINKS = [
   { label: 'Kontakt', href: '#contact' },
 ] as const;
 
-// Hero Section
-export const HERO_ROTATING_WORDS = ['Enheter', 'Bra kast', 'Armbåge', '99 kr'] as const;
-
-// Attendee Categories
-export const ATTENDEE_CATEGORIES = [
-  { name: 'Forskå', highlighted: true },
-  { name: 'Gamla Forskå', highlighted: false },
-  { name: 'Uncs', highlighted: false },
-  { name: 'Prehistorical Uncs', highlighted: false },
-] as const;
-
-// About Section
-export const ABOUT_CONTENT = {
-  title: 'Årets Mest Hypade',
-  titleHighlight: 'Event',
-  description1:
-    'Forskåpong är en årlig beer pong-turnering som samlar forskåare från när och fjärran för en kväll fylld av tävling, gemenskap och glädje. Detta är 76:e gången vi arrangerar detta legendariska event som har blivit en älskad tradition.',
-  description2:
-    'Varje lag tävlar i spännande matcher genom kvällen, med en kommentator som håller stämningen på topp. Oavsett om du är nybörjare eller erfaren spelare, garanterar vi en oförglömlig upplevelse.',
-} as const;
-
 // Schedule Data
 export const SCHEDULE_PHASES = [
   {
-    name: 'Öppnar',
-    startTime: '18:00',
+    name: 'Anmälan',
+    startTime: '17:00',
     events: [
       {
-        time: '18:00-18:40',
-        title: 'Mingel',
-        description: 'Dörrna öppnas och alla är välkommna till skönt häng!',
+        time: '17:00-17:30',
+        title: 'Anmälan',
+        description: 'Kom och hämta ut er lags kod och enheter.',
       },
       {
-        time: '18:45',
-        title: 'Välkomstceremoni',
-        description: 'Projektledarna hälsar alla varmt välkommna.',
+        time: '17:30',
+        title: 'Domare',
+        description: 'Sam & David',
         italic: true,
-        speakers: [
-          { name: '(W)ebb24', title: 'CEO, Hjälpis' },
-          { name: '(W)ebb25', title: "CTO, Hjälpis" },
-        ],
       },
     ],
   },
   {
-    name: 'Avspark',
-    startTime: '18:55',
+    name: 'Spel',
+    startTime: '17:45',
     events: [
       {
-        time: '18:55',
-        title: 'Skotten i Mikrorummet',
-        description: 'Forskåpongen går av stapeln för 76:e gången.',
-        bold: true,
-      },
-      {
-        time: '19:00-21:30',
-        title: 'Spelchemat',
-        description:
-          'Skriv in din 6-teckens kod för att se era matcher.',
+        time: '17:45-18:30',
+        title: 'Gruppspel',
+        description: 'Skriv in din 6-teckens kod för att se era matcher.',
         bold: true,
         type: 'login' as const,
-        speakers: [{ name: 'Aria Assadi', title: 'Sportkommentator' }],
       },
-    ],
-  },
-  {
-    name: 'Utgång',
-    startTime: '21:40',
-    events: [
       {
-        time: '21:45-22:00',
-        title: 'Prisutdelning',
+        time: '18:30-19:30',
+        title: 'Slutspel',
         description: '',
         bold: true,
       },
       {
-        time: '22:30',
-        title: 'Utvisning',
-        description: 'Förbud att stanna kvar. Vi drar till gähda istället.',
-        italic: true,
+        time: '19:30-19:45',
+        title: 'Semi-Final',
+        description: '',
+        bold: true,
+      },
+      {
+        time: '19:45-20:00',
+        title: 'Final',
+        description: 'Stanna kvar och heja, samt se prisutdelningen!',
+        bold: true,
+      },
+    ],
+  },
+  {
+    name: 'Klubb',
+    startTime: '20:00',
+    events: [
+      {
+        time: '20:00-02:00',
+        title: 'Klubb',
+        description: 'Nu kommer alla andra in på klubben som vanligt!',
       },
     ],
   },
@@ -168,126 +145,145 @@ export const SHOWCASE_CONFIG = {
 } as const;
 
 // Venue Map Configuration
+// Cinematic 19-waypoint "walking" flyover that traces the route from Studentvägen
+// (south-west of central Uppsala) east past Carolina Rediviva, then north along
+// the east side of the Snerikes block, curving around to the NW corner with a
+// continuous left turn and settling on an overlook of Bryggan Sommarklubb facing
+// SW at the pin (the entrance side of the nation).
+// Bearing rotates from ~85° (E, along the eastbound leg) all the way to 235° (SW)
+// in a smooth ~210° CCW arc.
 export const VENUE_MAP_CONFIG = {
   scrollPages: 5,
   mapStyle: 'mapbox://styles/mapbox/dark-v11',
-  venue: { lng: 17.648043, lat: 59.837987 },
+  venue: { lng: 17.630059, lat: 59.858978 },
   cameraWaypoints: [
-    { progress: 0, center: [17.634663, 59.845666] as const, zoom: 12, pitch: 24, bearing: 17 },
+    { progress: 0, center: [17.6, 59.854] as const, zoom: 12.3, pitch: 22, bearing: 70 },
     {
       progress: 0.055555,
-      center: [17.633594, 59.849386] as const,
+      center: [17.606, 59.8542] as const,
       zoom: 12.8,
-      pitch: 30,
-      bearing: 45,
+      pitch: 28,
+      bearing: 74,
     },
     {
       progress: 0.111111,
-      center: [17.632487, 59.851849] as const,
-      zoom: 13.6,
-      pitch: 48,
-      bearing: 94,
-    },
-    {
-      progress: 0.166667,
-      center: [17.637732, 59.849341] as const,
-      zoom: 15.1,
-      pitch: 59,
-      bearing: 119,
-    },
-    {
-      progress: 0.222222,
-      center: [17.638425, 59.84686] as const,
-      zoom: 15.9,
-      pitch: 63,
-      bearing: 152,
-    },
-    {
-      progress: 0.277778,
-      center: [17.637819, 59.844697] as const,
-      zoom: 16.9,
-      pitch: 76,
-      bearing: 170,
-    },
-    {
-      progress: 0.333333,
-      center: [17.638519, 59.842928] as const,
-      zoom: 17.4,
-      pitch: 80,
-      bearing: 171,
-    },
-    {
-      progress: 0.388889,
-      center: [17.639496, 59.840328] as const,
-      zoom: 17.7,
-      pitch: 80,
-      bearing: 171,
-    },
-    {
-      progress: 0.444444,
-      center: [17.640123, 59.838603] as const,
-      zoom: 17.7,
-      pitch: 80,
-      bearing: 171,
-    },
-    { progress: 0.5, center: [17.644568, 59.839801] as const, zoom: 17.7, pitch: 83, bearing: 77 },
-    {
-      progress: 0.555555,
-      center: [17.647874, 59.840329] as const,
-      zoom: 17.7,
-      pitch: 83,
+      center: [17.611, 59.8544] as const,
+      zoom: 13.3,
+      pitch: 34,
       bearing: 77,
     },
     {
+      progress: 0.166667,
+      center: [17.6134, 59.8546] as const,
+      zoom: 13.9,
+      pitch: 40,
+      bearing: 79,
+    },
+    {
+      progress: 0.222222,
+      center: [17.617, 59.8548] as const,
+      zoom: 14.4,
+      pitch: 46,
+      bearing: 81,
+    },
+    {
+      progress: 0.277778,
+      center: [17.621, 59.855] as const,
+      zoom: 14.8,
+      pitch: 52,
+      bearing: 83,
+    },
+    {
+      progress: 0.333333,
+      center: [17.625, 59.8552] as const,
+      zoom: 15.2,
+      pitch: 57,
+      bearing: 84,
+    },
+    {
+      progress: 0.388889,
+      center: [17.629, 59.8553] as const,
+      zoom: 15.5,
+      pitch: 61,
+      bearing: 82,
+    },
+    {
+      progress: 0.444444,
+      center: [17.6311, 59.8555] as const,
+      zoom: 15.8,
+      pitch: 64,
+      bearing: 72,
+    },
+    {
+      progress: 0.5,
+      center: [17.6316, 59.8563] as const,
+      zoom: 16.1,
+      pitch: 66,
+      bearing: 55,
+    },
+    {
+      progress: 0.555555,
+      center: [17.6322, 59.8572] as const,
+      zoom: 16.4,
+      pitch: 68,
+      bearing: 30,
+    },
+    {
       progress: 0.611111,
-      center: [17.648445, 59.839723] as const,
-      zoom: 17.7,
-      pitch: 82,
-      bearing: 133,
+      center: [17.6322, 59.858] as const,
+      zoom: 16.7,
+      pitch: 69,
+      bearing: 10,
     },
     {
       progress: 0.666667,
-      center: [17.648402, 59.83919] as const,
-      zoom: 18,
-      pitch: 84,
-      bearing: 166,
+      center: [17.631187, 59.858722] as const,
+      zoom: 17.0,
+      pitch: 70,
+      bearing: 350,
     },
     {
       progress: 0.722222,
-      center: [17.648867, 59.83844] as const,
-      zoom: 18,
-      pitch: 85,
-      bearing: 163,
+      center: [17.631112, 59.858865] as const,
+      zoom: 17.3,
+      pitch: 70,
+      bearing: 325,
     },
     {
       progress: 0.777778,
-      center: [17.648706, 59.837716] as const,
-      zoom: 18,
-      pitch: 84,
-      bearing: 179,
+      center: [17.631037, 59.859008] as const,
+      zoom: 17.5,
+      pitch: 68,
+      bearing: 300,
     },
     {
       progress: 0.833333,
-      center: [17.648527, 59.837459] as const,
-      zoom: 18.4,
-      pitch: 84,
-      bearing: -162,
+      center: [17.630823, 59.85908] as const,
+      zoom: 17.7,
+      pitch: 64,
+      bearing: 275,
     },
     {
       progress: 0.888889,
-      center: [17.647161, 59.837425] as const,
-      zoom: 18.1,
-      pitch: 84,
-      bearing: -128,
+      center: [17.630609, 59.859151] as const,
+      zoom: 17.7,
+      pitch: 66,
+      bearing: 250,
     },
     {
       progress: 0.944444,
-      center: [17.646647, 59.837886] as const,
-      zoom: 18.1,
-      pitch: 83,
-      bearing: -98,
+      center: [17.629900, 59.858920] as const,
+      zoom: 17.7,
+      pitch: 64,
+      bearing: 240,
     },
-    { progress: 1.0, center: [17.647362, 59.837941] as const, zoom: 19, pitch: 83, bearing: -98 },
+    {
+      progress: 1.0,
+      center: [17.629764, 59.858875] as const,
+      zoom: 17.7,
+      pitch: 62,
+      bearing: 235,
+    },
   ],
   annotations: [
     {
@@ -297,14 +293,14 @@ export const VENUE_MAP_CONFIG = {
       position: ['15%', '50%'] as const,
     },
     {
-      text: 'Ångström',
-      subtext: 'Mikrorummet',
+      text: 'Bryggan',
+      subtext: 'Sommarklubb',
       scrollRange: [0.4, 0.75] as const,
       position: ['20%', '30%'] as const,
     },
     {
       text: 'Vi ses här!',
-      subtext: '31 Mars 2026' + '\n kl 18:00',
+      subtext: '6 Juni 2026' + '\n kl 17:00',
       scrollRange: [0.75, 1.0] as const,
       position: ['25%', '70%'] as const,
     },
@@ -312,9 +308,15 @@ export const VENUE_MAP_CONFIG = {
 } as const;
 
 // Sponsors
+// TODO: add logo files for Monster and Zura under public/sponsors/ and wire up `logo` paths.
 export const SPONSORS: readonly { name: string; logo?: string; text?: string; href?: string }[] = [
-  { name: 'CTF', logo: '/sponsors/logotyp_CTF_transparent_inverterad.PNG', href: 'https://www.instagram.com/tentafestivalen/' },
-  { name: 'Impact Solution', logo: '/sponsors/logo-vit-text-trans.png.webp', href: 'https://impactsolution.se' },
+  {
+    name: 'TentaFestivalen',
+    logo: '/sponsors/logotyp_transparent_vit_tjock.png',
+    href: 'https://www.instagram.com/tentafestivalen/',
+  },
+  { name: 'Monster', logo: '/sponsors/monster.png', href: 'https://www.instagram.com/monsterenergy/' },
+  { name: 'Zura', logo: '/sponsors/zura.png', href: 'https://www.instagram.com/zurasverige/' },
 ];
 
 // Navbar Responsive Offsets (rem)
@@ -334,22 +336,3 @@ export const EXPLODED_VIEW_TITLE = {
 
 // Background
 export const FRAMER_BACKGROUND_URL = 'https://incomplete-listening-378233.framer.app' as const;
-
-// Hall of Fame Avatars
-export const HALL_OF_FAME_AVATARS = [
-  {
-    src: '/avatar-hall.webp',
-    fallback: 'HÅ',
-    tooltip: 'Håll',
-  },
-  {
-    src: '/avatar-forskarl.webp',
-    fallback: 'FK',
-    tooltip: 'Forskarl',
-  },
-  {
-    src: '/avatar-fest.webp',
-    fallback: 'FE',
-    tooltip: 'Fest',
-  },
-] as const;

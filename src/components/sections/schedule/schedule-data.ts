@@ -2,32 +2,46 @@ import { SCHEDULE_PHASES } from '@/lib/constants';
 import type { EnrichedEvent } from './types';
 
 // ── Time helpers ──────────────────────────────────────────────────
+// Event timeline runs 17:00 → 02:00 (next day). Times after midnight (e.g. "01:30")
+// are detected as < START_HOUR and shifted by 24h so they sort after the late-night klubb.
+const START_HOUR = 17;
+
 export function parseTimeToMinutes(timeStr: string): number {
   const match = timeStr.match(/^(\d{1,2}):(\d{2})/);
   if (!match) return 0;
-  return (parseInt(match[1]) - 18) * 60 + parseInt(match[2]);
+  let hour = parseInt(match[1]);
+  if (hour < START_HOUR) hour += 24;
+  return (hour - START_HOUR) * 60 + parseInt(match[2]);
 }
 
 export function formatMinutesToClock(minutes: number): string {
-  const h = 18 + Math.floor(minutes / 60);
+  const h = (START_HOUR + Math.floor(minutes / 60)) % 24;
   const m = minutes % 60;
   return `${h}:${String(m).padStart(2, '0')}`;
 }
 
 // ── Enriched event data ──────────────────────────────────────────
 export const EVENTS: EnrichedEvent[] = SCHEDULE_PHASES.flatMap((phase) =>
-  phase.events.map((ev) => ({
-    time: ev.time,
-    title: ev.title,
-    description: ev.description,
-    italic: 'italic' in ev ? ev.italic : undefined,
-    bold: 'bold' in ev ? ev.bold : undefined,
-    speakers: 'speakers' in ev ? ev.speakers : undefined,
-    type: 'type' in ev ? (ev.type as 'event' | 'login') : undefined,
-    phase: phase.name,
-    phaseStartMinute: parseTimeToMinutes(phase.startTime),
-    startMinute: parseTimeToMinutes(ev.time),
-  })),
+  phase.events.map((ev) => {
+    const e = ev as typeof ev & {
+      italic?: boolean;
+      bold?: boolean;
+      speakers?: readonly { readonly name: string; readonly title: string }[];
+      type?: 'event' | 'login';
+    };
+    return {
+      time: e.time,
+      title: e.title,
+      description: e.description,
+      italic: e.italic,
+      bold: e.bold,
+      speakers: e.speakers,
+      type: e.type,
+      phase: phase.name,
+      phaseStartMinute: parseTimeToMinutes(phase.startTime),
+      startMinute: parseTimeToMinutes(ev.time),
+    };
+  }),
 );
 
 // Phase list for the spine badges
@@ -36,7 +50,7 @@ export const PHASES = SCHEDULE_PHASES.map((p) => ({
   startMinute: parseTimeToMinutes(p.startTime),
 }));
 
-export const TOTAL_MINUTES = 270;
+export const TOTAL_MINUTES = 540;
 
 // ── Scroll constants ─────────────────────────────────────────────
 export const SCROLL_PAGES = 5;
