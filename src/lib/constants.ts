@@ -28,17 +28,6 @@ export const FOOTER_LINKS = [
   { label: 'Kontakt', href: '#contact' },
 ] as const;
 
-// About Section
-// TODO: Skriv om denna text för TentaFestivalen Beerpong.
-export const ABOUT_CONTENT = {
-  title: 'Årets Mest Hypade',
-  titleHighlight: 'Event',
-  description1:
-    '⚠️ TEXTEN HÄR BEHÖVER UPPDATERAS. Detta är en platshållare för TentaFestivalen Beerpong — skriv om de två styckena så de beskriver det nya eventet.',
-  description2:
-    '⚠️ Platshållartext — fyll i andra stycket med information om matcher, stämning och vad besökarna kan förvänta sig av kvällen på Bryggan Sommarklubb.',
-} as const;
-
 // Schedule Data
 export const SCHEDULE_PHASES = [
   {
@@ -325,8 +314,8 @@ export const SPONSORS: readonly { name: string; logo?: string; text?: string; hr
     logo: '/sponsors/logotyp_CTF_transparent_inverterad.PNG',
     href: 'https://www.instagram.com/tentafestivalen/',
   },
-  { name: 'Monster', logo: '/sponsors/monster.png' },
-  { name: 'Zura', text: 'Zura' },
+  { name: 'Monster', logo: '/sponsors/monster.png', href: 'https://www.instagram.com/monsterenergy/' },
+  { name: 'Zura', text: 'Zura', href: 'https://www.instagram.com/zurasverige/' },
 ];
 
 // Navbar Responsive Offsets (rem)

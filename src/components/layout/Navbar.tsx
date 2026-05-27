@@ -204,7 +204,7 @@ export default function Navbar() {
                   src="/TENTAFESTIVALEN vit.png"
                   alt="TentaFestivalen"
                   draggable={false}
-                  className="hidden sm:block h-3 lg:h-4 w-auto"
+                  className="hidden sm:block h-5 lg:h-6 w-auto"
                 />
               </a>
             </div>

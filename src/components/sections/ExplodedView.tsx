@@ -54,9 +54,9 @@ export default function ExplodedView({ id }: ExplodedViewProps) {
         >
           <Container>
             <h1 id="about-title" className="text-4xl md:text-6xl font-display text-foreground hdr-white-fill transition-colors duration-500">
-              Årets Mest
+              Terminens sista
               <br />
-              Hypade <span className="italic text-brand-500 hdr-text-fill pr-[0.15em]">Event</span>
+              <span className="italic text-brand-500 hdr-text-fill pr-[0.15em]">Beerpong</span>
             </h1>
           </Container>
         </motion.div>
