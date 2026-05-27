@@ -45,7 +45,7 @@ export default function About({ id }: AboutProps) {
         {/* Full-Width Image with Parallax */}
         <div ref={imgRef} className="w-full h-96 rounded-2xl overflow-hidden">
           <motion.img
-            src="/event-photo.webp"
+            src="/event.jpg"
             alt="TentaFestivalen Beerpong event"
             className="w-full h-[130%] object-cover"
             style={{ y: imgY }}
