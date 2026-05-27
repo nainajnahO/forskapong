@@ -50,7 +50,7 @@ export const PHASES = SCHEDULE_PHASES.map((p) => ({
   startMinute: parseTimeToMinutes(p.startTime),
 }));
 
-export const TOTAL_MINUTES = 540;
+export const TOTAL_MINUTES = 210;
 
 // ── Scroll constants ─────────────────────────────────────────────
 export const SCROLL_PAGES = 5;

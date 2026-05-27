@@ -37,10 +37,10 @@ export const SCHEDULE_PHASES = [
       {
         time: '17:00-17:30',
         title: 'Anmälan',
-        description: 'Kom och hämta ut er lags kod och enheter.',
+        description: 'Hämta eran lagkod och enheter.',
       },
       {
-        time: '17:30',
+        time: '17:30-',
         title: 'Domare',
         description: 'Sam & David',
         italic: true,
@@ -73,7 +73,7 @@ export const SCHEDULE_PHASES = [
       {
         time: '19:45-20:00',
         title: 'Final',
-        description: 'Stanna kvar och heja, samt se prisutdelningen!',
+        description: 'Prisutdelningen!!',
         bold: true,
       },
     ],
@@ -85,7 +85,7 @@ export const SCHEDULE_PHASES = [
       {
         time: '20:00-02:00',
         title: 'Klubb',
-        description: 'Nu kommer alla andra in på klubben som vanligt!',
+        description: '',
       },
     ],
   },
@@ -122,7 +122,7 @@ export const SHOWCASE_CONFIG = {
   annotations: [
     {
       text: 'Klara, färdiga, gå!',
-      subtext: '7 minuter per match.',
+      subtext: '10 minuter per match.',
       position: ['15%', '34%'] as const,
     },
     {
