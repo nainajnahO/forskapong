@@ -53,7 +53,7 @@ function NavbarEasterEgg({
         className="absolute inset-0 w-full h-full object-cover object-[center_34%]"
       />
       {/* Invisible CTA replica to match exact dimensions */}
-      <span className="invisible">{isLoggedIn ? 'Tillbaka' : <><span className="hidden lg:inline">Anmälan</span><span className="lg:hidden">Anmäl</span></>}</span>
+      <span className="invisible">{isLoggedIn ? 'Tillbaka' : 'Spela'}</span>
       <div className="w-10 h-10 -my-1 -mr-1 invisible flex-shrink-0" />
     </div>
   );
@@ -262,7 +262,7 @@ export default function Navbar() {
               {/* CTA Button - mobile: only when scrolled, desktop: always visible */}
               <button
                 ref={ctaRef}
-                onClick={isLoggedIn ? handleLogout : () => handleNavClick('#tickets')}
+                onClick={isLoggedIn ? handleLogout : () => navigate('/play')}
                 className="flex items-center justify-between gap-3 pl-6 pr-2 py-2 bg-white hdr-bg-white text-black font-semibold rounded-full hover:bg-zinc-100 absolute lg:relative right-0 lg:right-auto"
                 style={{
                   transform: isScrolled
@@ -281,10 +281,7 @@ export default function Navbar() {
                 {isLoggedIn ? (
                   <span>Tillbaka</span>
                 ) : (
-                  <>
-                    <span className="hidden lg:inline">Anmälan</span>
-                    <span className="lg:hidden">Anmäl</span>
-                  </>
+                  <span>Spela</span>
                 )}
                 <div className="w-10 h-10 -my-1 -mr-1 bg-brand-500 rounded-full flex items-center justify-center flex-shrink-0 hdr-dot-fill">
                   {isLoggedIn ? (

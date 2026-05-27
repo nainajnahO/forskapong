@@ -19,6 +19,7 @@ export default function AdminPassphraseGate({ onAuthenticated }: Props) {
       const { data } = await supabase.rpc('verify_admin_code', { code: value });
       if (data) {
         sessionStorage.setItem('adminAuth', 'true');
+        sessionStorage.setItem('adminCode', value);
         onAuthenticated();
       } else {
         setError(true);

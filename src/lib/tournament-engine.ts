@@ -44,9 +44,15 @@ export interface TeamStanding {
   name: string;
   wins: number;
   losses: number;
-  opponentWins: number;
-  totalCupsHit: number;
+  cupsFor: number;
+  cupsAgainst: number;
+  cupDiff: number;
   rank: number;
+}
+
+export interface CutoffTieWarning {
+  cutoff: number;
+  teamIds: string[];
 }
 
 /* ─── Helpers ─────────────────────────────────────────────────── */
@@ -266,13 +272,10 @@ export function calculateRankings(
   teams: TournamentTeam[],
   results: MatchResult[],
 ): TeamStanding[] {
-  const teamStats = new Map<
-    string,
-    { wins: number; losses: number; cupsHit: number; opponents: string[] }
-  >();
+  const teamStats = new Map<string, { wins: number; losses: number; cupsFor: number; cupsAgainst: number }>();
 
   for (const team of teams) {
-    teamStats.set(team.id, { wins: 0, losses: 0, cupsHit: 0, opponents: [] });
+    teamStats.set(team.id, { wins: 0, losses: 0, cupsFor: 0, cupsAgainst: 0 });
   }
 
   for (const result of results) {
@@ -283,44 +286,107 @@ export function calculateRankings(
     winner.wins += 1;
     loser.losses += 1;
 
-    winner.opponents.push(result.loserId);
-    loser.opponents.push(result.winnerId);
-
     const t1 = teamStats.get(result.team1Id);
     const t2 = teamStats.get(result.team2Id);
-    if (t1) t1.cupsHit += result.scoreTeam1;
-    if (t2) t2.cupsHit += result.scoreTeam2;
+    if (t1) {
+      t1.cupsFor += result.scoreTeam1;
+      t1.cupsAgainst += result.scoreTeam2;
+    }
+    if (t2) {
+      t2.cupsFor += result.scoreTeam2;
+      t2.cupsAgainst += result.scoreTeam1;
+    }
   }
 
-  // Calculate Buchholz (sum of opponents' wins)
   const standings: TeamStanding[] = teams.map((team) => {
     const stats = teamStats.get(team.id)!;
-    const opponentWins = stats.opponents.reduce((sum, oppId) => {
-      const oppStats = teamStats.get(oppId);
-      return sum + (oppStats?.wins ?? 0);
-    }, 0);
 
     return {
       id: team.id,
       name: team.name,
       wins: stats.wins,
       losses: stats.losses,
-      opponentWins,
-      totalCupsHit: stats.cupsHit,
+      cupsFor: stats.cupsFor,
+      cupsAgainst: stats.cupsAgainst,
+      cupDiff: stats.cupsFor - stats.cupsAgainst,
       rank: 0,
     };
   });
 
-  // Sort: 1) wins desc, 2) Buchholz desc, 3) total cups hit desc
+  // Sort baseline: 1) wins desc, 2) cup diff desc.
   standings.sort((a, b) => {
     if (b.wins !== a.wins) return b.wins - a.wins;
-    if (b.opponentWins !== a.opponentWins) return b.opponentWins - a.opponentWins;
-    return b.totalCupsHit - a.totalCupsHit;
+    if (b.cupDiff !== a.cupDiff) return b.cupDiff - a.cupDiff;
+    return a.name.localeCompare(b.name, 'sv');
   });
+
+  // Head-to-head tiebreak for exactly two teams on same wins + cup diff.
+  const directWinner = (teamAId: string, teamBId: string): string | null => {
+    const match = results.find(
+      (r) =>
+        (r.team1Id === teamAId && r.team2Id === teamBId) ||
+        (r.team1Id === teamBId && r.team2Id === teamAId),
+    );
+    return match?.winnerId ?? null;
+  };
+
+  for (let i = 0; i < standings.length; ) {
+    let j = i + 1;
+    while (
+      j < standings.length &&
+      standings[j].wins === standings[i].wins &&
+      standings[j].cupDiff === standings[i].cupDiff
+    ) {
+      j += 1;
+    }
+
+    const groupSize = j - i;
+    if (groupSize === 2) {
+      const a = standings[i];
+      const b = standings[i + 1];
+      const winner = directWinner(a.id, b.id);
+      if (winner === b.id) {
+        standings[i] = b;
+        standings[i + 1] = a;
+      }
+    }
+    i = j;
+  }
 
   standings.forEach((s, i) => {
     s.rank = i + 1;
   });
 
   return standings;
+}
+
+export function detectUnresolvedCutoffTie(
+  standings: TeamStanding[],
+  results: MatchResult[],
+  cutoff: number,
+): CutoffTieWarning | null {
+  if (cutoff <= 0 || standings.length < cutoff) return null;
+  const boundary = standings[cutoff - 1];
+  if (!boundary) return null;
+
+  const group = standings.filter((s) => s.wins === boundary.wins && s.cupDiff === boundary.cupDiff);
+  if (group.length <= 1) return null;
+
+  const minRank = Math.min(...group.map((s) => s.rank));
+  const maxRank = Math.max(...group.map((s) => s.rank));
+  const straddlesCutoff = minRank <= cutoff && maxRank > cutoff;
+  if (!straddlesCutoff) return null;
+
+  // If there are exactly 2 teams and they met, head-to-head resolves it.
+  if (group.length === 2) {
+    const [a, b] = group;
+    const met = results.some(
+      (r) =>
+        (r.team1Id === a.id && r.team2Id === b.id) ||
+        (r.team1Id === b.id && r.team2Id === a.id),
+    );
+    if (met) return null;
+  }
+
+  return { cutoff, teamIds: group.map((s) => s.id) };
 }

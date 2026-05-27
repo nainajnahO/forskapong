@@ -43,6 +43,7 @@ export interface Database {
         Row: {
           id: string;
           round: number;
+          wave: number;
           team1_id: string;
           team2_id: string;
           table_number: number | null;
@@ -59,6 +60,7 @@ export interface Database {
         Insert: {
           id?: string;
           round: number;
+          wave?: number;
           team1_id: string;
           team2_id: string;
           table_number?: number | null;
@@ -75,6 +77,7 @@ export interface Database {
         Update: {
           id?: string;
           round?: number;
+          wave?: number;
           team1_id?: string;
           team2_id?: string;
           table_number?: number | null;
@@ -126,23 +129,78 @@ export interface Database {
           },
         ];
       };
+      tiebreak_decisions: {
+        Row: {
+          id: string;
+          cutoff: number;
+          team1_id: string;
+          team2_id: string;
+          winner_team_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          cutoff: number;
+          team1_id: string;
+          team2_id: string;
+          winner_team_id: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          cutoff?: number;
+          team1_id?: string;
+          team2_id?: string;
+          winner_team_id?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'tiebreak_decisions_team1_id_fkey';
+            columns: ['team1_id'];
+            isOneToOne: false;
+            referencedRelation: 'teams';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'tiebreak_decisions_team2_id_fkey';
+            columns: ['team2_id'];
+            isOneToOne: false;
+            referencedRelation: 'teams';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'tiebreak_decisions_winner_team_id_fkey';
+            columns: ['winner_team_id'];
+            isOneToOne: false;
+            referencedRelation: 'teams';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       tournament: {
         Row: {
           id: number;
           current_round: number;
           total_rounds: number;
+          table_count: number;
           status: string;
         };
         Insert: {
           id?: number;
           current_round?: number;
           total_rounds?: number;
+          table_count?: number;
           status?: string;
         };
         Update: {
           id?: number;
           current_round?: number;
           total_rounds?: number;
+          table_count?: number;
           status?: string;
         };
         Relationships: [];
@@ -152,6 +210,10 @@ export interface Database {
       [_ in never]: never;
     };
     Functions: {
+      bulk_register_teams: {
+        Args: { team_names: string[]; admin_code: string };
+        Returns: { id: string; code: string; name: string }[];
+      };
       register_team: {
         Args: { team_name: string };
         Returns: { id: string; code: string; name: string }[];

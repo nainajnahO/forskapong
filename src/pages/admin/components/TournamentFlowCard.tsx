@@ -21,8 +21,11 @@ interface Props {
   generating: boolean;
   roundTime: string;
   roundCount: number;
+  tableCount: number;
+  schedulePreview: { matchCount: number; waveCount: number } | null;
   onRoundTimeChange: (v: string) => void;
   onRoundCountChange: (v: number) => void;
+  onTableCountChange: (v: number) => void;
   onStartTournament: () => void;
   onGeneratePairings: () => void;
   onAdvanceRound: () => void;
@@ -115,8 +118,11 @@ export default function TournamentFlowCard(props: Props) {
     generating,
     roundTime,
     roundCount,
+    tableCount,
+    schedulePreview,
     onRoundTimeChange,
     onRoundCountChange,
+    onTableCountChange,
     onStartTournament,
     onGeneratePairings,
     onAdvanceRound,
@@ -201,6 +207,20 @@ export default function TournamentFlowCard(props: Props) {
               </div>
             )}
 
+            {config.showTableCountInput && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-zinc-500">Bord:</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={32}
+                  value={tableCount}
+                  onChange={(e) => onTableCountChange(Math.max(1, Math.min(32, Number(e.target.value))))}
+                  className="w-14 h-9 px-2 rounded-xl text-sm bg-white/[0.04] border border-white/[0.08] text-white text-center outline-none focus:border-brand-500"
+                />
+              </div>
+            )}
+
             {config.showTimeInput && (
               <input
                 type="time"
@@ -239,6 +259,12 @@ export default function TournamentFlowCard(props: Props) {
               </button>
             )}
           </div>
+
+          {flowState === 'swiss_generate' && schedulePreview && (
+            <p className="text-xs text-zinc-500">
+              {schedulePreview.matchCount} matcher · {tableCount} bord · {schedulePreview.waveCount} spelpass
+            </p>
+          )}
         </div>
       </div>
     </motion.div>
@@ -269,6 +295,7 @@ interface CardConfig {
   progressBarClass: string;
   showTimeInput: boolean;
   showRoundCountInput: boolean;
+  showTableCountInput: boolean;
   action: {
     label: string;
     handler: ActionHandler;
@@ -323,6 +350,7 @@ function getCardConfig(
     progressBarClass: 'bg-brand-500',
     showTimeInput: false,
     showRoundCountInput: false,
+    showTableCountInput: false,
     action: null,
   };
 
@@ -349,8 +377,9 @@ function getCardConfig(
         ...BRAND_THEME,
         Icon: Play,
         title: 'Steg 2: Starta turneringen',
-        subtitle: 'Alla lag är redo. Välj antal swiss-rundor och starta turneringen.',
+        subtitle: 'Alla lag är redo. Välj swiss-rundor och antal bord innan start.',
         showRoundCountInput: true,
+        showTableCountInput: true,
         action: { label: 'Starta turnering', handler: 'start', buttonClass: BRAND_PRIMARY_BTN },
       };
 
@@ -396,7 +425,7 @@ function getCardConfig(
         ...AMBER_THEME,
         Icon: Swords,
         title: 'Swiss klart!',
-        subtitle: 'Alla 7 swiss-rundor är klara. Gå vidare till slutspelet.',
+        subtitle: `Alla ${totalRounds} swiss-rundor är klara. Gå vidare till slutspelet.`,
         action: { label: 'Gå till slutspel', handler: 'start_knockout', buttonClass: AMBER_BTN },
       };
 

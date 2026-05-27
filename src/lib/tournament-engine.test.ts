@@ -4,6 +4,7 @@ import {
   generateKnockoutBracket,
   advanceKnockoutRound,
   calculateRankings,
+  detectUnresolvedCutoffTie,
   type TournamentTeam,
   type MatchResult,
 } from './tournament-engine';
@@ -360,74 +361,59 @@ describe('calculateRankings', () => {
     expect(standings[2].id).toBe('c'); // 0 wins
   });
 
-  it('uses Buchholz (opponent wins) as tiebreaker', () => {
-    // A beats C (C ends 0W), B beats D, D beats C (D ends 1W)
-    // A(1W) Buchholz=0 (opponent C has 0W), B(1W) Buchholz=1 (opponent D has 1W)
-    // B should rank above A
-    const teamsClean: TournamentTeam[] = [
-      { id: 'a', name: 'A', wins: 0, losses: 0 },
-      { id: 'b', name: 'B', wins: 0, losses: 0 },
-      { id: 'c', name: 'C', wins: 0, losses: 0 },
-      { id: 'd', name: 'D', wins: 0, losses: 0 },
-    ];
-    // Round 1: A beats D, B beats C
-    // Round 2: C beats D, A beats... no one (too few teams for clean setup)
-    // Simpler: just 2 matches
-    // A beats C (C ends with 0 wins), B beats D (D ends with 1 win from somewhere)
-    // Nah, let's do:
-    // Match 1: A beats C → A: 1W, C: 0W
-    // Match 2: B beats D → B: 1W, D: 0W
-    // Match 3: D beats C → D: 1W, C: 0W (still)
-    // Now A(1W) opponents=[C(0W)] → Buchholz=0
-    // B(1W) opponents=[D(1W)] → Buchholz=1
-    // B should rank above A
-    const resultsClean: MatchResult[] = [
-      simulateResult('a', 'c', true),  // A beats C
-      simulateResult('b', 'd', true),  // B beats D
-      simulateResult('d', 'c', true),  // D beats C
-    ];
-
-    const standings = calculateRankings(teamsClean, resultsClean);
-
-    // B and A both have 1 win, but B's opponent (D) has 1 win vs A's opponent (C) has 0
-    const aStanding = standings.find((s) => s.id === 'a')!;
-    const bStanding = standings.find((s) => s.id === 'b')!;
-    expect(bStanding.rank).toBeLessThan(aStanding.rank);
-    expect(bStanding.opponentWins).toBeGreaterThan(aStanding.opponentWins);
-  });
-
-  it('uses total cups hit as third tiebreaker', () => {
+  it('uses cup difference as second tiebreaker', () => {
     const teams: TournamentTeam[] = [
       { id: 'a', name: 'A', wins: 0, losses: 0 },
       { id: 'b', name: 'B', wins: 0, losses: 0 },
       { id: 'c', name: 'C', wins: 0, losses: 0 },
     ];
 
-    // A beats C, B beats C — both have 1 win, same Buchholz (C has 0 wins)
-    // But A scored more cups
+    // A and B both finish with 1 win, but A has better cup diff.
     const results: MatchResult[] = [
       {
         team1Id: 'a',
         team2Id: 'c',
         winnerId: 'a',
         loserId: 'c',
-        scoreTeam1: 10,
-        scoreTeam2: 3,
+        scoreTeam1: 6,
+        scoreTeam2: 2, // A diff +4
       },
       {
         team1Id: 'b',
         team2Id: 'c',
         winnerId: 'b',
         loserId: 'c',
-        scoreTeam1: 7,
-        scoreTeam2: 3,
+        scoreTeam1: 6,
+        scoreTeam2: 5, // B diff +1
       },
     ];
 
     const standings = calculateRankings(teams, results);
     const aRank = standings.find((s) => s.id === 'a')!.rank;
     const bRank = standings.find((s) => s.id === 'b')!.rank;
-    expect(aRank).toBeLessThan(bRank); // A ranked higher (more cups)
+    expect(aRank).toBeLessThan(bRank);
+  });
+
+  it('uses head-to-head when wins and cup diff are equal for two teams', () => {
+    const teams: TournamentTeam[] = [
+      { id: 'a', name: 'A', wins: 0, losses: 0 },
+      { id: 'b', name: 'B', wins: 0, losses: 0 },
+      { id: 'c', name: 'C', wins: 0, losses: 0 },
+      { id: 'd', name: 'D', wins: 0, losses: 0 },
+    ];
+
+    const results: MatchResult[] = [
+      // A beats B directly (head-to-head)
+      { team1Id: 'a', team2Id: 'b', winnerId: 'a', loserId: 'b', scoreTeam1: 6, scoreTeam2: 5 },
+      // Both then lose with same margin -> same wins and cup diff.
+      { team1Id: 'a', team2Id: 'c', winnerId: 'c', loserId: 'a', scoreTeam1: 4, scoreTeam2: 6 },
+      { team1Id: 'b', team2Id: 'd', winnerId: 'd', loserId: 'b', scoreTeam1: 4, scoreTeam2: 6 },
+    ];
+
+    const standings = calculateRankings(teams, results);
+    const aRank = standings.find((s) => s.id === 'a')!.rank;
+    const bRank = standings.find((s) => s.id === 'b')!.rank;
+    expect(aRank).toBeLessThan(bRank);
   });
 
   it('assigns correct rank numbers', () => {
@@ -441,6 +427,24 @@ describe('calculateRankings', () => {
 
     const standings = calculateRankings(teams, results);
     expect(standings.map((s) => s.rank)).toEqual([1, 2, 3, 4]);
+  });
+
+  it('flags unresolved tie at playoff cutoff when teams never met', () => {
+    const teams: TournamentTeam[] = [
+      { id: 'a', name: 'A', wins: 0, losses: 0 },
+      { id: 'b', name: 'B', wins: 0, losses: 0 },
+      { id: 'c', name: 'C', wins: 0, losses: 0 },
+      { id: 'd', name: 'D', wins: 0, losses: 0 },
+    ];
+    const results: MatchResult[] = [
+      { team1Id: 'a', team2Id: 'c', winnerId: 'a', loserId: 'c', scoreTeam1: 6, scoreTeam2: 4 },
+      { team1Id: 'b', team2Id: 'd', winnerId: 'b', loserId: 'd', scoreTeam1: 6, scoreTeam2: 4 },
+    ];
+    const standings = calculateRankings(teams, results);
+    const warning = detectUnresolvedCutoffTie(standings, results, 1);
+
+    expect(warning).not.toBeNull();
+    expect(new Set(warning?.teamIds)).toEqual(new Set(['a', 'b']));
   });
 });
 

@@ -6,6 +6,7 @@ import type { Team, Match } from '@/lib/database.types';
 import { calculateRankings, type MatchResult } from '@/lib/tournament-engine';
 import { dbMatchToResult, teamsToEngine } from '../lib/match-utils';
 import TeamFormModal from '../components/TeamFormModal';
+import TeamBulkImportModal from '../components/TeamBulkImportModal';
 import DeleteConfirmModal from '../components/DeleteConfirmModal';
 import TypedConfirmModal from '../components/TypedConfirmModal';
 
@@ -16,6 +17,7 @@ export default function TeamsTab() {
   const [loading, setLoading] = useState(true);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [deletingTeam, setDeletingTeam] = useState<Team | null>(null);
   const [showBulkDelete, setShowBulkDelete] = useState(false);
 
@@ -137,6 +139,15 @@ export default function TeamsTab() {
         >
           <span className="hdr-white-fill">+ Skapa lag</span>
         </button>
+        <button
+          onClick={() => setShowImport(true)}
+          className={cn(
+            'h-10 px-4 rounded-xl text-sm font-medium transition-all whitespace-nowrap',
+            'border border-white/[0.08] text-zinc-200 hover:bg-white/[0.06]',
+          )}
+        >
+          Importera lag
+        </button>
       </div>
 
       {/* Check-in actions */}
@@ -194,8 +205,8 @@ export default function TeamsTab() {
             <>
               <span className="text-center">V</span>
               <span className="text-center">F</span>
-              <span className="text-center" title="Buchholz">BH</span>
-              <span className="text-center">Cups</span>
+              <span className="text-center" title="Cup difference">Diff</span>
+              <span className="text-center">Cup +/-</span>
             </>
           ) : (
             <span className="text-center">V/F</span>
@@ -261,8 +272,12 @@ export default function TeamsTab() {
                   <>
                     <span className="text-emerald-400 text-center font-mono text-xs">{s?.wins ?? 0}</span>
                     <span className="text-red-400 text-center font-mono text-xs">{s?.losses ?? 0}</span>
-                    <span className="text-zinc-400 text-center font-mono text-xs">{s?.opponentWins ?? 0}</span>
-                    <span className="text-zinc-400 text-center font-mono text-xs">{s?.totalCupsHit ?? 0}</span>
+                    <span className="text-zinc-400 text-center font-mono text-xs">
+                      {s ? (s.cupDiff > 0 ? `+${s.cupDiff}` : s.cupDiff) : 0}
+                    </span>
+                    <span className="text-zinc-400 text-center font-mono text-xs">
+                      {s ? `${s.cupsFor}-${s.cupsAgainst}` : '0-0'}
+                    </span>
                   </>
                 ) : (
                   <span className="text-center text-xs">
@@ -321,6 +336,16 @@ export default function TeamsTab() {
           onSaved={() => {
             setShowCreate(false);
             setEditingTeam(null);
+            loadData();
+          }}
+        />
+      )}
+
+      {showImport && (
+        <TeamBulkImportModal
+          existingTeams={teams}
+          onClose={() => setShowImport(false)}
+          onImported={() => {
             loadData();
           }}
         />

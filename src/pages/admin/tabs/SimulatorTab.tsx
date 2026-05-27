@@ -513,6 +513,7 @@ function simResultToMatch(r: MatchResult, round: number, idx: number): Match {
   return {
     id: `sim-${round}-${idx}`,
     round,
+    wave: 1,
     team1_id: r.team1Id,
     team2_id: r.team2Id,
     winner_id: r.winnerId,
@@ -980,13 +981,13 @@ function StatsPanel({ state }: { state: SimState }) {
                 </div>
               </div>
 
-              {/* Buchholz correlation */}
+              {/* Wins vs cup diff correlation */}
               <div className="flex items-center gap-2 text-xs">
-                <span className={stats.buchholzCorrelation > 0.7 ? 'text-emerald-400' : stats.buchholzCorrelation > 0.4 ? 'text-amber-400' : 'text-red-400'}>
-                  {stats.buchholzCorrelation > 0.7 ? '✓' : '⚠'}
+                <span className={stats.cupDiffCorrelation > 0.7 ? 'text-emerald-400' : stats.cupDiffCorrelation > 0.4 ? 'text-amber-400' : 'text-red-400'}>
+                  {stats.cupDiffCorrelation > 0.7 ? '✓' : '⚠'}
                 </span>
-                <span className="text-zinc-400">Buchholz-korrelation:</span>
-                <span className="text-white">{stats.buchholzCorrelation}</span>
+                <span className="text-zinc-400">Vinst/Cup diff-korrelation:</span>
+                <span className="text-white">{stats.cupDiffCorrelation}</span>
               </div>
 
               {/* Score diff per round */}

@@ -8,6 +8,7 @@ import {
   generateKnockoutBracket,
   advanceKnockoutRound,
   calculateRankings,
+  detectUnresolvedCutoffTie,
   type MatchResult,
   type TeamStanding,
   type KnockoutBracket as KnockoutBracketType,
@@ -20,7 +21,9 @@ import TournamentMapView from '../components/TournamentMapView';
 import TournamentFlowCard from '../components/TournamentFlowCard';
 import DangerZone from '../components/DangerZone';
 import { dbMatchToResult, teamsToEngine } from '../lib/match-utils';
+import { decideKnockoutHomeTeam, orientSwissPairings } from '@/lib/home-away';
 import type { AdminTab } from '@/contexts/AdminTabContextDef';
+import { assignTablesAndWaves, getWaveCount, normalizeTableCount } from '@/lib/table-scheduling';
 
 /* ─── Component ───────────────────────────────────────────────── */
 
@@ -39,12 +42,26 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   const [view, setView] = useState<'list' | 'map'>('list');
   const [roundTime, setRoundTime] = useState('');
   const [roundCount, setRoundCount] = useState(7);
+  const [tableCount, setTableCount] = useState(16);
+  const [manualRpsWinnerByKey, setManualRpsWinnerByKey] = useState<Record<string, string>>({});
+  const [savingRps, setSavingRps] = useState(false);
+
+  const getTiebreakKey = (cutoff: number, teamAId: string, teamBId: string): string => {
+    const [t1, t2] = [teamAId, teamBId].sort();
+    return `${cutoff}:${t1}-${t2}`;
+  };
 
   const loadData = useCallback(async () => {
-    const [tRes, teamsRes, matchesRes] = await Promise.all([
+    const [tRes, teamsRes, matchesRes, tiebreakRes] = await Promise.all([
       supabase.from('tournament').select('*').maybeSingle(),
       supabase.from('teams').select('*'),
-      supabase.from('matches').select('*').order('round', { ascending: true }),
+      supabase
+        .from('matches')
+        .select('*')
+        .order('round', { ascending: true })
+        .order('wave', { ascending: true })
+        .order('table_number', { ascending: true }),
+      supabase.from('tiebreak_decisions').select('*'),
     ]);
 
     const t = tRes.data;
@@ -53,8 +70,17 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
 
     setTournament(t);
     if (t?.total_rounds) setRoundCount(t.total_rounds);
+    if (t?.table_count) setTableCount(t.table_count);
     setTeams(allTeams);
     setMatches(allMatches);
+    const decisionMap: Record<string, string> = {};
+    if (tiebreakRes.data) {
+      for (const d of tiebreakRes.data) {
+        const key = getTiebreakKey(d.cutoff, d.team1_id, d.team2_id);
+        decisionMap[key] = d.winner_team_id;
+      }
+    }
+    setManualRpsWinnerByKey(decisionMap);
 
     // Calculate standings
     const results = allMatches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
@@ -82,6 +108,56 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   const completedResults = matches
     .map(dbMatchToResult)
     .filter(Boolean) as MatchResult[];
+  const unresolvedCutoffTie = detectUnresolvedCutoffTie(standings, completedResults, 8);
+  const unresolvedPair =
+    unresolvedCutoffTie && unresolvedCutoffTie.teamIds.length === 2 ? unresolvedCutoffTie.teamIds : null;
+  const unresolvedKey = unresolvedPair ? getTiebreakKey(8, unresolvedPair[0], unresolvedPair[1]) : null;
+  const selectedRpsWinner = unresolvedKey ? manualRpsWinnerByKey[unresolvedKey] ?? null : null;
+
+  async function handleSelectRpsWinner(teamId: string): Promise<void> {
+    if (!unresolvedPair) return;
+    const [team1Id, team2Id] = [...unresolvedPair].sort();
+    setSavingRps(true);
+    try {
+      const { error } = await supabase.from('tiebreak_decisions').upsert(
+        {
+          cutoff: 8,
+          team1_id: team1Id,
+          team2_id: team2Id,
+          winner_team_id: teamId,
+        },
+        { onConflict: 'cutoff,team1_id,team2_id' },
+      );
+      if (error) throw error;
+      setManualRpsWinnerByKey((prev) => ({
+        ...prev,
+        [getTiebreakKey(8, team1Id, team2Id)]: teamId,
+      }));
+    } finally {
+      setSavingRps(false);
+    }
+  }
+
+  function getPlayoffQualifiedStandings(): TeamStanding[] {
+    if (!unresolvedPair || !selectedRpsWinner) return standings;
+    const [a, b] = unresolvedPair;
+    const loser = selectedRpsWinner === a ? b : a;
+    const ia = standings.findIndex((s) => s.id === a);
+    const ib = standings.findIndex((s) => s.id === b);
+    if (ia === -1 || ib === -1) return standings;
+    if (ia < ib && selectedRpsWinner === a) return standings;
+    if (ib < ia && selectedRpsWinner === b) return standings;
+
+    const copy = standings.map((s) => ({ ...s }));
+    const winnerStanding = copy.find((s) => s.id === selectedRpsWinner)!;
+    const loserStanding = copy.find((s) => s.id === loser)!;
+    copy[Math.min(ia, ib)] = winnerStanding;
+    copy[Math.max(ia, ib)] = loserStanding;
+    copy.forEach((s, i) => {
+      s.rank = i + 1;
+    });
+    return copy;
+  }
 
   // Group matches by round
   const roundsMap = new Map<number, Match[]>();
@@ -102,12 +178,13 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
         await supabase.from('tournament').insert({
           current_round: 1,
           total_rounds: roundCount,
+          table_count: tableCount,
           status: 'swiss',
         });
       } else {
         await supabase
           .from('tournament')
-          .update({ current_round: 1, total_rounds: roundCount, status: 'swiss' })
+          .update({ current_round: 1, total_rounds: roundCount, table_count: tableCount, status: 'swiss' })
           .eq('id', tournament.id);
       }
       await loadData();
@@ -119,6 +196,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   async function handleGeneratePairings() {
     setGenerating(true);
     try {
+      const activeTableCount = normalizeTableCount(tournament?.table_count ?? tableCount);
       const engineTeams = teamsToEngine(teams, completedResults);
       const pairings = generateSwissPairings(
         engineTeams,
@@ -126,12 +204,17 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
         currentRound,
       );
 
-      // Insert matches
-      const inserts = pairings.pairings.map((p, i) => ({
+      const swissHistory = matches.filter((m) => m.round <= (tournament?.total_rounds ?? roundCount));
+      const orientedPairings = orientSwissPairings(pairings.pairings, swissHistory);
+      const scheduledPairings = assignTablesAndWaves(orientedPairings, activeTableCount);
+
+      // team1_id = home team, team2_id = away team
+      const inserts = scheduledPairings.map((p) => ({
         round: currentRound,
-        team1_id: p.team1Id,
-        team2_id: p.team2Id,
-        table_number: i + 1,
+        wave: p.wave,
+        team1_id: p.homeTeamId,
+        team2_id: p.awayTeamId,
+        table_number: p.tableNumber,
         scheduled_time: roundTime || null,
       }));
 
@@ -175,22 +258,40 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   async function handleGenerateKnockout() {
     setGenerating(true);
     try {
-      const top8 = standings.slice(0, 8).map((s) => ({
+      const activeTableCount = normalizeTableCount(tournament?.table_count ?? tableCount);
+      if (unresolvedPair && !selectedRpsWinner) {
+        return;
+      }
+
+      const playoffStandings = getPlayoffQualifiedStandings();
+      const top8 = playoffStandings.slice(0, 8).map((s) => ({
         id: s.id,
         name: s.name,
         wins: s.wins,
         losses: s.losses,
       }));
+      const standingsRankMap = new Map(standings.map((s) => [s.id, s.rank]));
       const bracket = generateKnockoutBracket(top8);
 
-      // Insert QF matches as round 8
-      const qfInserts = bracket.quarterfinals.map((qf, i) => ({
-        round: 8,
-        team1_id: qf.team1Id!,
-        team2_id: qf.team2Id!,
-        table_number: i + 1,
-        scheduled_time: roundTime || null,
-      }));
+      // Insert QF matches as round 8 (first knockout round falls back to standings)
+      const qfScheduled = assignTablesAndWaves(bracket.quarterfinals, activeTableCount);
+      const qfInserts = qfScheduled.map((qf) => {
+        const orientation = decideKnockoutHomeTeam(
+          qf.team1Id!,
+          qf.team2Id!,
+          8,
+          matches,
+          standingsRankMap,
+        );
+        return {
+          round: 8,
+          wave: qf.wave,
+          team1_id: orientation.homeTeamId,
+          team2_id: orientation.awayTeamId,
+          table_number: qf.tableNumber,
+          scheduled_time: roundTime || null,
+        };
+      });
       const { error } = await supabase.from('matches').insert(qfInserts);
       if (error) throw error;
       setRoundTime('');
@@ -204,17 +305,31 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     if (!tournament) return;
     setGenerating(true);
     try {
+      const activeTableCount = normalizeTableCount(tournament.table_count ?? tableCount);
+      const standingsRankMap = new Map(standings.map((s) => [s.id, s.rank]));
       const qfMatches = matches
         .filter((m) => m.round === 8 && m.confirmed)
-        .sort((a, b) => (a.table_number ?? 0) - (b.table_number ?? 0));
+        .sort((a, b) => {
+          const waveDelta = a.wave - b.wave;
+          if (waveDelta !== 0) return waveDelta;
+          return (a.table_number ?? 0) - (b.table_number ?? 0);
+        });
       const qfWinners = qfMatches.map((m) => m.winner_id!);
       if (qfWinners.length !== 4) return;
 
-      // QF1 winner vs QF2 winner, QF3 winner vs QF4 winner
-      const sfInserts = [
-        { round: 9, team1_id: qfWinners[0], team2_id: qfWinners[1], table_number: 1, scheduled_time: roundTime || null },
-        { round: 9, team1_id: qfWinners[2], team2_id: qfWinners[3], table_number: 2, scheduled_time: roundTime || null },
-      ];
+      // QF1 winner vs QF2 winner, QF3 winner vs QF4 winner.
+      // Home team is decided by latest knockout performance.
+      const sf1 = decideKnockoutHomeTeam(qfWinners[0], qfWinners[1], 9, matches, standingsRankMap);
+      const sf2 = decideKnockoutHomeTeam(qfWinners[2], qfWinners[3], 9, matches, standingsRankMap);
+      const sfScheduled = assignTablesAndWaves([sf1, sf2], activeTableCount);
+      const sfInserts = sfScheduled.map((sf) => ({
+        round: 9,
+        wave: sf.wave,
+        team1_id: sf.homeTeamId,
+        team2_id: sf.awayTeamId,
+        table_number: sf.tableNumber,
+        scheduled_time: roundTime || null,
+      }));
       const { error } = await supabase.from('matches').insert(sfInserts);
       if (error) throw error;
       setRoundTime('');
@@ -228,17 +343,33 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     if (!tournament) return;
     setGenerating(true);
     try {
+      const activeTableCount = normalizeTableCount(tournament.table_count ?? tableCount);
+      const standingsRankMap = new Map(standings.map((s) => [s.id, s.rank]));
       const sfMatches = matches
         .filter((m) => m.round === 9 && m.confirmed)
-        .sort((a, b) => (a.table_number ?? 0) - (b.table_number ?? 0));
+        .sort((a, b) => {
+          const waveDelta = a.wave - b.wave;
+          if (waveDelta !== 0) return waveDelta;
+          return (a.table_number ?? 0) - (b.table_number ?? 0);
+        });
       const sfWinners = sfMatches.map((m) => m.winner_id!);
       if (sfWinners.length !== 2) return;
 
+      const finalOrientation = decideKnockoutHomeTeam(
+        sfWinners[0],
+        sfWinners[1],
+        10,
+        matches,
+        standingsRankMap,
+      );
+
+      const [finalSlot] = assignTablesAndWaves([finalOrientation], activeTableCount);
       const { error } = await supabase.from('matches').insert({
         round: 10,
-        team1_id: sfWinners[0],
-        team2_id: sfWinners[1],
-        table_number: 1,
+        wave: finalSlot.wave,
+        team1_id: finalSlot.homeTeamId,
+        team2_id: finalSlot.awayTeamId,
+        table_number: finalSlot.tableNumber,
         scheduled_time: roundTime || null,
       });
       if (error) throw error;
@@ -337,6 +468,10 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
 
   const championName = champion ? teamNameMap.get(champion) ?? null : null;
   const disputed = matches.filter((m) => m.confirmed_by === 'disputed' && !m.confirmed);
+  const schedulePreview = {
+    matchCount: Math.floor(teams.length / 2),
+    waveCount: getWaveCount(Math.floor(teams.length / 2), tableCount),
+  };
 
   function handleMatchSaved(): void {
     setEditingMatchId(null);
@@ -396,9 +531,39 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       <div className="flex items-center gap-4 px-3 py-2 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[11px] font-mono text-zinc-500">
         <span className="text-zinc-600 uppercase tracking-wider text-[10px]">Ranking</span>
         <span><span className="text-zinc-300">1.</span> Vinster</span>
-        <span><span className="text-zinc-300">2.</span> Buchholz <span className="text-zinc-600">(motståndarvinster)</span></span>
-        <span><span className="text-zinc-300">3.</span> Koppar träffade</span>
+        <span><span className="text-zinc-300">2.</span> Cup diff</span>
+        <span><span className="text-zinc-300">3.</span> Inbördes möte (2 lag)</span>
       </div>
+
+      {unresolvedPair && (
+        <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4 space-y-3">
+          <div className="text-sm text-amber-300">
+            ⚠ Oavgjort vid slutspelsgränsen (Topp 8). Dessa två lag är fortfarande lika efter
+            vinster, cup diff och inbördes möte.
+          </div>
+          <div className="text-xs text-amber-200/90">
+            Kör sten-sax-påse framför admins och välj vinnaren här:
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {unresolvedPair.map((teamId) => (
+              <button
+                key={teamId}
+                onClick={() => void handleSelectRpsWinner(teamId)}
+                disabled={savingRps}
+                className={cn(
+                  'px-3 py-1.5 rounded-lg text-xs border transition-all disabled:opacity-60',
+                  selectedRpsWinner === teamId
+                    ? 'bg-amber-400/20 border-amber-300/50 text-amber-100'
+                    : 'bg-white/[0.03] border-white/[0.1] text-zinc-300 hover:bg-white/[0.06]',
+                )}
+              >
+                {teamNameMap.get(teamId) ?? teamId}
+                {selectedRpsWinner === teamId ? ' (RPS-vinnare)' : ''}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Flow Card — always-visible guidance + action */}
       <TournamentFlowCard
@@ -409,7 +574,10 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
         roundTime={roundTime}
         onRoundTimeChange={setRoundTime}
         roundCount={roundCount}
+        tableCount={tableCount}
+        schedulePreview={schedulePreview}
         onRoundCountChange={setRoundCount}
+        onTableCountChange={setTableCount}
         onStartTournament={handleStartTournament}
         onGeneratePairings={handleGeneratePairings}
         onAdvanceRound={handleAdvanceRound}
@@ -449,7 +617,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
                       {teamNameMap.get(m.team2_id) ?? '?'}
                     </span>
                     <span className="text-xs text-amber-400">
-                      R{m.round} · {m.score_team1}–{m.score_team2} · Klicka för att avgöra
+                      R{m.round} · P{m.wave} · B{m.table_number ?? '—'} · {m.score_team1}–{m.score_team2} · Klicka för att avgöra
                     </span>
                   </button>
                 )}
@@ -563,6 +731,9 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
                               >
                                 {teamNameMap.get(m.team2_id) ?? m.team2_id}
                               </span>
+                              <span className="col-span-3 text-center text-[11px] text-zinc-600 font-mono">
+                                P{m.wave} · B{m.table_number ?? '—'}
+                              </span>
                             </button>
                           ),
                         )}
@@ -573,11 +744,11 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
           )}
 
           {/* Swiss rounds */}
-          {rounds.filter(([r]) => r <= 7).length > 0 && (
+          {rounds.filter(([r]) => r <= (tournament?.total_rounds ?? roundCount)).length > 0 && (
             <div className="space-y-4">
               <h3 className="text-sm font-medium text-zinc-400">Swiss-rundor</h3>
               {rounds
-                .filter(([r]) => r <= 7)
+                .filter(([r]) => r <= (tournament?.total_rounds ?? roundCount))
                 .reverse()
                 .map(([round, roundMatches]) => (
                   <SwissRoundCard
