@@ -44,10 +44,25 @@ const padded = [
 ];
 const paddedBearings = unwrapBearing(padded.map((w) => w.bearing));
 
+// Scroll pacing: each waypoint's `progress` field is the scroll position at which
+// the camera reaches it, so legs with a wider progress gap consume more scroll
+// (slower). Remap the raw scroll value through these knots before feeding the
+// spline. With evenly-spaced `progress` this reduces to the original equal pacing.
+const knots = cameraWaypoints.map((w) => w.progress);
+
+function remapScroll(s: number) {
+  const clamped = Math.max(0, Math.min(1, s));
+  let k = 0;
+  while (k < knots.length - 2 && clamped > knots[k + 1]) k++;
+  const span = knots[k + 1] - knots[k];
+  const frac = span > 0 ? (clamped - knots[k]) / span : 0;
+  return (k + frac) / (knots.length - 1);
+}
+
 function interpolateWaypoints(progress: number) {
   const n = padded.length;
   const segments = n - 3;
-  const u = Math.max(0, Math.min(1, progress)) * segments;
+  const u = remapScroll(progress) * segments;
   const seg = Math.min(Math.floor(u), segments - 1);
   const t = u - seg;
 
