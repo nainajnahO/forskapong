@@ -121,7 +121,7 @@ export default function Footer() {
               rightTextClassName={themeText(theme, 'muted')}
               mediaContainerClassName="h-5 overflow-hidden"
             >
-              <span className="text-base leading-none">💥</span>
+              <span className="text-base leading-none">🛩️</span>
             </MediaBetweenText>
             <a
               href="https://github.com/nainajnahO/forskapong"
