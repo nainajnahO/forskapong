@@ -86,6 +86,8 @@ create table if not exists public.tournament (
 -- it; only the SECURITY DEFINER functions below can. Set the real passphrase
 -- out-of-band (do NOT commit it):
 --   update public.app_config set admin_code = '<your-passphrase>' where id = 1;
+-- Until that is done the gate stays closed: verify_admin_code() rejects the
+-- 'CHANGE_ME' placeholder outright, so the in-repo default can never unlock admin.
 create table if not exists public.app_config (
   id integer primary key default 1,
   admin_code text not null default 'CHANGE_ME',
@@ -110,6 +112,11 @@ security definer
 set search_path = public
 as $$
 begin
+  -- Refuse the seed placeholder so a project where the passphrase was never set
+  -- out-of-band cannot be unlocked with the value committed to the repo (issue #18 / N1a).
+  if code = 'CHANGE_ME' then
+    return false;
+  end if;
   return exists (select 1 from public.app_config where admin_code = code);
 end;
 $$;

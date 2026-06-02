@@ -46,6 +46,8 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   const [tableCount, setTableCount] = useState(16);
   const [manualRpsWinnerByKey, setManualRpsWinnerByKey] = useState<Record<string, string>>({});
   const [savingRps, setSavingRps] = useState(false);
+  const [rpsError, setRpsError] = useState('');
+  const [flowError, setFlowError] = useState('');
 
   const getTiebreakKey = (cutoff: number, teamAId: string, teamBId: string): string => {
     const [t1, t2] = [teamAId, teamBId].sort();
@@ -124,11 +126,12 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
 
   async function handleSelectRpsWinner(teamId: string): Promise<void> {
     if (!unresolvedPair) return;
-    const adminCode = sessionStorage.getItem('adminCode');
-    if (!adminCode) throw new Error('Logga in som admin igen');
     const [team1Id, team2Id] = [...unresolvedPair].sort();
+    setRpsError('');
     setSavingRps(true);
     try {
+      const adminCode = sessionStorage.getItem('adminCode');
+      if (!adminCode) throw new Error('Logga in som admin igen');
       // Writes go through an admin-gated RPC; tiebreak_decisions is no longer
       // directly writable with the public anon key (issue #18).
       const { error } = await supabase.rpc('set_tiebreak_decision', {
@@ -143,6 +146,8 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
         ...prev,
         [getTiebreakKey(PLAYOFF_CUTOFF, team1Id, team2Id)]: teamId,
       }));
+    } catch (err) {
+      setRpsError(err instanceof Error ? err.message : 'Kunde inte spara RPS-vinnaren');
     } finally {
       setSavingRps(false);
     }
@@ -182,28 +187,34 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   const status = tournament?.status ?? 'not_started';
 
   async function handleStartTournament() {
+    setFlowError('');
     setGenerating(true);
     try {
       if (!tournament) {
-        await supabase.from('tournament').insert({
+        const { error } = await supabase.from('tournament').insert({
           current_round: 1,
           total_rounds: roundCount,
           table_count: tableCount,
           status: 'swiss',
         });
+        if (error) throw error;
       } else {
-        await supabase
+        const { error } = await supabase
           .from('tournament')
           .update({ current_round: 1, total_rounds: roundCount, table_count: tableCount, status: 'swiss' })
           .eq('id', tournament.id);
+        if (error) throw error;
       }
       await loadData();
+    } catch (err) {
+      setFlowError(err instanceof Error ? err.message : 'Kunde inte starta turneringen');
     } finally {
       setGenerating(false);
     }
   }
 
   async function handleGeneratePairings() {
+    setFlowError('');
     setGenerating(true);
     try {
       const activeTableCount = normalizeTableCount(tournament?.table_count ?? tableCount);
@@ -232,6 +243,8 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       if (error) throw error;
       setRoundTime('');
       await loadData();
+    } catch (err) {
+      setFlowError(err instanceof Error ? err.message : 'Kunde inte generera matcher');
     } finally {
       setGenerating(false);
     }
@@ -239,13 +252,17 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
 
   async function handleAdvanceRound() {
     if (!tournament) return;
+    setFlowError('');
     setGenerating(true);
     try {
-      await supabase
+      const { error } = await supabase
         .from('tournament')
         .update({ current_round: currentRound + 1 })
         .eq('id', tournament.id);
+      if (error) throw error;
       await loadData();
+    } catch (err) {
+      setFlowError(err instanceof Error ? err.message : 'Kunde inte gå vidare till nästa runda');
     } finally {
       setGenerating(false);
     }
@@ -253,19 +270,24 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
 
   async function handleStartKnockout() {
     if (!tournament) return;
+    setFlowError('');
     setGenerating(true);
     try {
-      await supabase
+      const { error } = await supabase
         .from('tournament')
         .update({ status: 'knockout', current_round: KNOCKOUT_START_ROUND })
         .eq('id', tournament.id);
+      if (error) throw error;
       await loadData();
+    } catch (err) {
+      setFlowError(err instanceof Error ? err.message : 'Kunde inte starta slutspelet');
     } finally {
       setGenerating(false);
     }
   }
 
   async function handleGenerateKnockout() {
+    setFlowError('');
     setGenerating(true);
     try {
       const activeTableCount = normalizeTableCount(tournament?.table_count ?? tableCount);
@@ -306,6 +328,8 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       if (error) throw error;
       setRoundTime('');
       await loadData();
+    } catch (err) {
+      setFlowError(err instanceof Error ? err.message : 'Kunde inte generera kvartsfinaler');
     } finally {
       setGenerating(false);
     }
@@ -313,6 +337,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
 
   async function handleGenerateSemifinals() {
     if (!tournament) return;
+    setFlowError('');
     setGenerating(true);
     try {
       const activeTableCount = normalizeTableCount(tournament.table_count ?? tableCount);
@@ -356,6 +381,8 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       if (error) throw error;
       setRoundTime('');
       await loadData();
+    } catch (err) {
+      setFlowError(err instanceof Error ? err.message : 'Kunde inte generera semifinaler');
     } finally {
       setGenerating(false);
     }
@@ -363,6 +390,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
 
   async function handleGenerateFinal() {
     if (!tournament) return;
+    setFlowError('');
     setGenerating(true);
     try {
       const activeTableCount = normalizeTableCount(tournament.table_count ?? tableCount);
@@ -397,6 +425,8 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       if (error) throw error;
       setRoundTime('');
       await loadData();
+    } catch (err) {
+      setFlowError(err instanceof Error ? err.message : 'Kunde inte generera finalen');
     } finally {
       setGenerating(false);
     }
@@ -404,13 +434,17 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
 
   async function handleFinishTournament() {
     if (!tournament) return;
+    setFlowError('');
     setGenerating(true);
     try {
-      await supabase
+      const { error } = await supabase
         .from('tournament')
         .update({ status: 'finished' })
         .eq('id', tournament.id);
+      if (error) throw error;
       await loadData();
+    } catch (err) {
+      setFlowError(err instanceof Error ? err.message : 'Kunde inte avsluta turneringen');
     } finally {
       setGenerating(false);
     }
@@ -582,6 +616,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
               </button>
             ))}
           </div>
+          {rpsError && <p className="text-red-400 text-sm">{rpsError}</p>}
         </div>
       )}
 
@@ -633,6 +668,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
         onTabChange={onTabChange}
         championName={championName}
       />
+      {flowError && <p className="text-red-400 text-sm">{flowError}</p>}
 
       {/* Disputed matches */}
       {disputed.length > 0 && (
