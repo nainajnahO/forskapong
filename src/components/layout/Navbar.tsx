@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowUpRight, Flame, LogOut, Waves } from 'lucide-react';
+import wordmarkHdr from '@/assets/hdr/wordmark.avif';
 import { NAV_LINKS, NAV_RESPONSIVE_OFFSETS } from '@/lib/constants';
 import { useAdminTab } from '@/contexts/useAdminTab';
 import { ADMIN_TABS } from '@/contexts/AdminTabContextDef';
@@ -200,12 +201,15 @@ export default function Navbar() {
                   draggable={false}
                   className="h-9 lg:h-10 w-auto"
                 />
-                <img
-                  src="/TENTAFESTIVALEN vit.png"
-                  alt="TentaFestivalen"
-                  draggable={false}
-                  className="hidden sm:block h-5 lg:h-6 w-auto"
-                />
+                <picture className="hidden sm:block">
+                  <source srcSet={wordmarkHdr} media="(dynamic-range: high)" type="image/avif" />
+                  <img
+                    src="/TENTAFESTIVALEN vit.png"
+                    alt="TentaFestivalen"
+                    draggable={false}
+                    className="h-5 lg:h-6 w-auto hdr-img-fill"
+                  />
+                </picture>
               </a>
             </div>
 
