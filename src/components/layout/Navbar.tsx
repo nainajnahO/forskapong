@@ -201,7 +201,7 @@ export default function Navbar() {
                   draggable={false}
                   className="h-9 lg:h-10 w-auto"
                 />
-                <picture className="hidden sm:block">
+                <picture className="block">
                   <source srcSet={wordmarkHdr} media="(dynamic-range: high)" type="image/avif" />
                   <img
                     src="/TENTAFESTIVALEN vit.png"
