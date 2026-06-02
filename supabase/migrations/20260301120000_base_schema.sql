@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════════
--- Base schema (RECONSTRUCTED)  —  DRAFT FOR REVIEW, NOT YET APPLIED
+-- Base schema (RECONSTRUCTED)
 -- ════════════════════════════════════════════════════════════════════════
 --
 -- WHY THIS FILE EXISTS
@@ -31,6 +31,14 @@
 --     input). The old column may have been `time` / `timestamptz`.
 --   • matches.confirmed_by — modeled as text, no FK (the generated types list no
 --     relationship for it, unlike reported_by which is a uuid FK to teams).
+--
+-- Two additions beyond what the generated types capture (types can't express
+-- either, so they were missing from the first draft):
+--   • Realtime: teams/matches/tournament are added to the supabase_realtime
+--     publication (bottom of file) — the scoreboard, display, dashboard, and admin
+--     Live/Tournament tabs subscribe to postgres_changes and need it.
+--   • tournament is constrained to a single row (the app loads it via
+--     .maybeSingle(), which errors on >1 row).
 -- ════════════════════════════════════════════════════════════════════════
 
 grant usage on schema public to anon, authenticated;
@@ -79,6 +87,13 @@ create table if not exists public.tournament (
   total_rounds integer not null default 7,
   status text not null default 'not_started'
 );
+
+-- Single-row guard: the app loads the tournament via .maybeSingle(), which errors
+-- on >1 row. A unique index on a constant expression permits exactly one row
+-- without adding a column (so the generated types are unaffected), and — unlike a
+-- check (id = 1) — it survives delete+recreate since it doesn't depend on the
+-- identity value. Mirrors the singleton guarantee app_config gets from check (id = 1).
+create unique index if not exists tournament_single_row on public.tournament ((true));
 
 -- ─── app_config (admin passphrase store) ────────────────────────────────
 -- Single-row config holding the admin passphrase. RLS is enabled with NO
@@ -175,3 +190,34 @@ create policy "tournament_public_all" on public.tournament for all using (true) 
 grant select, insert, update, delete on public.teams to anon, authenticated;
 grant select, insert, update, delete on public.matches to anon, authenticated;
 grant select, insert, update, delete on public.tournament to anon, authenticated;
+
+-- ─── Realtime: publish the live-updating tables ──────────────────────────
+-- The public scoreboard, chrome-free display, player dashboard/match pages, and
+-- the admin Live/Teams/Tournament tabs all subscribe to postgres_changes on these
+-- tables. A fresh project's supabase_realtime publication is empty by default, so
+-- without this the live surfaces only refresh on a manual reload. Idempotent:
+-- creates the publication if absent and adds each table only if not already a member.
+do $$
+begin
+  if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    create publication supabase_realtime;
+  end if;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'teams'
+  ) then
+    alter publication supabase_realtime add table public.teams;
+  end if;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'matches'
+  ) then
+    alter publication supabase_realtime add table public.matches;
+  end if;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'tournament'
+  ) then
+    alter publication supabase_realtime add table public.tournament;
+  end if;
+end $$;
