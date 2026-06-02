@@ -42,7 +42,7 @@ export const SCHEDULE_PHASES = [
       {
         time: '17:30-',
         title: 'Domare',
-        description: 'Sam & David',
+        description: 'Sam (Största) & David',
         italic: true,
       },
     ],
@@ -61,13 +61,13 @@ export const SCHEDULE_PHASES = [
       {
         time: '18:30-19:30',
         title: 'Slutspel',
-        description: '',
+        description: '8 lag kvar',
         bold: true,
       },
       {
         time: '19:30-19:45',
         title: 'Semi-Final',
-        description: '',
+        description: '4 lag kvar',
         bold: true,
       },
       {
