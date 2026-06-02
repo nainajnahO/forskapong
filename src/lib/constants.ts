@@ -137,9 +137,10 @@ export const SHOWCASE_CONFIG = {
       position: ['20%', '15%'] as const,
     },
     {
-      text: 'Fler regler! (fråga domarna om dispyt)',
-      subtext: 'Inga trickshots\nBlåsa och slå (vid studs) är tillåtet\nVälter kopp pga boll eller försvarare: räknas som träffad\nTappad boll i egen kopp: räknas som träffad\nFörsvarare nudar icke studsad boll över bordet: räknas som träffad',
-      position: ['25%', '50%'] as const,
+      text: 'Fler regler!',
+      subtext:
+        'Inga trickshots\nBlåsa & slå tillåtet vid studs\n\nRäknas som träffad:\nKopp välter av boll/försvarare\nTappad boll i egen kopp\nFörsvarare nuddar ostudsad boll\n\nFråga domarna vid dispyt',
+      position: ['15%', '64%'] as const,
     },
   ] as const,
 } as const;
