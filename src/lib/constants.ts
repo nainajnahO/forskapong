@@ -229,12 +229,5 @@ export const NAV_RESPONSIVE_OFFSETS = {
   phoneSm: 6.5, // < 640px
 } as const;
 
-// ExplodedView Title Animation
-export const EXPLODED_VIEW_TITLE = {
-  fadeStart: 0.93,
-  fadeEnd: 0.99,
-  yOffset: 20,
-} as const;
-
 // Background
 export const FRAMER_BACKGROUND_URL = 'https://incomplete-listening-378233.framer.app' as const;
