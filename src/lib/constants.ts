@@ -307,9 +307,19 @@ export const VENUE_MAP_CONFIG = {
   ],
 } as const;
 
+// Tournament structure
+/** Number of teams that advance from the Swiss stage into the knockout bracket. */
+export const PLAYOFF_CUTOFF = 8;
+/**
+ * Round number of the first knockout match (quarterfinals); the semifinal is
+ * KNOCKOUT_START_ROUND + 1 and the final is KNOCKOUT_START_ROUND + 2. Swiss rounds
+ * occupy 1..KNOCKOUT_START_ROUND - 1, so the configurable Swiss round count is capped
+ * below this to keep a Swiss round from colliding with the quarterfinals.
+ */
+export const KNOCKOUT_START_ROUND = 8;
+
 // Sponsors
-// TODO: add logo files for Monster and Zura under public/sponsors/ and wire up `logo` paths.
-export const SPONSORS: readonly { name: string; logo?: string; text?: string; href?: string }[] = [
+export const SPONSORS: readonly { name: string; logo: string; href?: string }[] = [
   {
     name: 'TentaFestivalen',
     logo: '/sponsors/logotyp_transparent_vit_tjock.png',

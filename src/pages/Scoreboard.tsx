@@ -14,6 +14,7 @@ import {
   type TeamStanding,
 } from '@/lib/tournament-engine';
 import { dbMatchToResult, teamsToEngine } from '@/pages/admin/lib/match-utils';
+import { PLAYOFF_CUTOFF } from '@/lib/constants';
 import FluidBackground from '@/components/common/FluidBackground';
 import StaticNoise from '@/components/common/StaticNoise';
 
@@ -25,8 +26,6 @@ interface ScoreboardStanding extends TeamStanding {
   player1: string | null;
   player2: string | null;
 }
-
-const PLAYOFF_CUTOFF = 8;
 
 /* ─── Data ────────────────────────────────────────────────────── */
 

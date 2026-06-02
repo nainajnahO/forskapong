@@ -218,6 +218,24 @@ export interface Database {
         Args: { team_name: string };
         Returns: { id: string; code: string; name: string }[];
       };
+      set_tiebreak_decision: {
+        Args: {
+          p_cutoff: number;
+          p_team1_id: string;
+          p_team2_id: string;
+          p_winner_team_id: string;
+          admin_code: string;
+        };
+        Returns: {
+          id: string;
+          cutoff: number;
+          team1_id: string;
+          team2_id: string;
+          winner_team_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+      };
       verify_admin_code: {
         Args: { code: string };
         Returns: boolean;

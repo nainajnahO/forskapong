@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import type { Match, Tournament } from '@/lib/database.types';
 import type { AdminTab } from '@/contexts/AdminTabContextDef';
+import { KNOCKOUT_START_ROUND } from '@/lib/constants';
 
 interface Props {
   tournament: Tournament | null;
@@ -31,6 +32,7 @@ interface Props {
   onAdvanceRound: () => void;
   onStartKnockout: () => void;
   onGenerateKnockout: () => void;
+  knockoutBlockedByTie: boolean;
   onGenerateSemifinals: () => void;
   onGenerateFinal: () => void;
   onFinishTournament: () => void;
@@ -79,9 +81,9 @@ function deriveFlowState(
   }
 
   if (status === 'knockout') {
-    const qfMatches = roundsMap.get(8) ?? [];
-    const sfMatches = roundsMap.get(9) ?? [];
-    const finalMatches = roundsMap.get(10) ?? [];
+    const qfMatches = roundsMap.get(KNOCKOUT_START_ROUND) ?? [];
+    const sfMatches = roundsMap.get(KNOCKOUT_START_ROUND + 1) ?? [];
+    const finalMatches = roundsMap.get(KNOCKOUT_START_ROUND + 2) ?? [];
 
     if (qfMatches.length === 0) return 'knockout_generate_qf';
 
@@ -128,6 +130,7 @@ export default function TournamentFlowCard(props: Props) {
     onAdvanceRound,
     onStartKnockout,
     onGenerateKnockout,
+    knockoutBlockedByTie,
     onGenerateSemifinals,
     onGenerateFinal,
     onFinishTournament,
@@ -199,9 +202,13 @@ export default function TournamentFlowCard(props: Props) {
                 <input
                   type="number"
                   min={1}
-                  max={15}
+                  max={KNOCKOUT_START_ROUND - 1}
                   value={roundCount}
-                  onChange={(e) => onRoundCountChange(Math.max(1, Math.min(15, Number(e.target.value))))}
+                  onChange={(e) =>
+                    onRoundCountChange(
+                      Math.max(1, Math.min(KNOCKOUT_START_ROUND - 1, Number(e.target.value))),
+                    )
+                  }
                   className="w-14 h-9 px-2 rounded-xl text-sm bg-white/[0.04] border border-white/[0.08] text-white text-center outline-none focus:border-brand-500"
                 />
               </div>
@@ -245,7 +252,10 @@ export default function TournamentFlowCard(props: Props) {
                     case 'finish': onFinishTournament(); break;
                   }
                 }}
-                disabled={generating}
+                disabled={
+                  generating ||
+                  (config.action.handler === 'generate_knockout' && knockoutBlockedByTie)
+                }
                 className={cn(
                   'px-4 py-2 rounded-xl text-sm font-medium transition-all inline-flex items-center gap-2',
                   config.action.buttonClass,
@@ -441,7 +451,7 @@ function getCardConfig(
       };
 
     case 'knockout_qf_in_progress': {
-      const qfMatches = roundsMap.get(8) ?? [];
+      const qfMatches = roundsMap.get(KNOCKOUT_START_ROUND) ?? [];
       return {
         ...base,
         ...AMBER_THEME,
@@ -463,7 +473,7 @@ function getCardConfig(
       };
 
     case 'knockout_sf_in_progress': {
-      const sfMatches = roundsMap.get(9) ?? [];
+      const sfMatches = roundsMap.get(KNOCKOUT_START_ROUND + 1) ?? [];
       return {
         ...base,
         ...AMBER_THEME,
@@ -485,7 +495,7 @@ function getCardConfig(
       };
 
     case 'knockout_final_in_progress': {
-      const finalMatches = roundsMap.get(10) ?? [];
+      const finalMatches = roundsMap.get(KNOCKOUT_START_ROUND + 2) ?? [];
       return {
         ...base,
         ...AMBER_THEME,

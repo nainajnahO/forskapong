@@ -2,16 +2,12 @@ import { useRef, useEffect } from 'react';
 import { SPONSORS } from '@/lib/constants';
 
 function SponsorItem({ sponsor }: { sponsor: (typeof SPONSORS)[number] }) {
-  const content = sponsor.logo ? (
+  const content = (
     <img
       src={sponsor.logo}
       alt={sponsor.name}
       className="h-14 max-w-[140px] shrink-0 object-contain opacity-50 grayscale transition-opacity hover:opacity-80 md:h-20 md:max-w-[180px]"
     />
-  ) : (
-    <span className="shrink-0 text-5xl opacity-50 md:text-6xl">
-      {sponsor.text}
-    </span>
   );
 
   if (sponsor.href) {

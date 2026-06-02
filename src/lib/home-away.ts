@@ -1,4 +1,5 @@
 import type { Match } from '@/lib/database.types';
+import { KNOCKOUT_START_ROUND } from '@/lib/constants';
 
 export interface SimplePairing {
   team1Id: string;
@@ -86,7 +87,7 @@ export function decideKnockoutHomeTeam(
 ): OrientedPairing {
   const priorKnockout = allMatches.filter(
     (m) =>
-      m.round >= 8 &&
+      m.round >= KNOCKOUT_START_ROUND &&
       m.round < targetRound &&
       (m.team1_id === teamAId ||
         m.team2_id === teamAId ||
