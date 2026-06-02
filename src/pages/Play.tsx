@@ -65,11 +65,9 @@ export default function Play() {
     setError('');
 
     try {
-      const { data: team, error: dbError } = await supabase
-        .from('teams')
-        .select('*')
-        .eq('code', code)
-        .maybeSingle();
+      // Codes live in the locked team_codes vault; login_team resolves the team
+      // server-side without ever exposing the code list to the public key.
+      const { data, error: dbError } = await supabase.rpc('login_team', { p_code: code });
 
       if (dbError) {
         setError('Något gick fel. Försök igen.');
@@ -77,6 +75,7 @@ export default function Play() {
         return;
       }
 
+      const team = data?.[0];
       if (!team) {
         setError('Ogiltig kod — hittades inte');
         setIsSubmitting(false);

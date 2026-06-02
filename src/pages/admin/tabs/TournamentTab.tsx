@@ -190,21 +190,16 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     setFlowError('');
     setGenerating(true);
     try {
-      if (!tournament) {
-        const { error } = await supabase.from('tournament').insert({
-          current_round: 1,
-          total_rounds: roundCount,
-          table_count: tableCount,
-          status: 'swiss',
-        });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('tournament')
-          .update({ current_round: 1, total_rounds: roundCount, table_count: tableCount, status: 'swiss' })
-          .eq('id', tournament.id);
-        if (error) throw error;
-      }
+      const adminCode = sessionStorage.getItem('adminCode');
+      if (!adminCode) throw new Error('Logga in som admin igen');
+      const { error } = await supabase.rpc('admin_set_tournament', {
+        admin_code: adminCode,
+        p_current_round: 1,
+        p_total_rounds: roundCount,
+        p_table_count: tableCount,
+        p_status: 'swiss',
+      });
+      if (error) throw error;
       await loadData();
     } catch (err) {
       setFlowError(err instanceof Error ? err.message : 'Kunde inte starta turneringen');
@@ -239,7 +234,10 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
         scheduled_time: roundTime || null,
       }));
 
-      const { error } = await supabase.from('matches').insert(inserts);
+      const { error } = await supabase.rpc('admin_create_matches', {
+        admin_code: sessionStorage.getItem('adminCode') ?? '',
+        rows: inserts,
+      });
       if (error) throw error;
       setRoundTime('');
       await loadData();
@@ -255,10 +253,10 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     setFlowError('');
     setGenerating(true);
     try {
-      const { error } = await supabase
-        .from('tournament')
-        .update({ current_round: currentRound + 1 })
-        .eq('id', tournament.id);
+      const { error } = await supabase.rpc('admin_set_tournament', {
+        admin_code: sessionStorage.getItem('adminCode') ?? '',
+        p_current_round: currentRound + 1,
+      });
       if (error) throw error;
       await loadData();
     } catch (err) {
@@ -273,10 +271,11 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     setFlowError('');
     setGenerating(true);
     try {
-      const { error } = await supabase
-        .from('tournament')
-        .update({ status: 'knockout', current_round: KNOCKOUT_START_ROUND })
-        .eq('id', tournament.id);
+      const { error } = await supabase.rpc('admin_set_tournament', {
+        admin_code: sessionStorage.getItem('adminCode') ?? '',
+        p_status: 'knockout',
+        p_current_round: KNOCKOUT_START_ROUND,
+      });
       if (error) throw error;
       await loadData();
     } catch (err) {
@@ -324,7 +323,10 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
           scheduled_time: roundTime || null,
         };
       });
-      const { error } = await supabase.from('matches').insert(qfInserts);
+      const { error } = await supabase.rpc('admin_create_matches', {
+        admin_code: sessionStorage.getItem('adminCode') ?? '',
+        rows: qfInserts,
+      });
       if (error) throw error;
       setRoundTime('');
       await loadData();
@@ -377,7 +379,10 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
         table_number: sf.tableNumber,
         scheduled_time: roundTime || null,
       }));
-      const { error } = await supabase.from('matches').insert(sfInserts);
+      const { error } = await supabase.rpc('admin_create_matches', {
+        admin_code: sessionStorage.getItem('adminCode') ?? '',
+        rows: sfInserts,
+      });
       if (error) throw error;
       setRoundTime('');
       await loadData();
@@ -414,13 +419,18 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       );
 
       const [finalSlot] = assignTablesAndWaves([finalOrientation], activeTableCount);
-      const { error } = await supabase.from('matches').insert({
-        round: KNOCKOUT_START_ROUND + 2,
-        wave: finalSlot.wave,
-        team1_id: finalSlot.homeTeamId,
-        team2_id: finalSlot.awayTeamId,
-        table_number: finalSlot.tableNumber,
-        scheduled_time: roundTime || null,
+      const { error } = await supabase.rpc('admin_create_matches', {
+        admin_code: sessionStorage.getItem('adminCode') ?? '',
+        rows: [
+          {
+            round: KNOCKOUT_START_ROUND + 2,
+            wave: finalSlot.wave,
+            team1_id: finalSlot.homeTeamId,
+            team2_id: finalSlot.awayTeamId,
+            table_number: finalSlot.tableNumber,
+            scheduled_time: roundTime || null,
+          },
+        ],
       });
       if (error) throw error;
       setRoundTime('');
@@ -437,10 +447,10 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     setFlowError('');
     setGenerating(true);
     try {
-      const { error } = await supabase
-        .from('tournament')
-        .update({ status: 'finished' })
-        .eq('id', tournament.id);
+      const { error } = await supabase.rpc('admin_set_tournament', {
+        admin_code: sessionStorage.getItem('adminCode') ?? '',
+        p_status: 'finished',
+      });
       if (error) throw error;
       await loadData();
     } catch (err) {

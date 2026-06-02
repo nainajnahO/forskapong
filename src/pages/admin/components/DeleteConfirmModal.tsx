@@ -23,10 +23,12 @@ export default function DeleteConfirmModal({
     setDeleting(true);
     setError('');
     try {
-      const { error: err } = await supabase
-        .from('teams')
-        .delete()
-        .eq('id', teamId);
+      const adminCode = sessionStorage.getItem('adminCode');
+      if (!adminCode) throw new Error('Logga in som admin igen');
+      const { error: err } = await supabase.rpc('admin_delete_team', {
+        admin_code: adminCode,
+        p_team_id: teamId,
+      });
       if (err) throw err;
       onDeleted();
     } catch (err) {

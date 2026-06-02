@@ -213,11 +213,16 @@ export default function Dashboard() {
   }, [loadData]);
 
   async function savePlayerNames(): Promise<void> {
-    if (!teamId || savingNamesRef.current) return;
+    if (!teamId || !code || savingNamesRef.current) return;
     const trimmed = { player1: player1.trim() || null, player2: player2.trim() || null };
     savingNamesRef.current = true;
     try {
-      const { error: saveError } = await supabase.from('teams').update(trimmed).eq('id', teamId);
+      // Gated by the team's own code; the empty strings become null server-side.
+      const { error: saveError } = await supabase.rpc('update_team_profile', {
+        p_code: code,
+        p_player1: player1.trim(),
+        p_player2: player2.trim(),
+      });
       if (!saveError) setTeam((prev) => (prev ? { ...prev, ...trimmed } : prev));
     } finally {
       savingNamesRef.current = false;

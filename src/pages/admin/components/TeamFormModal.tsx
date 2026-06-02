@@ -26,20 +26,19 @@ export default function TeamFormModal({ team, onClose, onSaved }: Props) {
     setError('');
 
     try {
+      const adminCode = sessionStorage.getItem('adminCode');
+      if (!adminCode) throw new Error('Logga in som admin igen');
+
       if (isEdit) {
-        const { error: err } = await supabase
-          .from('teams')
-          .update({
-            name: name.trim(),
-            player1: player1.trim() || null,
-            player2: player2.trim() || null,
-          })
-          .eq('id', team.id);
+        const { error: err } = await supabase.rpc('admin_update_team', {
+          admin_code: adminCode,
+          p_team_id: team.id,
+          p_name: name.trim(),
+          p_player1: player1.trim(),
+          p_player2: player2.trim(),
+        });
         if (err) throw err;
       } else {
-        const adminCode = sessionStorage.getItem('adminCode');
-        if (!adminCode) throw new Error('Logga in som admin igen');
-
         const { error: err } = await supabase.rpc('bulk_register_teams', {
           team_names: [name.trim()],
           admin_code: adminCode,

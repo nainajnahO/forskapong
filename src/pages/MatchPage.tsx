@@ -237,28 +237,14 @@ export default function MatchPage() {
     setIsSubmitting(true);
     setSubmitError('');
 
-    const opponentId = isHomeTeam ? match.team2_id : match.team1_id;
-    const winnerId = weAreWinner ? teamId : opponentId;
-    const loserId = weAreWinner ? opponentId : teamId;
-
-    // Winner always hit 6, loser hit loserCups
-    const winnerScore = 6;
-    const team1IsWinner = winnerId === match.team1_id;
-    const scoreTeam1 = team1IsWinner ? winnerScore : loserCups;
-    const scoreTeam2 = team1IsWinner ? loserCups : winnerScore;
-
-    const { error: updateError } = await supabase
-      .from('matches')
-      .update({
-        winner_id: winnerId,
-        loser_id: loserId,
-        score_team1: scoreTeam1,
-        score_team2: scoreTeam2,
-        reported_by: teamId,
-      })
-      .eq('id', match.id)
-      .eq('team1_id', teamId)
-      .is('winner_id', null);
+    // The RPC re-verifies (home team + undecided) and computes scores server-side
+    // (winner hits 6, loser hits loserCups). Direct table writes are no longer allowed.
+    const { error: updateError } = await supabase.rpc('report_match_result', {
+      p_match_id: match.id,
+      p_code: sessionStorage.getItem('playCode') ?? '',
+      p_we_are_winner: weAreWinner,
+      p_loser_cups: loserCups,
+    });
 
     if (updateError) {
       setSubmitError('Kunde inte spara resultatet. Försök igen.');
@@ -279,16 +265,11 @@ export default function MatchPage() {
     }
     setSubmitError('');
 
-    const { error: updateError } = await supabase
-      .from('matches')
-      .update({
-        confirmed: true,
-        confirmed_by: 'away',
-      })
-      .eq('id', match.id)
-      .eq('team2_id', teamId)
-      .eq('reported_by', match.team1_id)
-      .eq('confirmed', false);
+    const { error: updateError } = await supabase.rpc('respond_match_result', {
+      p_match_id: match.id,
+      p_code: sessionStorage.getItem('playCode') ?? '',
+      p_action: 'confirm',
+    });
 
     if (updateError) {
       setSubmitError('Kunde inte bekräfta. Försök igen.');
@@ -306,13 +287,11 @@ export default function MatchPage() {
     }
     setSubmitError('');
 
-    const { error: updateError } = await supabase
-      .from('matches')
-      .update({ confirmed_by: 'disputed' })
-      .eq('id', match.id)
-      .eq('team2_id', teamId)
-      .eq('reported_by', match.team1_id)
-      .eq('confirmed', false);
+    const { error: updateError } = await supabase.rpc('respond_match_result', {
+      p_match_id: match.id,
+      p_code: sessionStorage.getItem('playCode') ?? '',
+      p_action: 'dispute',
+    });
 
     if (updateError) {
       setSubmitError('Kunde inte disputera. Försök igen.');
