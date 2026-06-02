@@ -34,7 +34,8 @@ function buildCsv(teams: BulkRegisteredTeam[]) {
 }
 
 function downloadCsv(teams: BulkRegisteredTeam[]) {
-  const blob = new Blob([buildCsv(teams)], { type: 'text/csv;charset=utf-8' });
+  // Prepend a UTF-8 BOM so Excel reads Swedish characters (å/ä/ö) as UTF-8 rather than ANSI.
+  const blob = new Blob(['\uFEFF' + buildCsv(teams)], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
