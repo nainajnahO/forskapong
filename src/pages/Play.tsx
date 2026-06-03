@@ -18,7 +18,14 @@ function isValidAtPosition(char: string, position: number) {
 
 export default function Play() {
   const { theme } = useTheme();
-  const [values, setValues] = useState<string[]>(Array(TOTAL_LENGTH).fill(''));
+  // Prefill from the last successful login so returning players don't retype
+  // their code. Falls back to empty if the stored value is missing or malformed.
+  const [values, setValues] = useState<string[]>(() => {
+    const saved = (localStorage.getItem('playCode') ?? '').toUpperCase();
+    const isComplete =
+      saved.length === TOTAL_LENGTH && [...saved].every((c, i) => isValidAtPosition(c, i));
+    return isComplete ? [...saved] : Array(TOTAL_LENGTH).fill('');
+  });
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(0);
@@ -86,6 +93,8 @@ export default function Play() {
       sessionStorage.setItem('playCode', team.code);
       sessionStorage.setItem('teamId', team.id);
       sessionStorage.setItem('teamName', team.name);
+      // Persist the code across browser restarts so it prefills on the next visit
+      localStorage.setItem('playCode', team.code);
       navigate('/play/dashboard');
     } catch {
       setError('Kunde inte ansluta. Kontrollera din uppkoppling.');
