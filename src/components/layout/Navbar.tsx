@@ -192,7 +192,7 @@ export default function Navbar() {
                 href="#"
                 draggable={false}
                 onClick={handleLogoClick}
-                className="flex items-center gap-2 lg:gap-3 cursor-pointer"
+                className="flex items-center gap-0.5 cursor-pointer"
                 aria-label="TentaFestivalen Beerpong"
               >
                 <img
