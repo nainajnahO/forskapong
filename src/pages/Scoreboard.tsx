@@ -58,7 +58,6 @@ export default function Scoreboard() {
   }, [teamId, navigate]);
 
   const [standings, setStandings] = useState<ScoreboardStanding[]>([]);
-  const [cutoffWarningTeamIds, setCutoffWarningTeamIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -74,8 +73,6 @@ export default function Scoreboard() {
         player2: playerMap.get(s.id)?.player2 ?? null,
       }));
       setStandings(merged);
-      const warning = detectUnresolvedCutoffTie(engineStandings, results, PLAYOFF_CUTOFF);
-      setCutoffWarningTeamIds(warning?.teamIds ?? []);
       setError('');
     } catch {
       setError('Kunde inte ladda ställningen.');
@@ -232,7 +229,6 @@ export default function Scoreboard() {
           const inPlayoff = team.rank <= PLAYOFF_CUTOFF;
           const isCurrentTeam = team.id === teamId;
           const isAtCutoff = team.rank === PLAYOFF_CUTOFF;
-          const hasCutoffWarning = cutoffWarningTeamIds.includes(team.id);
 
           return (
             <motion.div
@@ -275,11 +271,6 @@ export default function Scoreboard() {
                     )}
                   >
                     {team.name}
-                    {hasCutoffWarning && (
-                      <span className="ml-2 text-amber-400" title="Oavgjort vid slutspelsgränsen">
-                        ⚠
-                      </span>
-                    )}
                     {isCurrentTeam && (
                       <span
                         className={cn(
@@ -379,12 +370,6 @@ export default function Scoreboard() {
           <span className={themeText(theme, 'secondary')}>Rankningsordning:</span> 1) Antal vinster,
           2) Cup diff, 3) Inbördes möte mellan två lag (om tillämpligt).
         </p>
-        {cutoffWarningTeamIds.length === 2 && (
-          <p className={cn('text-[11px] leading-relaxed mt-2 text-amber-400')}>
-            ⚠ Två lag är fortfarande lika vid slutspelsgränsen. Avgör med sten-sax-påse framför
-            admins.
-          </p>
-        )}
 
         {/* Page footer */}
         <p
