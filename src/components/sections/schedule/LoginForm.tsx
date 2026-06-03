@@ -17,10 +17,13 @@ interface LoginFormProps {
 }
 
 export default function LoginForm({ theme, side }: LoginFormProps) {
+  // Prefill from the last successful login so returning players don't retype
+  // their code. Falls back to empty if the stored value is missing or malformed.
   const [values, setValues] = useState<string[]>(() => {
-    const session = sessionStorage.getItem('playCode');
-    if (session?.length === TOTAL_LENGTH) return session.split('');
-    return Array(TOTAL_LENGTH).fill('');
+    const saved = (localStorage.getItem('playCode') ?? '').toUpperCase();
+    const isComplete =
+      saved.length === TOTAL_LENGTH && [...saved].every((c, i) => isValidAtPosition(c, i));
+    return isComplete ? [...saved] : Array(TOTAL_LENGTH).fill('');
   });
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -86,6 +89,8 @@ export default function LoginForm({ theme, side }: LoginFormProps) {
       sessionStorage.setItem('playCode', team.code);
       sessionStorage.setItem('teamId', team.id);
       sessionStorage.setItem('teamName', team.name);
+      // Persist the code across browser restarts so it prefills on the next visit
+      localStorage.setItem('playCode', team.code);
       navigate('/play/dashboard');
     } catch {
       setError('Kunde inte ansluta. Kontrollera din uppkoppling.');
