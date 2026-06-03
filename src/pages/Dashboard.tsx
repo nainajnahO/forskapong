@@ -10,6 +10,8 @@ import { supabase } from '@/lib/supabase';
 import type { Team, Match } from '@/lib/database.types';
 import FluidBackground from '@/components/common/FluidBackground';
 import StaticNoise from '@/components/common/StaticNoise';
+import RealtimeIndicator from '@/components/common/RealtimeIndicator';
+import { useRealtimeStatus } from '@/hooks/useRealtimeStatus';
 
 /* ─── Types ───────────────────────────────────────────────────── */
 
@@ -208,6 +210,13 @@ export default function Dashboard() {
     }
   }, [teamId]);
 
+  const refreshUnlessSaving = useCallback(() => {
+    // Skip the reconnect refetch if the player is mid-edit on their names —
+    // otherwise the server values would clobber what they're typing.
+    if (!savingNamesRef.current) loadData();
+  }, [loadData]);
+  const { status, onStatusChange } = useRealtimeStatus(refreshUnlessSaving);
+
   useEffect(() => {
     loadData();
   }, [loadData]);
@@ -241,11 +250,11 @@ export default function Dashboard() {
           if (!savingNamesRef.current) loadData();
         },
       )
-      .subscribe();
+      .subscribe(onStatusChange);
     return () => {
       void channel.unsubscribe();
     };
-  }, [teamId, loadData]);
+  }, [teamId, loadData, onStatusChange]);
 
   if (!teamId || !code) return null;
 
@@ -406,15 +415,18 @@ export default function Dashboard() {
           >
             Matchschema
           </p>
-          <button
-            onClick={() => navigate('/scoreboard')}
-            className={cn(
-              'text-xs transition-opacity hover:opacity-70',
-              themeText(theme, 'secondary'),
-            )}
-          >
-            Scoreboard →
-          </button>
+          <div className="flex items-center gap-4">
+            <RealtimeIndicator status={status} onRefresh={loadData} theme={theme} />
+            <button
+              onClick={() => navigate('/scoreboard')}
+              className={cn(
+                'text-xs transition-opacity hover:opacity-70',
+                themeText(theme, 'secondary'),
+              )}
+            >
+              Scoreboard →
+            </button>
+          </div>
         </div>
 
         {/* ── Match entries ────────────────────── */}

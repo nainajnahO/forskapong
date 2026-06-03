@@ -9,7 +9,6 @@ import { supabase } from '@/lib/supabase';
 import type { Team, Match } from '@/lib/database.types';
 import {
   calculateRankings,
-  detectUnresolvedCutoffTie,
   type MatchResult,
   type TeamStanding,
 } from '@/lib/tournament-engine';
@@ -17,6 +16,8 @@ import { dbMatchToResult, teamsToEngine } from '@/pages/admin/lib/match-utils';
 import { PLAYOFF_CUTOFF } from '@/lib/constants';
 import FluidBackground from '@/components/common/FluidBackground';
 import StaticNoise from '@/components/common/StaticNoise';
+import RealtimeIndicator from '@/components/common/RealtimeIndicator';
+import { useRealtimeStatus } from '@/hooks/useRealtimeStatus';
 
 /* ─── Types ───────────────────────────────────────────────────── */
 
@@ -83,6 +84,8 @@ export default function Scoreboard() {
     }
   }, []);
 
+  const { status, onStatusChange } = useRealtimeStatus(loadData);
+
   useEffect(() => {
     loadData();
   }, [loadData]);
@@ -94,11 +97,11 @@ export default function Scoreboard() {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'teams' }, () =>
         loadData(),
       )
-      .subscribe();
+      .subscribe(onStatusChange);
     return () => {
       void channel.unsubscribe();
     };
-  }, [loadData]);
+  }, [loadData, onStatusChange]);
 
   /* ── Loading ──────────────────────────────────────── */
   if (loading) {
@@ -150,9 +153,19 @@ export default function Scoreboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <h1 className="font-display text-4xl md:text-5xl text-brand-500 tracking-wider hdr-text-fill mb-2">
-            Scoreboard
-          </h1>
+          {/* relative + inline-block keeps the centered title untouched while the
+              chip floats just off its right edge (absolute, so it adds no width). */}
+          <div className="relative inline-block mb-2">
+            <h1 className="font-display text-4xl md:text-5xl text-brand-500 tracking-wider hdr-text-fill">
+              Scoreboard
+            </h1>
+            <RealtimeIndicator
+              status={status}
+              onRefresh={loadData}
+              theme={theme}
+              className="absolute left-full top-1/2 -translate-y-1/2 ml-3"
+            />
+          </div>
           <p className={cn('text-sm', themeText(theme, 'secondary'))}>
             Topp {PLAYOFF_CUTOFF} går vidare till slutspel
           </p>
@@ -166,8 +179,8 @@ export default function Scoreboard() {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
-        {/* Back link + legend */}
-        <div className="flex items-center justify-between mt-6 mb-4">
+        {/* Back link */}
+        <div className="flex items-center mt-6 mb-4">
           {teamId && (
             <button
               onClick={() => navigate('/play/dashboard')}
@@ -179,12 +192,6 @@ export default function Scoreboard() {
               ← Tillbaka
             </button>
           )}
-          <div className="flex items-center gap-4 ml-auto">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span className={cn('text-[10px]', themeText(theme, 'muted'))}>Slutspel</span>
-            </div>
-          </div>
         </div>
 
         {/* Dashed rule */}

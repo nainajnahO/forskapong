@@ -9,6 +9,8 @@ import { canAwayTeamConfirm, canHomeTeamReport } from '@/lib/home-away';
 import type { Team, Match } from '@/lib/database.types';
 import Container from '../components/common/Container';
 import SectionLabel from '../components/common/SectionLabel';
+import RealtimeIndicator from '../components/common/RealtimeIndicator';
+import { useRealtimeStatus } from '@/hooks/useRealtimeStatus';
 
 /* ─── Types ───────────────────────────────────────────────────── */
 
@@ -176,6 +178,8 @@ export default function MatchPage() {
     }
   }, [matchId]);
 
+  const { status, onStatusChange } = useRealtimeStatus(loadMatch);
+
   useEffect(() => {
     loadMatch();
   }, [loadMatch]);
@@ -193,12 +197,12 @@ export default function MatchPage() {
           loadMatch();
         },
       )
-      .subscribe();
+      .subscribe(onStatusChange);
 
     return () => {
       void channel.unsubscribe();
     };
-  }, [matchId, loadMatch]);
+  }, [matchId, loadMatch, onStatusChange]);
 
   if (!teamId) return null;
 
@@ -443,6 +447,7 @@ export default function MatchPage() {
               <span className={cn('inline-flex items-center gap-1.5', themeText(theme, 'secondary'))}>
                 Spelpass {match.wave}
               </span>
+              <RealtimeIndicator status={status} onRefresh={loadMatch} theme={theme} />
             </div>
           </motion.div>
 
