@@ -82,9 +82,6 @@ function MatchRow({
       <span className={cn('text-right', !t1Won ? 'text-emerald-400 font-medium' : 'text-zinc-600')}>
         {t2Name}
       </span>
-      <span className="col-span-3 text-[10px] text-zinc-600 font-mono text-center">
-        P{match.wave} · B{match.table_number ?? '—'}
-      </span>
     </div>
   ) : (
     <div
