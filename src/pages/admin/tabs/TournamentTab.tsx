@@ -110,11 +110,15 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   // Build name map
   const teamNameMap = new Map(teams.map((t) => [t.id, t.name]));
   const completedResults = matches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
-  const unresolvedCutoffTie = detectUnresolvedCutoffTie(
-    standings,
-    completedResults,
-    PLAYOFF_CUTOFF,
-  );
+  // The Top-8 cutoff tie only matters at the Swiss→knockout seeding step: all Swiss
+  // rounds are done (status is 'knockout') but the QF bracket isn't generated yet.
+  // Outside that step the detection would fire spuriously — e.g. before play starts
+  // every team is 0–0 with equal cup diff, so the whole field reads as one big tie.
+  const atKnockoutSeedingStep =
+    tournament?.status === 'knockout' && !matches.some((m) => m.round === KNOCKOUT_START_ROUND);
+  const unresolvedCutoffTie = atKnockoutSeedingStep
+    ? detectUnresolvedCutoffTie(standings, completedResults, PLAYOFF_CUTOFF)
+    : null;
   const tieGroupIds = unresolvedCutoffTie?.teamIds ?? null;
   const storedTieOrder = tieOrderByCutoff[PLAYOFF_CUTOFF] ?? [];
 
