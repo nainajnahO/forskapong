@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { cn } from '@/lib/utils';
+import { cn, getErrorMessage } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 
 interface Props {
@@ -32,7 +32,7 @@ export default function DeleteConfirmModal({
       if (err) throw err;
       onDeleted();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Något gick fel');
+      setError(getErrorMessage(err));
       setDeleting(false);
     }
   }
