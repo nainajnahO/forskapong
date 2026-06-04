@@ -453,6 +453,7 @@ export type Database = {
           p_loser_cups: number
           p_match_id: string
           p_we_are_winner: boolean
+          p_winner_cups: number
         }
         Returns: {
           confirmed: boolean
