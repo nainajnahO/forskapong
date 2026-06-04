@@ -29,7 +29,12 @@ import DangerZone from '../components/DangerZone';
 import { byesByRound, dbMatchToResult, standingsFromMatches, teamsToEngine } from '../lib/match-utils';
 import { orientSwissPairings, type OrientedPairing } from '@/lib/home-away';
 import type { AdminTab } from '@/contexts/AdminTabContextDef';
-import { assignTablesAndWaves, getWaveCount, normalizeTableCount } from '@/lib/table-scheduling';
+import {
+  assignTablesAndWaves,
+  getWaveCount,
+  normalizeTableCount,
+  waveStartTime,
+} from '@/lib/table-scheduling';
 import { getKnockoutStartRound, DEFAULT_KNOCKOUT_SIZE } from '@/lib/constants';
 
 /* ─── Component ───────────────────────────────────────────────── */
@@ -51,6 +56,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   const [roundCount, setRoundCount] = useState(7);
   const [tableCount, setTableCount] = useState(16);
   const [knockoutSize, setKnockoutSize] = useState(DEFAULT_KNOCKOUT_SIZE);
+  const [matchDuration, setMatchDuration] = useState(10);
   // Persisted N-way tie ordering, keyed by cutoff → team ids in rank order.
   // A 2-team tie is just N=2; this supersedes the old pairwise RPS flow.
   const [tieOrderByCutoff, setTieOrderByCutoff] = useState<Record<number, string[]>>({});
@@ -81,6 +87,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     if (t?.total_rounds) setRoundCount(t.total_rounds);
     if (t?.table_count) setTableCount(t.table_count);
     if (t?.knockout_size) setKnockoutSize(t.knockout_size);
+    if (t?.match_duration_minutes) setMatchDuration(t.match_duration_minutes);
     setTeams(allTeams);
     setMatches(allMatches);
     // Rows arrive sorted by (cutoff, rank), so pushing yields each cutoff's
@@ -245,6 +252,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
         p_total_rounds: effectiveRoundCount,
         p_table_count: tableCount,
         p_knockout_size: effectiveKnockoutSize,
+        p_match_duration_minutes: matchDuration,
         p_status: 'swiss',
       });
       if (error) throw error;
@@ -274,15 +282,17 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       );
       const orientedPairings = orientSwissPairings(pairings.pairings, swissHistory);
       const scheduledPairings = assignTablesAndWaves(orientedPairings, activeTableCount);
+      const matchDuration = tournament?.match_duration_minutes ?? 10;
 
-      // team1_id = home team, team2_id = away team
+      // team1_id = home team, team2_id = away team. Each wave starts a match length
+      // after the previous one, so its planned time is offset from the round start.
       const inserts = scheduledPairings.map((p) => ({
         round: currentRound,
         wave: p.wave,
         team1_id: p.homeTeamId,
         team2_id: p.awayTeamId,
         table_number: p.tableNumber,
-        scheduled_time: roundTime || null,
+        scheduled_time: roundTime ? waveStartTime(roundTime, p.wave, matchDuration) : null,
       }));
 
       const { error } = await supabase.rpc('admin_create_matches', {
@@ -386,13 +396,14 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       }
 
       const scheduled = assignTablesAndWaves(pairings, activeTableCount);
+      const matchDuration = tournament?.match_duration_minutes ?? 10;
       const inserts = scheduled.map((p) => ({
         round: targetRound,
         wave: p.wave,
         team1_id: p.homeTeamId,
         team2_id: p.awayTeamId,
         table_number: p.tableNumber,
-        scheduled_time: roundTime || null,
+        scheduled_time: roundTime ? waveStartTime(roundTime, p.wave, matchDuration) : null,
       }));
       const { error } = await supabase.rpc('admin_create_matches', {
         admin_code: sessionStorage.getItem('adminCode') ?? '',
@@ -646,10 +657,12 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
         roundCount={roundCount}
         tableCount={tableCount}
         knockoutSize={knockoutSize}
+        matchDuration={matchDuration}
         schedulePreview={schedulePreview}
         onRoundCountChange={setRoundCount}
         onTableCountChange={setTableCount}
         onKnockoutSizeChange={setKnockoutSize}
+        onMatchDurationChange={setMatchDuration}
         onStartTournament={handleStartTournament}
         onGeneratePairings={handleGeneratePairings}
         onAdvanceRound={handleAdvanceRound}

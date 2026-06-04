@@ -25,11 +25,13 @@ interface Props {
   roundCount: number;
   tableCount: number;
   knockoutSize: number;
+  matchDuration: number;
   schedulePreview: { matchCount: number; waveCount: number } | null;
   onRoundTimeChange: (v: string) => void;
   onRoundCountChange: (v: number) => void;
   onTableCountChange: (v: number) => void;
   onKnockoutSizeChange: (v: number) => void;
+  onMatchDurationChange: (v: number) => void;
   onStartTournament: () => void;
   onGeneratePairings: () => void;
   onAdvanceRound: () => void;
@@ -136,11 +138,13 @@ export default function TournamentFlowCard(props: Props) {
     roundCount,
     tableCount,
     knockoutSize,
+    matchDuration,
     schedulePreview,
     onRoundTimeChange,
     onRoundCountChange,
     onTableCountChange,
     onKnockoutSizeChange,
+    onMatchDurationChange,
     onStartTournament,
     onGeneratePairings,
     onAdvanceRound,
@@ -265,6 +269,22 @@ export default function TournamentFlowCard(props: Props) {
               </div>
             )}
 
+            {config.showMatchDurationInput && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-zinc-500">Matchlängd (min):</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={120}
+                  value={matchDuration}
+                  onChange={(e) =>
+                    onMatchDurationChange(Math.max(1, Math.min(120, Number(e.target.value))))
+                  }
+                  className="w-14 h-9 px-2 rounded-xl text-sm bg-white/[0.04] border border-white/[0.08] text-white text-center outline-none focus:border-brand-500"
+                />
+              </div>
+            )}
+
             {config.showTimeInput && (
               <input
                 type="time"
@@ -340,6 +360,7 @@ interface CardConfig {
   showRoundCountInput: boolean;
   showTableCountInput: boolean;
   showKnockoutSizeInput: boolean;
+  showMatchDurationInput: boolean;
   action: {
     label: string;
     handler: ActionHandler;
@@ -397,6 +418,7 @@ function getCardConfig(
     showRoundCountInput: false,
     showTableCountInput: false,
     showKnockoutSizeInput: false,
+    showMatchDurationInput: false,
     action: null,
   };
 
@@ -429,10 +451,12 @@ function getCardConfig(
         ...BRAND_THEME,
         Icon: Play,
         title: 'Steg 2: Starta turneringen',
-        subtitle: 'Alla lag är redo. Välj swiss-rundor, slutspelsstorlek och antal bord innan start.',
+        subtitle:
+          'Alla lag är redo. Välj swiss-rundor, slutspelsstorlek, antal bord och matchlängd innan start.',
         showRoundCountInput: true,
         showKnockoutSizeInput: true,
         showTableCountInput: true,
+        showMatchDurationInput: true,
         action: { label: 'Starta turnering', handler: 'start', buttonClass: BRAND_PRIMARY_BTN },
       };
 

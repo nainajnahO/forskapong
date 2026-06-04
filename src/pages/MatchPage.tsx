@@ -441,7 +441,7 @@ export default function MatchPage() {
                   className={cn('inline-flex items-center gap-1.5', themeText(theme, 'secondary'))}
                 >
                   <ClockIcon />
-                  {match.scheduled_time}
+                  ca {match.scheduled_time}
                 </span>
               )}
               {match.table_number && (

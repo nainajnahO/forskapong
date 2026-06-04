@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { assignTablesAndWaves, getTableSlot, getWaveCount, normalizeTableCount } from './table-scheduling';
+import {
+  assignTablesAndWaves,
+  getTableSlot,
+  getWaveCount,
+  normalizeTableCount,
+  waveStartTime,
+} from './table-scheduling';
 
 describe('table scheduling', () => {
   it('normalizes invalid table counts to 1', () => {
@@ -37,5 +43,29 @@ describe('table scheduling', () => {
       waveSet.add(match.tableNumber);
       usedByWave.set(match.wave, waveSet);
     }
+  });
+});
+
+describe('waveStartTime', () => {
+  it('returns the round start unchanged for the first wave', () => {
+    expect(waveStartTime('17:00', 1, 10)).toBe('17:00');
+  });
+
+  it('offsets later waves by (wave - 1) match lengths', () => {
+    expect(waveStartTime('17:00', 2, 10)).toBe('17:10');
+    expect(waveStartTime('17:00', 3, 10)).toBe('17:20');
+    expect(waveStartTime('17:00', 4, 7)).toBe('17:21');
+  });
+
+  it('carries minutes into the next hour', () => {
+    expect(waveStartTime('17:50', 2, 15)).toBe('18:05');
+  });
+
+  it('zero-pads hours and minutes', () => {
+    expect(waveStartTime('09:05', 2, 5)).toBe('09:10');
+  });
+
+  it('wraps around midnight', () => {
+    expect(waveStartTime('23:30', 4, 15)).toBe('00:15');
   });
 });

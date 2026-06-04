@@ -585,7 +585,8 @@ export default function Dashboard() {
             {waveBannerState === 'wait' && (
               <p className={cn('text-sm mt-1', themeText(theme, 'secondary'))}>
                 Spelpass {roundCtx.activeWave} spelas nu. Du spelar i Spelpass {currentMatch.wave}
-                {currentMatch.table ? ` · Bord ${currentMatch.table}` : ''}.
+                {currentMatch.table ? ` · Bord ${currentMatch.table}` : ''}
+                {currentMatch.time ? ` · ca ${currentMatch.time}` : ''}.
               </p>
             )}
 
@@ -704,7 +705,7 @@ export default function Dashboard() {
                         'flex gap-2 sm:block mb-1 sm:mb-0',
                       )}
                     >
-                      <span>{round.time ?? '——:——'}</span>
+                      <span>{round.time ? `ca ${round.time}` : '——:——'}</span>
                       <span className="sm:block">{round.table ? `Bord ${round.table}` : '——'}</span>
                     </div>
 

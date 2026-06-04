@@ -261,6 +261,7 @@ export type Database = {
           current_round: number
           id: number
           knockout_size: number
+          match_duration_minutes: number
           status: string
           table_count: number
           total_rounds: number
@@ -269,6 +270,7 @@ export type Database = {
           current_round?: number
           id?: number
           knockout_size?: number
+          match_duration_minutes?: number
           status?: string
           table_count?: number
           total_rounds?: number
@@ -277,6 +279,7 @@ export type Database = {
           current_round?: number
           id?: number
           knockout_size?: number
+          match_duration_minutes?: number
           status?: string
           table_count?: number
           total_rounds?: number
@@ -383,6 +386,7 @@ export type Database = {
           admin_code: string
           p_current_round?: number
           p_knockout_size?: number
+          p_match_duration_minutes?: number
           p_status?: string
           p_table_count?: number
           p_total_rounds?: number
@@ -391,6 +395,7 @@ export type Database = {
           current_round: number
           id: number
           knockout_size: number
+          match_duration_minutes: number
           status: string
           table_count: number
           total_rounds: number
