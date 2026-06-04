@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { cn } from '@/lib/utils';
+import { cn, getErrorMessage } from '@/lib/utils';
 
 interface Props {
   title: string;
@@ -33,7 +33,7 @@ export default function TypedConfirmModal({
       await onConfirm();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Något gick fel');
+      setError(getErrorMessage(err));
       setRunning(false);
     }
   }

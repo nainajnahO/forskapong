@@ -2,14 +2,11 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
+import { getKnockoutStartRound, DEFAULT_KNOCKOUT_SIZE } from '@/lib/constants';
 import type { Team, Match, Tournament } from '@/lib/database.types';
-import {
-  calculateRankings,
-  advanceKnockoutRound,
-  type MatchResult,
-  type KnockoutBracket,
-} from '@/lib/tournament-engine';
-import { dbMatchToResult, teamsToEngine } from '@/pages/admin/lib/match-utils';
+import { type MatchResult, type KnockoutBracket } from '@/lib/tournament-engine';
+import { buildLiveBracket } from '@/lib/live-knockout';
+import { dbMatchToResult, standingsFromMatches } from '@/pages/admin/lib/match-utils';
 import TournamentMapView from '@/pages/admin/components/TournamentMapView';
 
 /* ─── Champion overlay ────────────────────────────────── */
@@ -54,7 +51,12 @@ export default function DisplayPage() {
     const [tRes, teamsRes, matchesRes] = await Promise.all([
       supabase.from('tournament').select('*').maybeSingle(),
       supabase.from('teams').select('*'),
-      supabase.from('matches').select('*').order('round', { ascending: true }),
+      supabase
+        .from('matches')
+        .select('*')
+        .order('round', { ascending: true })
+        .order('wave', { ascending: true })
+        .order('table_number', { ascending: true }),
     ]);
     setTournament(tRes.data);
     setTeams(teamsRes.data ?? []);
@@ -82,9 +84,10 @@ export default function DisplayPage() {
   const teamNameMap = new Map(teams.map((t) => [t.id, t.name]));
   const status = tournament?.status ?? 'not_started';
   const currentRound = tournament?.current_round ?? 0;
-  const results = matches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
-  const engineTeams = teamsToEngine(teams, results);
-  const standings = calculateRankings(engineTeams, results);
+  const knockoutStartRound = getKnockoutStartRound(tournament?.total_rounds ?? 7);
+  const playoffSize = tournament?.knockout_size ?? DEFAULT_KNOCKOUT_SIZE;
+  const numKnockoutRounds = Math.log2(playoffSize);
+  const standings = standingsFromMatches(teams, matches);
 
   // Group matches by round
   const roundsMap = new Map<number, Match[]>();
@@ -95,57 +98,14 @@ export default function DisplayPage() {
   }
   const rounds = [...roundsMap.entries()].sort(([a], [b]) => a - b);
 
-  // Build knockout bracket
-  const knockoutMatches = matches.filter((m) => m.round >= 8);
+  // Live bracket from the generated match rows (null until the first round exists).
+  const knockoutMatches = matches.filter((m) => m.round >= knockoutStartRound);
   const knockoutResults = knockoutMatches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
-  let liveBracket: KnockoutBracket | null = null;
+  const liveBracket: KnockoutBracket | null =
+    status === 'knockout' ? buildLiveBracket(knockoutMatches, knockoutStartRound, playoffSize) : null;
 
-  if (status === 'knockout' && knockoutMatches.length >= 4) {
-    const qfMatches = knockoutMatches.filter((m) => m.round === 8);
-    if (qfMatches.length === 4) {
-      liveBracket = {
-        quarterfinals: qfMatches.map((m, i) => ({
-          matchIndex: i,
-          team1Id: m.team1_id,
-          team2Id: m.team2_id,
-        })),
-        semifinals: [
-          { matchIndex: 0, team1Id: null, team2Id: null },
-          { matchIndex: 1, team1Id: null, team2Id: null },
-        ],
-        final: { matchIndex: 0, team1Id: null, team2Id: null },
-      };
-
-      const qfResults = qfMatches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
-      if (qfResults.length === 4) {
-        liveBracket = advanceKnockoutRound(liveBracket, qfResults, 'quarterfinals');
-      }
-
-      const sfMatches = knockoutMatches.filter((m) => m.round === 9);
-      if (sfMatches.length === 2) {
-        liveBracket.semifinals = sfMatches.map((m, i) => ({
-          matchIndex: i,
-          team1Id: m.team1_id,
-          team2Id: m.team2_id,
-        }));
-        const sfResults = sfMatches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
-        if (sfResults.length === 2) {
-          liveBracket = advanceKnockoutRound(liveBracket, sfResults, 'semifinals');
-        }
-      }
-
-      const finalMatch = knockoutMatches.find((m) => m.round === 10);
-      if (finalMatch) {
-        liveBracket.final = {
-          matchIndex: 0,
-          team1Id: finalMatch.team1_id,
-          team2Id: finalMatch.team2_id,
-        };
-      }
-    }
-  }
-
-  const finalResult = knockoutMatches.find((m) => m.round === 10 && m.winner_id);
+  const lastKnockoutRound = knockoutStartRound + numKnockoutRounds - 1;
+  const finalResult = knockoutMatches.find((m) => m.round === lastKnockoutRound && m.winner_id);
   const champion = finalResult?.winner_id ?? null;
 
   if (status === 'not_started') {
@@ -153,7 +113,7 @@ export default function DisplayPage() {
       <div className="h-screen bg-zinc-950 flex items-center justify-center">
         <div className="text-center">
           <p className="text-4xl mb-4">🏓</p>
-          <p className="text-2xl font-bold text-white tracking-tight">Forskåpong</p>
+          <p className="text-2xl font-bold text-white tracking-tight">TentaFestivalen Beerpong</p>
           <p className="text-zinc-600 mt-2">Turneringen har inte startat ännu</p>
         </div>
       </div>
@@ -165,7 +125,7 @@ export default function DisplayPage() {
       {/* Header */}
       <div className="flex items-center justify-between px-8 py-5">
         <div className="flex items-center gap-4">
-          <h1 className="text-xl font-bold text-white tracking-tight">Forskåpong</h1>
+          <h1 className="text-xl font-bold text-white tracking-tight">TentaFestivalen Beerpong</h1>
           <div
             className={cn(
               'px-3 py-1 rounded-full text-xs font-medium border',

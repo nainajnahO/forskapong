@@ -4,11 +4,16 @@ import { motion } from 'motion/react';
 import { useTheme } from '@/contexts/useTheme';
 import { cn } from '@/lib/utils';
 import { themeText } from '@/lib/theme-utils';
+import { canAwayTeamConfirm, canHomeTeamReport } from '@/lib/home-away';
+import { deriveWaveBannerState } from '@/lib/wave-banner';
+import { getKnockoutStartRound } from '@/lib/constants';
 
 import { supabase } from '@/lib/supabase';
 import type { Team, Match } from '@/lib/database.types';
 import FluidBackground from '@/components/common/FluidBackground';
 import StaticNoise from '@/components/common/StaticNoise';
+import RealtimeIndicator from '@/components/common/RealtimeIndicator';
+import { useRealtimeStatus } from '@/hooks/useRealtimeStatus';
 
 /* ─── Types ───────────────────────────────────────────────────── */
 
@@ -19,6 +24,7 @@ interface MatchWithTeams extends Match {
 
 interface RoundDisplay {
   round: number;
+  wave: number;
   matchId: string;
   time: string | null;
   table: number | null;
@@ -29,6 +35,7 @@ interface RoundDisplay {
   confirmed: boolean;
   needsConfirmation: boolean;
   canReport: boolean;
+  isBye: boolean;
 }
 
 /* ─── Data fetching ───────────────────────────────────────────── */
@@ -44,7 +51,9 @@ async function fetchMatches(teamId: string): Promise<MatchWithTeams[]> {
     .from('matches')
     .select('*')
     .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
-    .order('round', { ascending: true });
+    .order('round', { ascending: true })
+    .order('wave', { ascending: true })
+    .order('table_number', { ascending: true });
   if (matchError) throw matchError;
   if (!matches || matches.length === 0) return [];
 
@@ -74,9 +83,8 @@ function matchToRound(match: MatchWithTeams, teamId: string): RoundDisplay {
   if (match.winner_id === teamId) result = 'win';
   else if (match.loser_id === teamId) result = 'loss';
 
-  const needsConfirmation =
-    match.loser_id === teamId && !match.confirmed && match.reported_by !== null;
-  const canReport = match.winner_id === null && !isTbd;
+  const needsConfirmation = canAwayTeamConfirm(match, teamId);
+  const canReport = canHomeTeamReport(match, teamId) && !isTbd;
 
   let scoreDisplay: string | null = null;
   if (match.score_team1 !== null && match.score_team2 !== null) {
@@ -87,6 +95,7 @@ function matchToRound(match: MatchWithTeams, teamId: string): RoundDisplay {
 
   return {
     round: match.round,
+    wave: match.wave,
     matchId: match.id,
     time: match.scheduled_time,
     table: match.table_number,
@@ -97,6 +106,73 @@ function matchToRound(match: MatchWithTeams, teamId: string): RoundDisplay {
     confirmed: match.confirmed,
     needsConfirmation,
     canReport,
+    isBye: false,
+  };
+}
+
+interface TournamentContext {
+  totalRounds: number;
+  currentRound: number;
+  status: string;
+  generatedRounds: number[];
+  // Current-round wave progress, for the "din tur / vänta" status banner.
+  activeWave: number | null; // lowest wave still holding an unconfirmed match; null once all confirmed
+  waveCount: number; // number of waves (spelpass) in the current round
+  confirmedCount: number;
+  totalCount: number;
+}
+
+/**
+ * Tournament context for the schedule view: total/current round + status (for the
+ * wave status banner), every round that has matches (for deriving this team's byes),
+ * and the current round's wave progress.
+ *
+ * Byes: a bye leaves no match row, so it's inferred — a generated Swiss round
+ * (round ≤ total_rounds) where the team has no match. The bye-aware scoreboard counts
+ * a bye as a win (issue #26); the Dashboard mirrors that. Knockout rounds are excluded
+ * by the total_rounds bound. Kept consistent with the engine's `deriveByes` (which works
+ * the whole field at once); update both if the rule changes.
+ *
+ * Waves: a round is split into waves (spelpass) when there aren't enough tables for every
+ * match at once. There is no "current wave" column — it's derived as the lowest wave with
+ * an unconfirmed match, since earlier waves finish (get confirmed) before later ones play.
+ */
+async function fetchTournamentContext(): Promise<TournamentContext> {
+  const [{ data: tournament }, { data: rows }] = await Promise.all([
+    supabase.from('tournament').select('total_rounds, current_round, status').maybeSingle(),
+    supabase.from('matches').select('round, wave, confirmed'),
+  ]);
+  const allRows = rows ?? [];
+  const currentRound = tournament?.current_round ?? 0;
+  const currentRows = allRows.filter((r) => r.round === currentRound);
+  const openWaves = currentRows.filter((r) => !r.confirmed).map((r) => r.wave);
+  return {
+    totalRounds: tournament?.total_rounds ?? 0,
+    currentRound,
+    status: tournament?.status ?? 'not_started',
+    generatedRounds: [...new Set(allRows.map((r) => r.round))],
+    activeWave: openWaves.length > 0 ? Math.min(...openWaves) : null,
+    waveCount: currentRows.length > 0 ? Math.max(...currentRows.map((r) => r.wave)) : 0,
+    confirmedCount: currentRows.filter((r) => r.confirmed).length,
+    totalCount: currentRows.length,
+  };
+}
+
+function byeToRound(round: number): RoundDisplay {
+  return {
+    round,
+    wave: 0,
+    matchId: `bye-${round}`,
+    time: null,
+    table: null,
+    opponent: null,
+    opponentId: null,
+    result: 'win', // a bye is a win (issue #26)
+    scoreDisplay: null,
+    confirmed: true,
+    needsConfirmation: false,
+    canReport: false,
+    isBye: true,
   };
 }
 
@@ -175,6 +251,15 @@ export default function Dashboard() {
 
   const [team, setTeam] = useState<Team | null>(null);
   const [rounds, setRounds] = useState<RoundDisplay[]>([]);
+  // Tournament's configured Swiss round count; rounds beyond it are knockout.
+  const [swissRounds, setSwissRounds] = useState(7);
+  // Live round + wave progress, for the wave status banner.
+  const [roundCtx, setRoundCtx] = useState<
+    Pick<
+      TournamentContext,
+      'currentRound' | 'status' | 'activeWave' | 'waveCount' | 'confirmedCount' | 'totalCount'
+    >
+  >({ currentRound: 0, status: 'not_started', activeWave: null, waveCount: 0, confirmedCount: 0, totalCount: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [player1, setPlayer1] = useState('');
@@ -189,11 +274,35 @@ export default function Dashboard() {
   const loadData = useCallback(async () => {
     if (!teamId) return;
     try {
-      const [teamData, matchData] = await Promise.all([fetchTeam(teamId), fetchMatches(teamId)]);
+      const [teamData, matchData, ctx] = await Promise.all([
+        fetchTeam(teamId),
+        fetchMatches(teamId),
+        fetchTournamentContext(),
+      ]);
       setTeam(teamData);
       setPlayer1(teamData.player1 ?? '');
       setPlayer2(teamData.player2 ?? '');
-      setRounds(matchData.map((m) => matchToRound(m, teamId)));
+      // Falls back to 7 before the tournament row sets total_rounds.
+      setSwissRounds(ctx.totalRounds || 7);
+      setRoundCtx({
+        currentRound: ctx.currentRound,
+        status: ctx.status,
+        activeWave: ctx.activeWave,
+        waveCount: ctx.waveCount,
+        confirmedCount: ctx.confirmedCount,
+        totalCount: ctx.totalCount,
+      });
+      // Played matches + bye rounds (counted as wins), in round order.
+      const teamRounds = new Set(matchData.map((m) => m.round));
+      const byeRounds = ctx.generatedRounds.filter(
+        (round) => round <= ctx.totalRounds && !teamRounds.has(round),
+      );
+      const playedRounds = matchData.map((m) => matchToRound(m, teamId));
+      setRounds(
+        [...playedRounds, ...byeRounds.map(byeToRound)].sort(
+          (a, b) => a.round - b.round || a.wave - b.wave,
+        ),
+      );
       setError('');
     } catch {
       setError('Kunde inte ladda data. Försök igen.');
@@ -202,16 +311,28 @@ export default function Dashboard() {
     }
   }, [teamId]);
 
+  const refreshUnlessSaving = useCallback(() => {
+    // Skip the reconnect refetch if the player is mid-edit on their names —
+    // otherwise the server values would clobber what they're typing.
+    if (!savingNamesRef.current) loadData();
+  }, [loadData]);
+  const { status, onStatusChange } = useRealtimeStatus(refreshUnlessSaving);
+
   useEffect(() => {
     loadData();
   }, [loadData]);
 
   async function savePlayerNames(): Promise<void> {
-    if (!teamId || savingNamesRef.current) return;
+    if (!teamId || !code || savingNamesRef.current) return;
     const trimmed = { player1: player1.trim() || null, player2: player2.trim() || null };
     savingNamesRef.current = true;
     try {
-      const { error: saveError } = await supabase.from('teams').update(trimmed).eq('id', teamId);
+      // Gated by the team's own code; the empty strings become null server-side.
+      const { error: saveError } = await supabase.rpc('update_team_profile', {
+        p_code: code,
+        p_player1: player1.trim(),
+        p_player2: player2.trim(),
+      });
       if (!saveError) setTeam((prev) => (prev ? { ...prev, ...trimmed } : prev));
     } finally {
       savingNamesRef.current = false;
@@ -230,15 +351,17 @@ export default function Dashboard() {
           if (!savingNamesRef.current) loadData();
         },
       )
-      .subscribe();
+      .subscribe(onStatusChange);
     return () => {
       void channel.unsubscribe();
     };
-  }, [teamId, loadData]);
+  }, [teamId, loadData, onStatusChange]);
 
   if (!teamId || !code) return null;
 
-  const currentRoundIdx = rounds.findIndex((r) => r.canReport || r.needsConfirmation);
+  const currentRoundIdx = rounds.findIndex(
+    (r) => r.canReport || r.needsConfirmation || (r.result === null && !r.confirmed),
+  );
   const wins = rounds.filter((r) => r.result === 'win').length;
   const losses = rounds.filter((r) => r.result === 'loss').length;
   const totalPlayed = wins + losses;
@@ -250,6 +373,17 @@ export default function Dashboard() {
         ? rounds[rounds.length - 1].round
         : 0;
   const totalRounds = rounds.length;
+
+  // ── Wave status banner ──────────────────────
+  // "Am I up now, or waiting for a later wave?" — derivation is pure + tested in
+  // wave-banner.ts; this team's only open match is in current_round (round advance
+  // is gated on the whole round confirming).
+  const currentMatch = rounds.find((r) => r.round === roundCtx.currentRound && !r.isBye) ?? null;
+  const waveBannerState = deriveWaveBannerState(currentMatch, {
+    status: roundCtx.status,
+    waveCount: roundCtx.waveCount,
+    activeWave: roundCtx.activeWave,
+  });
 
   /* ── Loading ──────────────────────────────── */
   if (loading) {
@@ -383,6 +517,88 @@ export default function Dashboard() {
           )}
         />
 
+        {/* ── Wave status banner ───────────────── */}
+        {waveBannerState && currentMatch && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className={cn(
+              'border px-4 py-3 mb-6',
+              waveBannerState === 'turn' && 'border-emerald-500/40 bg-emerald-500/5',
+              waveBannerState === 'wait' && 'border-amber-500/40 bg-amber-500/5',
+              waveBannerState === 'done' && (theme === 'dark' ? 'border-zinc-800' : 'border-zinc-200'),
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <span
+                className={cn(
+                  'text-xs',
+                  waveBannerState === 'turn' && 'text-emerald-400',
+                  waveBannerState === 'wait' && 'text-amber-400',
+                  waveBannerState === 'done' && themeText(theme, 'muted'),
+                )}
+              >
+                {waveBannerState === 'turn' ? '●' : waveBannerState === 'wait' ? '◐' : '✓'}
+              </span>
+              <span
+                className={cn(
+                  'text-xs uppercase tracking-[0.2em] font-semibold',
+                  waveBannerState === 'turn' && 'text-emerald-400',
+                  waveBannerState === 'wait' && 'text-amber-400',
+                  waveBannerState === 'done' && themeText(theme, 'secondary'),
+                )}
+              >
+                {waveBannerState === 'turn'
+                  ? 'Din tur nu'
+                  : waveBannerState === 'wait'
+                    ? 'Vänta på ditt spelpass'
+                    : currentMatch.confirmed
+                      ? 'Klar för rundan'
+                      : 'Inväntar bekräftelse'}
+              </span>
+            </div>
+
+            {waveBannerState === 'turn' && (
+              <>
+                <p className={cn('text-sm mt-1', themeText(theme, 'secondary'))}>
+                  Spelpass {currentMatch.wave}
+                  {currentMatch.table ? ` · Bord ${currentMatch.table}` : ''} · vs{' '}
+                  {currentMatch.opponent}
+                </p>
+                <button
+                  onClick={() => navigate(`/play/match/${currentMatch.matchId}`)}
+                  className={cn(
+                    'mt-1.5 text-sm text-brand-400 underline underline-offset-4 decoration-brand-500/30',
+                    'hover:decoration-brand-500/60 transition-colors',
+                  )}
+                >
+                  {currentMatch.needsConfirmation
+                    ? 'Bekräfta resultat →'
+                    : currentMatch.canReport
+                      ? 'Rapportera →'
+                      : 'Visa match →'}
+                </button>
+              </>
+            )}
+
+            {waveBannerState === 'wait' && (
+              <p className={cn('text-sm mt-1', themeText(theme, 'secondary'))}>
+                Spelpass {roundCtx.activeWave} spelas nu. Du spelar i Spelpass {currentMatch.wave}
+                {currentMatch.table ? ` · Bord ${currentMatch.table}` : ''}
+                {currentMatch.time ? ` · ca ${currentMatch.time}` : ''}.
+              </p>
+            )}
+
+            {waveBannerState === 'done' && (
+              <p className={cn('text-sm mt-1', themeText(theme, 'muted'))}>
+                Väntar på att runda {roundCtx.currentRound} spelas klar ({roundCtx.confirmedCount}/
+                {roundCtx.totalCount}).
+              </p>
+            )}
+          </motion.div>
+        )}
+
         {/* ── Match schedule header ────────────── */}
         <div className="flex items-center justify-between mb-6">
           <p
@@ -393,15 +609,18 @@ export default function Dashboard() {
           >
             Matchschema
           </p>
-          <button
-            onClick={() => navigate('/scoreboard')}
-            className={cn(
-              'text-xs transition-opacity hover:opacity-70',
-              themeText(theme, 'secondary'),
-            )}
-          >
-            Scoreboard →
-          </button>
+          <div className="flex items-center gap-4">
+            <RealtimeIndicator status={status} onRefresh={loadData} theme={theme} />
+            <button
+              onClick={() => navigate('/scoreboard')}
+              className={cn(
+                'text-xs transition-opacity hover:opacity-70',
+                themeText(theme, 'secondary'),
+              )}
+            >
+              Scoreboard →
+            </button>
+          </div>
         </div>
 
         {/* ── Match entries ────────────────────── */}
@@ -416,6 +635,51 @@ export default function Dashboard() {
               const isPlayed = round.result !== null;
               const isWin = round.result === 'win';
               const isTbd = round.opponent === null;
+
+              if (round.isBye) {
+                return (
+                  <motion.div
+                    key={round.matchId}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: i * 0.04 }}
+                  >
+                    <div
+                      className={cn('grid gap-x-3 py-3', 'grid-cols-1', 'sm:grid-cols-[4rem_1fr_4rem]')}
+                    >
+                      <div
+                        className={cn(
+                          'text-[11px] font-mono tabular-nums sm:text-right mb-1 sm:mb-0',
+                          themeText(theme, 'muted'),
+                        )}
+                      >
+                        ——:——
+                      </div>
+                      <div>
+                        <p className="text-sm">
+                          <span className={cn('mr-1.5', themeText(theme, 'muted'))}>▸</span>
+                          <span className={themeText(theme, 'secondary')}>Spelfri runda</span>
+                        </p>
+                        <p className={cn('text-[11px] mt-0.5 ml-4', themeText(theme, 'muted'))}>
+                          Gruppspel runda {round.round}
+                          <span className="ml-2">Vinst utan match</span>
+                        </p>
+                      </div>
+                      <div className="text-[11px] font-mono tabular-nums sm:text-left flex items-center mt-1 sm:mt-0 ml-4 sm:ml-0 sm:block">
+                        <span className="font-black uppercase sm:block text-emerald-400">W</span>
+                      </div>
+                    </div>
+                    {i < rounds.length - 1 && (
+                      <div
+                        className={cn(
+                          'h-px ml-0 sm:ml-[4.75rem]',
+                          theme === 'dark' ? 'bg-zinc-800/40' : 'bg-zinc-100',
+                        )}
+                      />
+                    )}
+                  </motion.div>
+                );
+              }
 
               return (
                 <motion.div
@@ -441,8 +705,8 @@ export default function Dashboard() {
                         'flex gap-2 sm:block mb-1 sm:mb-0',
                       )}
                     >
-                      <span>{round.time ?? '——:——'}</span>
-                      <span className="sm:block">{round.table ? `B${round.table}` : '——'}</span>
+                      <span>{round.time ? `ca ${round.time}` : '——:——'}</span>
+                      <span className="sm:block">{round.table ? `Bord ${round.table}` : '——'}</span>
                     </div>
 
                     {/* Center: main content */}
@@ -463,7 +727,9 @@ export default function Dashboard() {
                         )}
                       </p>
                       <p className={cn('text-[11px] mt-0.5 ml-4', themeText(theme, 'muted'))}>
-                        Runda {round.round}
+                        {round.round >= getKnockoutStartRound(swissRounds) ? 'Slutspel' : 'Gruppspel'}{' '}
+                        runda {round.round}
+                        <span className="ml-2">Spelpass {round.wave}</span>
                         {isCurrent && (
                           <span
                             className={cn(
@@ -483,7 +749,11 @@ export default function Dashboard() {
                             'hover:decoration-brand-500/60 transition-colors',
                           )}
                         >
-                          {round.needsConfirmation ? 'Bekräfta resultat →' : 'Rapportera →'}
+                          {round.needsConfirmation
+                            ? 'Bekräfta resultat →'
+                            : round.canReport
+                              ? 'Rapportera →'
+                              : 'Visa match →'}
                         </button>
                       )}
                     </div>

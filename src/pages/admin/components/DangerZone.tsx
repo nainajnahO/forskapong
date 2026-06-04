@@ -10,39 +10,26 @@ interface Props {
   onActionComplete: () => void;
 }
 
-export default function DangerZone({ tournament, currentRound, onActionComplete }: Props) {
+export default function DangerZone({ currentRound, onActionComplete }: Props) {
   const [open, setOpen] = useState(false);
   const [modal, setModal] = useState<'reset' | 'clear-round' | null>(null);
 
   async function handleResetTournament() {
-    // Delete all matches
-    const { error: matchErr } = await supabase.from('matches').delete().not('id', 'is', null);
-    if (matchErr) throw matchErr;
-
-    // Reset tournament state
-    if (tournament) {
-      const { error: tErr } = await supabase
-        .from('tournament')
-        .update({ current_round: 0, status: 'not_started' })
-        .eq('id', tournament.id);
-      if (tErr) throw tErr;
-    }
-
-    // Reset all team W/L
-    const { error: teamErr } = await supabase
-      .from('teams')
-      .update({ wins: 0, losses: 0 })
-      .not('id', 'is', null);
-    if (teamErr) throw teamErr;
-
+    const adminCode = sessionStorage.getItem('adminCode');
+    if (!adminCode) throw new Error('Logga in som admin igen');
+    // One transactional RPC: wipe matches, reset the tournament row + all team W/L.
+    const { error } = await supabase.rpc('admin_reset_tournament', { admin_code: adminCode });
+    if (error) throw error;
     onActionComplete();
   }
 
   async function handleClearRound() {
-    const { error } = await supabase
-      .from('matches')
-      .delete()
-      .eq('round', currentRound);
+    const adminCode = sessionStorage.getItem('adminCode');
+    if (!adminCode) throw new Error('Logga in som admin igen');
+    const { error } = await supabase.rpc('admin_clear_round', {
+      admin_code: adminCode,
+      p_round: currentRound,
+    });
     if (error) throw error;
     onActionComplete();
   }

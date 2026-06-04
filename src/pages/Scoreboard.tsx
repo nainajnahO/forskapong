@@ -7,24 +7,22 @@ import { themeText } from '@/lib/theme-utils';
 
 import { supabase } from '@/lib/supabase';
 import type { Team, Match } from '@/lib/database.types';
+import { type TeamStanding } from '@/lib/tournament-engine';
+import { standingsFromMatches } from '@/pages/admin/lib/match-utils';
+import { DEFAULT_KNOCKOUT_SIZE } from '@/lib/constants';
 import FluidBackground from '@/components/common/FluidBackground';
 import StaticNoise from '@/components/common/StaticNoise';
+import RealtimeIndicator from '@/components/common/RealtimeIndicator';
+import { useRealtimeStatus } from '@/hooks/useRealtimeStatus';
 
 /* ─── Types ───────────────────────────────────────────────────── */
 
-interface TeamStanding {
+interface ScoreboardStanding extends TeamStanding {
   id: string;
   name: string;
   player1: string | null;
   player2: string | null;
-  wins: number;
-  losses: number;
-  opponentWins: number;
-  totalCupsHit: number;
-  rank: number;
 }
-
-const PLAYOFF_CUTOFF = 8;
 
 /* ─── Data ────────────────────────────────────────────────────── */
 
@@ -43,70 +41,6 @@ async function fetchAllMatches(): Promise<Match[]> {
   return data ?? [];
 }
 
-function calculateStandings(teams: Team[], matches: Match[]): TeamStanding[] {
-  const teamStats = new Map<
-    string,
-    { wins: number; losses: number; cupsHit: number; opponents: string[] }
-  >();
-
-  for (const team of teams) {
-    teamStats.set(team.id, { wins: 0, losses: 0, cupsHit: 0, opponents: [] });
-  }
-
-  for (const match of matches) {
-    if (!match.winner_id || !match.loser_id) continue;
-
-    const winner = teamStats.get(match.winner_id);
-    const loser = teamStats.get(match.loser_id);
-    if (!winner || !loser) continue;
-
-    winner.wins += 1;
-    loser.losses += 1;
-
-    winner.opponents.push(match.loser_id);
-    loser.opponents.push(match.winner_id);
-
-    if (match.score_team1 !== null && match.score_team2 !== null) {
-      const t1Stats = teamStats.get(match.team1_id);
-      const t2Stats = teamStats.get(match.team2_id);
-      if (t1Stats) t1Stats.cupsHit += match.score_team1;
-      if (t2Stats) t2Stats.cupsHit += match.score_team2;
-    }
-  }
-
-  const standings: TeamStanding[] = teams.map((team) => {
-    const stats = teamStats.get(team.id)!;
-    const opponentWins = stats.opponents.reduce((sum, oppId) => {
-      const oppStats = teamStats.get(oppId);
-      return sum + (oppStats?.wins ?? 0);
-    }, 0);
-
-    return {
-      id: team.id,
-      name: team.name,
-      player1: team.player1,
-      player2: team.player2,
-      wins: stats.wins,
-      losses: stats.losses,
-      opponentWins,
-      totalCupsHit: stats.cupsHit,
-      rank: 0,
-    };
-  });
-
-  standings.sort((a, b) => {
-    if (b.wins !== a.wins) return b.wins - a.wins;
-    if (b.opponentWins !== a.opponentWins) return b.opponentWins - a.opponentWins;
-    return b.totalCupsHit - a.totalCupsHit;
-  });
-
-  standings.forEach((s, i) => {
-    s.rank = i + 1;
-  });
-
-  return standings;
-}
-
 /* ─── Scoreboard Component ────────────────────────────────────── */
 
 export default function Scoreboard() {
@@ -119,14 +53,27 @@ export default function Scoreboard() {
     if (!teamId) navigate('/play', { replace: true });
   }, [teamId, navigate]);
 
-  const [standings, setStandings] = useState<TeamStanding[]>([]);
+  const [standings, setStandings] = useState<ScoreboardStanding[]>([]);
+  const [playoffSize, setPlayoffSize] = useState(DEFAULT_KNOCKOUT_SIZE);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const loadData = useCallback(async () => {
     try {
-      const [teams, matches] = await Promise.all([fetchAllTeams(), fetchAllMatches()]);
-      setStandings(calculateStandings(teams, matches));
+      const [teams, matches, tournamentRes] = await Promise.all([
+        fetchAllTeams(),
+        fetchAllMatches(),
+        supabase.from('tournament').select('knockout_size').maybeSingle(),
+      ]);
+      const engineStandings = standingsFromMatches(teams, matches);
+      const playerMap = new Map(teams.map((t) => [t.id, { player1: t.player1, player2: t.player2 }]));
+      const merged = engineStandings.map((s) => ({
+        ...s,
+        player1: playerMap.get(s.id)?.player1 ?? null,
+        player2: playerMap.get(s.id)?.player2 ?? null,
+      }));
+      setStandings(merged);
+      setPlayoffSize(tournamentRes.data?.knockout_size ?? DEFAULT_KNOCKOUT_SIZE);
       setError('');
     } catch {
       setError('Kunde inte ladda ställningen.');
@@ -134,6 +81,8 @@ export default function Scoreboard() {
       setLoading(false);
     }
   }, []);
+
+  const { status, onStatusChange } = useRealtimeStatus(loadData);
 
   useEffect(() => {
     loadData();
@@ -146,11 +95,11 @@ export default function Scoreboard() {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'teams' }, () =>
         loadData(),
       )
-      .subscribe();
+      .subscribe(onStatusChange);
     return () => {
       void channel.unsubscribe();
     };
-  }, [loadData]);
+  }, [loadData, onStatusChange]);
 
   /* ── Loading ──────────────────────────────────────── */
   if (loading) {
@@ -202,11 +151,21 @@ export default function Scoreboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <h1 className="font-display text-4xl md:text-5xl text-brand-500 tracking-wider hdr-text-fill mb-2">
-            Scoreboard
-          </h1>
+          {/* relative + inline-block keeps the centered title untouched while the
+              chip floats just off its right edge (absolute, so it adds no width). */}
+          <div className="relative inline-block mb-2">
+            <h1 className="font-display text-4xl md:text-5xl text-brand-500 tracking-wider hdr-text-fill">
+              Scoreboard
+            </h1>
+            <RealtimeIndicator
+              status={status}
+              onRefresh={loadData}
+              theme={theme}
+              className="absolute left-full top-1/2 -translate-y-1/2 ml-3"
+            />
+          </div>
           <p className={cn('text-sm', themeText(theme, 'secondary'))}>
-            Topp {PLAYOFF_CUTOFF} går vidare till slutspel
+            Topp {playoffSize} går vidare till slutspel
           </p>
         </motion.div>
       </div>
@@ -218,8 +177,8 @@ export default function Scoreboard() {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
-        {/* Back link + legend */}
-        <div className="flex items-center justify-between mt-6 mb-4">
+        {/* Back link */}
+        <div className="flex items-center mt-6 mb-4">
           {teamId && (
             <button
               onClick={() => navigate('/play/dashboard')}
@@ -231,12 +190,6 @@ export default function Scoreboard() {
               ← Tillbaka
             </button>
           )}
-          <div className="flex items-center gap-4 ml-auto">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span className={cn('text-[10px]', themeText(theme, 'muted'))}>Slutspel</span>
-            </div>
-          </div>
         </div>
 
         {/* Dashed rule */}
@@ -250,7 +203,7 @@ export default function Scoreboard() {
         {/* ── Column headers ──────────────────── */}
         <div
           className={cn(
-            'grid grid-cols-[2rem_1fr_2.5rem_2.5rem_3rem] sm:grid-cols-[2.5rem_1fr_3rem_3rem_3.5rem_3.5rem] gap-0 py-3',
+            'grid grid-cols-[2rem_1fr_2.5rem_2.5rem_3rem] sm:grid-cols-[2.5rem_1fr_3rem_3rem_3.5rem_4.25rem] gap-0 py-3',
             'text-[9px] font-mono uppercase tracking-widest',
             themeText(theme, 'muted'),
           )}
@@ -259,10 +212,10 @@ export default function Scoreboard() {
           <span>Lag</span>
           <span className="text-center">V</span>
           <span className="text-center">F</span>
-          <span className="text-center hidden sm:block" title="Motståndarvinster (Buchholz)">
-            BH
+          <span className="text-center hidden sm:block" title="Cup difference">
+            Diff
           </span>
-          <span className="text-center">Cups</span>
+          <span className="text-center">Cup +/-</span>
         </div>
 
         <div
@@ -274,9 +227,9 @@ export default function Scoreboard() {
 
         {/* ── Table rows ──────────────────────── */}
         {standings.map((team, i) => {
-          const inPlayoff = team.rank <= PLAYOFF_CUTOFF;
+          const inPlayoff = team.rank <= playoffSize;
           const isCurrentTeam = team.id === teamId;
-          const isAtCutoff = team.rank === PLAYOFF_CUTOFF;
+          const isAtCutoff = team.rank === playoffSize;
 
           return (
             <motion.div
@@ -287,7 +240,7 @@ export default function Scoreboard() {
             >
               <div
                 className={cn(
-                  'grid grid-cols-[2rem_1fr_2.5rem_2.5rem_3rem] sm:grid-cols-[2.5rem_1fr_3rem_3rem_3.5rem_3.5rem] gap-0 py-2.5 items-center',
+                  'grid grid-cols-[2rem_1fr_2.5rem_2.5rem_3rem] sm:grid-cols-[2.5rem_1fr_3rem_3rem_3.5rem_4.25rem] gap-0 py-2.5 items-center',
                   inPlayoff && (theme === 'dark' ? 'bg-emerald-500/[0.03]' : 'bg-emerald-50/30'),
                   isCurrentTeam &&
                     (theme === 'dark'
@@ -362,24 +315,24 @@ export default function Scoreboard() {
                   {team.losses}
                 </span>
 
-                {/* Buchholz (desktop) */}
+                {/* Cup diff (desktop) */}
                 <span
                   className={cn(
                     'text-xs font-mono tabular-nums text-center hidden sm:block',
                     themeText(theme, 'muted'),
                   )}
                 >
-                  {team.opponentWins}
+                  {team.cupDiff > 0 ? `+${team.cupDiff}` : team.cupDiff}
                 </span>
 
-                {/* Total cups */}
+                {/* Cup +/- */}
                 <span
                   className={cn(
                     'text-xs font-mono tabular-nums text-center',
                     themeText(theme, 'muted'),
                   )}
                 >
-                  {team.totalCupsHit}
+                  {team.cupsFor}-{team.cupsAgainst}
                 </span>
               </div>
 
@@ -416,7 +369,7 @@ export default function Scoreboard() {
         {/* ── Scoring explanation — as prose ───── */}
         <p className={cn('text-[11px] leading-relaxed', themeText(theme, 'muted'))}>
           <span className={themeText(theme, 'secondary')}>Rankningsordning:</span> 1) Antal vinster,
-          2) Motståndarvinster (BH) — summan av alla motståndares vinster, 3) Totala koppar träffade.
+          2) Cup diff, 3) Inbördes möte mellan två lag (om tillämpligt).
         </p>
 
         {/* Page footer */}

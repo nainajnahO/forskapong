@@ -42,17 +42,16 @@ export default function MatchResultEditor({
     if (!winnerId || !loserId) return;
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('matches')
-        .update({
-          winner_id: winnerId,
-          loser_id: loserId,
-          score_team1: score1,
-          score_team2: score2,
-          confirmed: true,
-          confirmed_by: 'admin',
-        })
-        .eq('id', match.id);
+      const adminCode = sessionStorage.getItem('adminCode');
+      if (!adminCode) throw new Error('Logga in som admin igen');
+      const { error } = await supabase.rpc('admin_set_match_result', {
+        admin_code: adminCode,
+        p_match_id: match.id,
+        p_winner_id: winnerId,
+        p_loser_id: loserId,
+        p_score_team1: score1,
+        p_score_team2: score2,
+      });
       if (error) throw error;
       onSaved();
     } finally {

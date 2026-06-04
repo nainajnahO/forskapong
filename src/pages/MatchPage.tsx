@@ -5,9 +5,12 @@ import { useTheme } from '@/contexts/useTheme';
 import { cn } from '@/lib/utils';
 import { themeText } from '@/lib/theme-utils';
 import { supabase } from '@/lib/supabase';
+import { canAwayTeamConfirm, canHomeTeamReport } from '@/lib/home-away';
 import type { Team, Match } from '@/lib/database.types';
 import Container from '../components/common/Container';
 import SectionLabel from '../components/common/SectionLabel';
+import RealtimeIndicator from '../components/common/RealtimeIndicator';
+import { useRealtimeStatus } from '@/hooks/useRealtimeStatus';
 
 /* ─── Types ───────────────────────────────────────────────────── */
 
@@ -150,7 +153,8 @@ export default function MatchPage() {
   // Reporting state
   const [step, setStep] = useState<'idle' | 'won' | 'lost' | 'done'>('idle');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [loserCups, setLoserCups] = useState(0); // cups hit by the losing team (0–5)
+  const [ourCups, setOurCups] = useState(6); // cups our team hit (0–6)
+  const [theirCups, setTheirCups] = useState(0); // cups the opponent hit (0–6)
   const [submitError, setSubmitError] = useState('');
 
   // Redirect if not logged in
@@ -175,6 +179,8 @@ export default function MatchPage() {
     }
   }, [matchId]);
 
+  const { status, onStatusChange } = useRealtimeStatus(loadMatch);
+
   useEffect(() => {
     loadMatch();
   }, [loadMatch]);
@@ -192,64 +198,65 @@ export default function MatchPage() {
           loadMatch();
         },
       )
-      .subscribe();
+      .subscribe(onStatusChange);
 
     return () => {
       void channel.unsubscribe();
     };
-  }, [matchId, loadMatch]);
+  }, [matchId, loadMatch, onStatusChange]);
 
   if (!teamId) return null;
 
   // ── Derived state ──────────────────────────────
-  const isTeam1 = match?.team1_id === teamId;
-  const ourTeam = match ? (isTeam1 ? match.team1 : match.team2) : null;
-  const theirTeam = match ? (isTeam1 ? match.team2 : match.team1) : null;
+  const isHomeTeam = match?.team1_id === teamId;
+  const isAwayTeam = match?.team2_id === teamId;
+  const ourTeam = match ? (isHomeTeam ? match.team1 : match.team2) : null;
+  const theirTeam = match ? (isHomeTeam ? match.team2 : match.team1) : null;
 
   const isPlayed = match?.winner_id !== null && match?.winner_id !== undefined;
   const isDisputed = match?.confirmed_by === 'disputed' && !match?.confirmed;
   const weWon = match?.winner_id === teamId;
-  const weLost = match?.loser_id === teamId;
   const weReported = match?.reported_by === teamId;
-  const needsOurConfirmation = weLost && !match?.confirmed && !weReported && !isDisputed;
+  const needsOurConfirmation = !!(match && canAwayTeamConfirm(match, teamId)) && !weReported && !isDisputed;
+  const canReport = !!(match && canHomeTeamReport(match, teamId));
+  const ourRoleLabel = isHomeTeam ? 'Hemmalag' : 'Bortalag';
+  const theirRoleLabel = isHomeTeam ? 'Bortalag' : 'Hemmalag';
 
   // Format score from our perspective
   const scoreDisplay =
     match?.score_team1 != null && match?.score_team2 != null
-      ? `${isTeam1 ? match.score_team1 : match.score_team2}–${isTeam1 ? match.score_team2 : match.score_team1}`
+      ? `${isHomeTeam ? match.score_team1 : match.score_team2}–${isHomeTeam ? match.score_team2 : match.score_team1}`
       : null;
 
   const cardBg = theme === 'dark' ? 'bg-white/[0.03]' : 'bg-zinc-50';
   const cardBorder = theme === 'dark' ? 'border-white/[0.06]' : 'border-zinc-200';
 
   // ── Report result ──────────────────────────────
-  // Cups hit: winner always = 6, loser = loserCups (0–5)
-  // score_team1/score_team2 = cups HIT by that team
+  // score_team1/score_team2 = cups HIT by that team (0–6). The reporter enters both
+  // teams' cups; the declared winner must have strictly more (the RPC re-checks).
   const handleReport = async (weAreWinner: boolean) => {
-    if (!match || !teamId) return;
+    if (!match || !teamId || !isHomeTeam) {
+      setSubmitError('Endast hemmalaget kan rapportera resultatet.');
+      return;
+    }
+    const winnerCups = weAreWinner ? ourCups : theirCups;
+    const loserCups = weAreWinner ? theirCups : ourCups;
+    if (winnerCups <= loserCups) {
+      setSubmitError('Vinnaren måste ha fler koppar än motståndaren.');
+      return;
+    }
     setIsSubmitting(true);
     setSubmitError('');
 
-    const opponentId = isTeam1 ? match.team2_id : match.team1_id;
-    const winnerId = weAreWinner ? teamId : opponentId;
-    const loserId = weAreWinner ? opponentId : teamId;
-
-    // Winner always hit 6, loser hit loserCups
-    const winnerScore = 6;
-    const team1IsWinner = winnerId === match.team1_id;
-    const scoreTeam1 = team1IsWinner ? winnerScore : loserCups;
-    const scoreTeam2 = team1IsWinner ? loserCups : winnerScore;
-
-    const { error: updateError } = await supabase
-      .from('matches')
-      .update({
-        winner_id: winnerId,
-        loser_id: loserId,
-        score_team1: scoreTeam1,
-        score_team2: scoreTeam2,
-        reported_by: teamId,
-      })
-      .eq('id', match.id);
+    // The RPC re-verifies (home team + undecided) and the winner > loser rule.
+    // Direct table writes are no longer allowed.
+    const { error: updateError } = await supabase.rpc('report_match_result', {
+      p_match_id: match.id,
+      p_code: sessionStorage.getItem('playCode') ?? '',
+      p_we_are_winner: weAreWinner,
+      p_winner_cups: winnerCups,
+      p_loser_cups: loserCups,
+    });
 
     if (updateError) {
       setSubmitError('Kunde inte spara resultatet. Försök igen.');
@@ -264,16 +271,17 @@ export default function MatchPage() {
 
   // ── Confirm result ─────────────────────────────
   const handleConfirm = async () => {
-    if (!match) return;
+    if (!match || !isAwayTeam) {
+      setSubmitError('Endast bortalaget kan bekräfta resultatet.');
+      return;
+    }
     setSubmitError('');
 
-    const { error: updateError } = await supabase
-      .from('matches')
-      .update({
-        confirmed: true,
-        confirmed_by: 'loser',
-      })
-      .eq('id', match.id);
+    const { error: updateError } = await supabase.rpc('respond_match_result', {
+      p_match_id: match.id,
+      p_code: sessionStorage.getItem('playCode') ?? '',
+      p_action: 'confirm',
+    });
 
     if (updateError) {
       setSubmitError('Kunde inte bekräfta. Försök igen.');
@@ -285,13 +293,17 @@ export default function MatchPage() {
 
   // ── Dispute ────────────────────────────────────
   const handleDispute = async () => {
-    if (!match) return;
+    if (!match || !isAwayTeam) {
+      setSubmitError('Endast bortalaget kan disputera resultatet.');
+      return;
+    }
     setSubmitError('');
 
-    const { error: updateError } = await supabase
-      .from('matches')
-      .update({ confirmed_by: 'disputed' })
-      .eq('id', match.id);
+    const { error: updateError } = await supabase.rpc('respond_match_result', {
+      p_match_id: match.id,
+      p_code: sessionStorage.getItem('playCode') ?? '',
+      p_action: 'dispute',
+    });
 
     if (updateError) {
       setSubmitError('Kunde inte disputera. Försök igen.');
@@ -388,6 +400,9 @@ export default function MatchPage() {
                     ? `${ourTeam.player1} & ${ourTeam.player2}`
                     : ourTeam.player1 || ourTeam.player2 || '–'}
                 </p>
+                <p className={cn('text-[11px] mt-1 uppercase tracking-wider', themeText(theme, 'secondary'))}>
+                  {ourRoleLabel}
+                </p>
               </div>
 
               <span
@@ -413,6 +428,9 @@ export default function MatchPage() {
                     ? `${theirTeam.player1} & ${theirTeam.player2}`
                     : theirTeam.player1 || theirTeam.player2 || '–'}
                 </p>
+                <p className={cn('text-[11px] mt-1 uppercase tracking-wider', themeText(theme, 'secondary'))}>
+                  {theirRoleLabel}
+                </p>
               </div>
             </div>
 
@@ -423,7 +441,7 @@ export default function MatchPage() {
                   className={cn('inline-flex items-center gap-1.5', themeText(theme, 'secondary'))}
                 >
                   <ClockIcon />
-                  {match.scheduled_time}
+                  ca {match.scheduled_time}
                 </span>
               )}
               {match.table_number && (
@@ -434,6 +452,10 @@ export default function MatchPage() {
                   Bord {match.table_number}
                 </span>
               )}
+              <span className={cn('inline-flex items-center gap-1.5', themeText(theme, 'secondary'))}>
+                Spelpass {match.wave}
+              </span>
+              <RealtimeIndicator status={status} onRefresh={loadMatch} theme={theme} />
             </div>
           </motion.div>
 
@@ -520,8 +542,8 @@ export default function MatchPage() {
 
                 <p className={cn('text-xs', themeText(theme, 'secondary'))}>
                   {weReported
-                    ? 'Du rapporterade detta resultat. Väntar på att motståndaren bekräftar.'
-                    : 'Motståndaren har rapporterat resultatet. Väntar på bekräftelse.'}
+                    ? 'Du rapporterade detta resultat. Väntar på att bortalaget bekräftar.'
+                    : 'Hemmalaget har rapporterat resultatet. Väntar på bortalagets bekräftelse.'}
                 </p>
               </div>
             )}
@@ -530,7 +552,7 @@ export default function MatchPage() {
             {needsOurConfirmation && (
               <div className="text-center">
                 <p className={cn('text-sm mb-2', themeText(theme, 'secondary'))}>
-                  Motståndarlaget rapporterade:
+                  Hemmalaget rapporterade:
                 </p>
 
                 {scoreDisplay && (
@@ -568,17 +590,18 @@ export default function MatchPage() {
             )}
 
             {/* ─── STATE: Not played yet — report ─────── */}
-            {!isPlayed && step === 'idle' && (
+            {canReport && step === 'idle' && (
               <div className="text-center">
                 <p className={cn('text-sm mb-6', themeText(theme, 'secondary'))}>
-                  Rapportera matchresultatet efter att ni spelat klart.
+                  Du spelar som hemmalag. Rapportera matchresultatet efter att ni spelat klart.
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   <button
                     onClick={() => {
                       setStep('won');
-                      setLoserCups(0);
+                      setOurCups(6);
+                      setTheirCups(0);
                     }}
                     className="px-6 py-3 rounded-xl text-sm font-semibold bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:brightness-110 transition-all"
                   >
@@ -587,7 +610,8 @@ export default function MatchPage() {
                   <button
                     onClick={() => {
                       setStep('lost');
-                      setLoserCups(0);
+                      setOurCups(0);
+                      setTheirCups(6);
                     }}
                     className={cn(
                       'px-6 py-3 rounded-xl text-sm font-semibold border transition-all hover:opacity-80',
@@ -602,24 +626,34 @@ export default function MatchPage() {
               </div>
             )}
 
+            {!isPlayed && !canReport && (
+              <div className="text-center">
+                <p className={cn('text-sm', themeText(theme, 'secondary'))}>
+                  Du spelar som bortalag. Vänta på att hemmalaget rapporterar resultatet, sedan
+                  bekräftar ni eller disputerar.
+                </p>
+              </div>
+            )}
+
             {/* ─── STATE: Score picker (won — how many did THEY hit?) ── */}
-            {!isPlayed && step === 'won' && (
+            {canReport && step === 'won' && (
               <div>
                 <p className={cn('text-sm text-center mb-2 font-semibold text-emerald-400')}>
                   Ni vann!
                 </p>
                 <p className={cn('text-sm text-center mb-6', themeText(theme, 'secondary'))}>
-                  Hur många koppar träffade motståndaren?
+                  Hur många koppar träffade varje lag?
                 </p>
 
                 <div className="flex flex-col items-center gap-4 mb-8">
                   <div className="flex items-center gap-6">
-                    <div className="text-center">
-                      <p className={cn('text-xs mb-1 font-medium', themeText(theme, 'secondary'))}>
-                        {ourTeam.name}
-                      </p>
-                      <span className="text-3xl font-mono font-bold text-emerald-400">6</span>
-                    </div>
+                    <ScorePicker
+                      theme={theme}
+                      value={ourCups}
+                      onChange={setOurCups}
+                      label={ourTeam.name}
+                      max={6}
+                    />
                     <span
                       className={cn(
                         'text-xl font-display',
@@ -630,12 +664,17 @@ export default function MatchPage() {
                     </span>
                     <ScorePicker
                       theme={theme}
-                      value={loserCups}
-                      onChange={setLoserCups}
+                      value={theirCups}
+                      onChange={setTheirCups}
                       label={theirTeam.name}
-                      max={5}
+                      max={6}
                     />
                   </div>
+                  {ourCups <= theirCups && (
+                    <p className="text-xs text-amber-400">
+                      Vinnaren måste ha fler koppar än motståndaren.
+                    </p>
+                  )}
                 </div>
 
                 {submitError && (
@@ -645,7 +684,7 @@ export default function MatchPage() {
                 <div className="flex gap-3 justify-center">
                   <button
                     onClick={() => handleReport(true)}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || ourCups <= theirCups}
                     className="px-6 py-3 rounded-xl text-sm font-semibold bg-brand-500 text-white shadow-lg shadow-brand-500/20 hover:brightness-110 transition-all disabled:opacity-40"
                   >
                     {isSubmitting ? 'Sparar…' : 'Skicka resultat'}
@@ -666,23 +705,23 @@ export default function MatchPage() {
             )}
 
             {/* ─── STATE: Score picker (lost — how many did WE hit?) ── */}
-            {!isPlayed && step === 'lost' && (
+            {canReport && step === 'lost' && (
               <div>
                 <p className={cn('text-sm text-center mb-2 font-semibold text-red-400')}>
                   Ni förlorade
                 </p>
                 <p className={cn('text-sm text-center mb-6', themeText(theme, 'secondary'))}>
-                  Hur många koppar träffade ni?
+                  Hur många koppar träffade varje lag?
                 </p>
 
                 <div className="flex flex-col items-center gap-4 mb-8">
                   <div className="flex items-center gap-6">
                     <ScorePicker
                       theme={theme}
-                      value={loserCups}
-                      onChange={setLoserCups}
+                      value={ourCups}
+                      onChange={setOurCups}
                       label={ourTeam.name}
-                      max={5}
+                      max={6}
                     />
                     <span
                       className={cn(
@@ -692,13 +731,19 @@ export default function MatchPage() {
                     >
                       –
                     </span>
-                    <div className="text-center">
-                      <p className={cn('text-xs mb-1 font-medium', themeText(theme, 'secondary'))}>
-                        {theirTeam.name}
-                      </p>
-                      <span className="text-3xl font-mono font-bold text-red-400">6</span>
-                    </div>
+                    <ScorePicker
+                      theme={theme}
+                      value={theirCups}
+                      onChange={setTheirCups}
+                      label={theirTeam.name}
+                      max={6}
+                    />
                   </div>
+                  {theirCups <= ourCups && (
+                    <p className="text-xs text-amber-400">
+                      Vinnaren måste ha fler koppar än motståndaren.
+                    </p>
+                  )}
                 </div>
 
                 {submitError && (
@@ -708,7 +753,7 @@ export default function MatchPage() {
                 <div className="flex gap-3 justify-center">
                   <button
                     onClick={() => handleReport(false)}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || theirCups <= ourCups}
                     className="px-6 py-3 rounded-xl text-sm font-semibold bg-brand-500 text-white shadow-lg shadow-brand-500/20 hover:brightness-110 transition-all disabled:opacity-40"
                   >
                     {isSubmitting ? 'Sparar…' : 'Skicka resultat'}
@@ -746,7 +791,7 @@ export default function MatchPage() {
                 <div className="text-4xl mb-3">✅</div>
                 <p className="text-sm font-semibold text-foreground mb-1">Resultat rapporterat!</p>
                 <p className={cn('text-xs', themeText(theme, 'secondary'))}>
-                  Väntar på att motståndarlaget bekräftar.
+                  Väntar på att bortalaget bekräftar.
                 </p>
               </div>
             )}

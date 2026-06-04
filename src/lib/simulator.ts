@@ -24,7 +24,7 @@ export interface VerificationStats {
   totalMatches: number;
   maxByes: number;
   winDistribution: number[];
-  buchholzCorrelation: number;
+  cupDiffCorrelation: number;
   avgScoreDiffPerRound: number[];
 }
 
@@ -235,7 +235,7 @@ export function computeVerificationStats(
   teams: TournamentTeam[],
   allResults: MatchResult[],
   roundHistory: { round: number; results: MatchResult[] }[],
-  standings: { wins: number; opponentWins: number }[],
+  standings: { wins: number; cupDiff: number }[],
 ): VerificationStats {
   // Rematch counting
   const pairingCounts = new Map<string, number>();
@@ -275,10 +275,10 @@ export function computeVerificationStats(
     winDistribution.push(winCounts.get(i) ?? 0);
   }
 
-  // Buchholz correlation (Pearson r between wins and opponent wins)
+  // Correlation between wins and cup difference.
   const wins = standings.map((s) => s.wins);
-  const bh = standings.map((s) => s.opponentWins);
-  const buchholzCorrelation = pearsonR(wins, bh);
+  const cupDiff = standings.map((s) => s.cupDiff);
+  const cupDiffCorrelation = pearsonR(wins, cupDiff);
 
   // Average score differential per round
   const avgScoreDiffPerRound = roundHistory.map((rh) => {
@@ -295,7 +295,7 @@ export function computeVerificationStats(
     totalMatches: allResults.length,
     maxByes,
     winDistribution,
-    buchholzCorrelation,
+    cupDiffCorrelation,
     avgScoreDiffPerRound,
   };
 }
@@ -350,6 +350,9 @@ export async function runBatchSimulation(
         ? generateSkillRatings(teams)
         : null;
       let allResults: MatchResult[] = [];
+      // A bye counts as a win + average-margin cup credit (issue #26); track the
+      // count per team so the final standings match the live tournament.
+      const byeCount = new Map<string, number>();
 
       // Swiss rounds
       for (let round = 1; round <= config.swissRounds; round++) {
@@ -374,10 +377,11 @@ export async function runBatchSimulation(
           teams = teams.map((t) =>
             t.id === rp.bye ? { ...t, wins: t.wins + 1 } : t,
           );
+          byeCount.set(rp.bye, (byeCount.get(rp.bye) ?? 0) + 1);
         }
       }
 
-      const standings = calculateRankings(teams, allResults);
+      const standings = calculateRankings(teams, allResults, byeCount);
 
       // Track stats by seed (original index)
       for (const s of standings) {

@@ -2,26 +2,29 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
-import type { Team, Match } from '@/lib/database.types';
-import { calculateRankings, type MatchResult } from '@/lib/tournament-engine';
-import { dbMatchToResult, teamsToEngine } from '../lib/match-utils';
+import type { AdminTeam, Match } from '@/lib/database.types';
+import { standingsFromMatches } from '../lib/match-utils';
 import TeamFormModal from '../components/TeamFormModal';
+import TeamBulkImportModal from '../components/TeamBulkImportModal';
 import DeleteConfirmModal from '../components/DeleteConfirmModal';
 import TypedConfirmModal from '../components/TypedConfirmModal';
 
 export default function TeamsTab() {
-  const [teams, setTeams] = useState<Team[]>([]);
+  const [teams, setTeams] = useState<AdminTeam[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
-  const [editingTeam, setEditingTeam] = useState<Team | null>(null);
+  const [editingTeam, setEditingTeam] = useState<AdminTeam | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [deletingTeam, setDeletingTeam] = useState<Team | null>(null);
+  const [showImport, setShowImport] = useState(false);
+  const [deletingTeam, setDeletingTeam] = useState<AdminTeam | null>(null);
   const [showBulkDelete, setShowBulkDelete] = useState(false);
 
   const loadData = useCallback(async () => {
+    // Codes are needed here (the hand-out screen) — read them via the admin gate,
+    // since the anon key can't read the team_codes vault directly.
     const [teamsRes, matchesRes] = await Promise.all([
-      supabase.from('teams').select('*'),
+      supabase.rpc('admin_list_teams', { admin_code: sessionStorage.getItem('adminCode') ?? '' }),
       supabase.from('matches').select('*'),
     ]);
     setTeams(teamsRes.data ?? []);
@@ -43,10 +46,7 @@ export default function TeamsTab() {
   }, [loadData]);
 
   // Compute standings for sorting & stats
-  const standings = useMemo(() => {
-    const results = matches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
-    return calculateRankings(teamsToEngine(teams, results), results);
-  }, [teams, matches]);
+  const standings = useMemo(() => standingsFromMatches(teams, matches), [teams, matches]);
 
   // Map team id → standing for quick lookup
   const standingMap = useMemo(
@@ -59,22 +59,32 @@ export default function TeamsTab() {
   const uncheckedCount = teams.filter((t) => !t.checked_in).length;
   const allCheckedIn = teams.length > 0 && uncheckedCount === 0;
 
-  async function toggleCheckIn(team: Team) {
+  async function toggleCheckIn(team: AdminTeam) {
     const prev = teams;
     setTeams((cur) => cur.map((t) => (t.id === team.id ? { ...t, checked_in: !t.checked_in } : t)));
-    const { error } = await supabase.from('teams').update({ checked_in: !team.checked_in }).eq('id', team.id);
+    const { error } = await supabase.rpc('admin_set_checkin', {
+      admin_code: sessionStorage.getItem('adminCode') ?? '',
+      p_value: !team.checked_in,
+      p_team_id: team.id,
+    });
     if (error) setTeams(prev);
   }
 
   async function bulkCheckIn(value: boolean) {
     const prev = teams;
     setTeams((cur) => cur.map((t) => ({ ...t, checked_in: value })));
-    const { error } = await supabase.from('teams').update({ checked_in: value }).not('id', 'is', null);
+    // p_team_id omitted → applies to all teams.
+    const { error } = await supabase.rpc('admin_set_checkin', {
+      admin_code: sessionStorage.getItem('adminCode') ?? '',
+      p_value: value,
+    });
     if (error) setTeams(prev);
   }
 
   async function deleteUnchecked() {
-    const { error } = await supabase.from('teams').delete().eq('checked_in', false);
+    const { error } = await supabase.rpc('admin_delete_unchecked', {
+      admin_code: sessionStorage.getItem('adminCode') ?? '',
+    });
     if (error) throw error;
     setTeams((cur) => cur.filter((t) => t.checked_in));
   }
@@ -137,6 +147,15 @@ export default function TeamsTab() {
         >
           <span className="hdr-white-fill">+ Skapa lag</span>
         </button>
+        <button
+          onClick={() => setShowImport(true)}
+          className={cn(
+            'h-10 px-4 rounded-xl text-sm font-medium transition-all whitespace-nowrap',
+            'border border-white/[0.08] text-zinc-200 hover:bg-white/[0.06]',
+          )}
+        >
+          Importera lag
+        </button>
       </div>
 
       {/* Check-in actions */}
@@ -194,8 +213,8 @@ export default function TeamsTab() {
             <>
               <span className="text-center">V</span>
               <span className="text-center">F</span>
-              <span className="text-center" title="Buchholz">BH</span>
-              <span className="text-center">Cups</span>
+              <span className="text-center" title="Cup difference">Diff</span>
+              <span className="text-center">Cup +/-</span>
             </>
           ) : (
             <span className="text-center">V/F</span>
@@ -261,8 +280,12 @@ export default function TeamsTab() {
                   <>
                     <span className="text-emerald-400 text-center font-mono text-xs">{s?.wins ?? 0}</span>
                     <span className="text-red-400 text-center font-mono text-xs">{s?.losses ?? 0}</span>
-                    <span className="text-zinc-400 text-center font-mono text-xs">{s?.opponentWins ?? 0}</span>
-                    <span className="text-zinc-400 text-center font-mono text-xs">{s?.totalCupsHit ?? 0}</span>
+                    <span className="text-zinc-400 text-center font-mono text-xs">
+                      {s ? (s.cupDiff > 0 ? `+${s.cupDiff}` : s.cupDiff) : 0}
+                    </span>
+                    <span className="text-zinc-400 text-center font-mono text-xs">
+                      {s ? `${s.cupsFor}-${s.cupsAgainst}` : '0-0'}
+                    </span>
                   </>
                 ) : (
                   <span className="text-center text-xs">
@@ -321,6 +344,16 @@ export default function TeamsTab() {
           onSaved={() => {
             setShowCreate(false);
             setEditingTeam(null);
+            loadData();
+          }}
+        />
+      )}
+
+      {showImport && (
+        <TeamBulkImportModal
+          existingTeams={teams}
+          onClose={() => setShowImport(false)}
+          onImported={() => {
             loadData();
           }}
         />

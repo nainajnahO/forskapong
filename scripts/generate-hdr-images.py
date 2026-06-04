@@ -139,34 +139,39 @@ def create_hdr_avif(name, oklch, boost):
 
 # ─── Logo conversion ─────────────────────────────────────────────────
 
-LOGO_SRC = Path(__file__).parent.parent / "src" / "assets" / "logo.webp"
+# White-on-transparent brand marks converted to HDR PQ AVIF (RGB replaced with
+# HDR white, original alpha preserved). Keyed by output name in src/assets/hdr/.
+PROJECT_ROOT = Path(__file__).parent.parent
 LOGO_BOOST = 2.5  # same as white HDR fill
+LOGOS = {
+    "wordmark": {"src": PROJECT_ROOT / "public" / "TENTAFESTIVALEN vit.png", "boost": LOGO_BOOST},
+}
 
 
-def create_hdr_logo():
-    """Convert the white-on-transparent logo to an HDR PQ-encoded AVIF."""
-    if not LOGO_SRC.exists():
-        print(f"  ERROR: Logo not found at {LOGO_SRC}")
+def create_hdr_logo(name, src, boost):
+    """Convert a white-on-transparent logo to an HDR PQ-encoded AVIF."""
+    if not src.exists():
+        print(f"  ERROR: Logo not found at {src}")
         return False
 
     # Compute PQ value for HDR white
-    pq_signal, _, nits = oklch_to_pq_bt2020(1.0, 0, 0, LOGO_BOOST)
+    pq_signal, _, nits = oklch_to_pq_bt2020(1.0, 0, 0, boost)
     pixel_8bit = int(np.clip(pq_signal[0] * 255, 0, 255))
 
     # Load logo and preserve alpha
-    logo = Image.open(LOGO_SRC).convert("RGBA")
-    r, g, b, a = logo.split()
+    logo = Image.open(src).convert("RGBA")
+    _, _, _, a = logo.split()
 
     # Replace RGB with PQ HDR white, keep original alpha
     hdr_channel = Image.new("L", logo.size, pixel_8bit)
     hdr_logo = Image.merge("RGBA", (hdr_channel, hdr_channel, hdr_channel, a))
 
     # Save temporary PNG
-    png_path = OUTPUT_DIR / "logo.png"
+    png_path = OUTPUT_DIR / f"{name}.png"
     hdr_logo.save(str(png_path))
 
     # Encode to AVIF with PQ metadata + alpha
-    avif_path = OUTPUT_DIR / "logo.avif"
+    avif_path = OUTPUT_DIR / f"{name}.avif"
     result = subprocess.run(
         [
             "avifenc",
@@ -189,9 +194,9 @@ def create_hdr_logo():
 
     png_path.unlink()
     size = avif_path.stat().st_size
-    print(f"  Created logo.avif ({size} bytes)")
-    print(f"    Source         : {LOGO_SRC.name} ({logo.size[0]}×{logo.size[1]})")
-    print(f"    Target nits    : {nits[0]:.0f} (boost {LOGO_BOOST}×)")
+    print(f"  Created {name}.avif ({size} bytes)")
+    print(f"    Source         : {src.name} ({logo.size[0]}×{logo.size[1]})")
+    print(f"    Target nits    : {nits[0]:.0f} (boost {boost}×)")
     print(f"    PQ white pixel : {pixel_8bit} / 255")
     return True
 
@@ -202,15 +207,16 @@ def main():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     # Accept optional filter argument
-    names = sys.argv[1:] if len(sys.argv) > 1 else list(BRAND_COLORS.keys()) + ["logo"]
+    names = sys.argv[1:] if len(sys.argv) > 1 else list(BRAND_COLORS.keys()) + list(LOGOS.keys())
 
     success = 0
     total = len(names)
     for name in names:
-        if name == "logo":
+        if name in LOGOS:
             print(f"\n{'─' * 50}")
-            print("Generating HDR logo...")
-            if create_hdr_logo():
+            print(f"Generating HDR logo: {name}...")
+            cfg = LOGOS[name]
+            if create_hdr_logo(name, cfg["src"], cfg["boost"]):
                 success += 1
             continue
         if name not in BRAND_COLORS:

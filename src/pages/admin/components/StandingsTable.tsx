@@ -30,8 +30,8 @@ export default function StandingsTable({
         <span className="text-zinc-500">Lag</span>
         <span className="text-zinc-500 text-center">V</span>
         <span className="text-zinc-500 text-center">F</span>
-        <span className="text-zinc-500 text-center" title="Buchholz">BH</span>
-        <span className="text-zinc-500 text-center">Cups</span>
+        <span className="text-zinc-500 text-center" title="Cup difference">Diff</span>
+        <span className="text-zinc-500 text-center">Cup +/-</span>
       </div>
 
       {/* Rows */}
@@ -62,8 +62,8 @@ export default function StandingsTable({
             <span className="text-white truncate">{s.name}</span>
             <span className="text-emerald-400 text-center font-mono">{s.wins}</span>
             <span className="text-red-400 text-center font-mono">{s.losses}</span>
-            <span className="text-zinc-400 text-center font-mono">{s.opponentWins}</span>
-            <span className="text-zinc-400 text-center font-mono">{s.totalCupsHit}</span>
+            <span className="text-zinc-400 text-center font-mono">{s.cupDiff > 0 ? `+${s.cupDiff}` : s.cupDiff}</span>
+            <span className="text-zinc-400 text-center font-mono">{s.cupsFor}-{s.cupsAgainst}</span>
           </motion.div>
         );
       })}

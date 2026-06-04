@@ -17,18 +17,13 @@ interface LoginFormProps {
 }
 
 export default function LoginForm({ theme, side }: LoginFormProps) {
+  // Prefill from the last successful login so returning players don't retype
+  // their code. Falls back to empty if the stored value is missing or malformed.
   const [values, setValues] = useState<string[]>(() => {
-    // Check previous login first, then registration code
-    const session = sessionStorage.getItem('playCode');
-    if (session?.length === TOTAL_LENGTH) return session.split('');
-    try {
-      const reg = localStorage.getItem('forskopong_registered');
-      if (reg) {
-        const { code } = JSON.parse(reg) as { code: string };
-        if (code?.length === TOTAL_LENGTH) return code.split('');
-      }
-    } catch { /* ignore */ }
-    return Array(TOTAL_LENGTH).fill('');
+    const saved = (localStorage.getItem('playCode') ?? '').toUpperCase();
+    const isComplete =
+      saved.length === TOTAL_LENGTH && [...saved].every((c, i) => isValidAtPosition(c, i));
+    return isComplete ? [...saved] : Array(TOTAL_LENGTH).fill('');
   });
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -74,11 +69,9 @@ export default function LoginForm({ theme, side }: LoginFormProps) {
 
     try {
       const { supabase } = await import('@/lib/supabase');
-      const { data: team, error: dbError } = await supabase
-        .from('teams')
-        .select('*')
-        .eq('code', code)
-        .maybeSingle();
+      // Codes live in the locked team_codes vault; login_team resolves the team
+      // server-side without exposing the code list to the public key.
+      const { data, error: dbError } = await supabase.rpc('login_team', { p_code: code });
 
       if (dbError) {
         setError('Något gick fel. Försök igen.');
@@ -86,6 +79,7 @@ export default function LoginForm({ theme, side }: LoginFormProps) {
         return;
       }
 
+      const team = data?.[0];
       if (!team) {
         setError('Ogiltig kod — hittades inte');
         setIsSubmitting(false);
@@ -95,6 +89,8 @@ export default function LoginForm({ theme, side }: LoginFormProps) {
       sessionStorage.setItem('playCode', team.code);
       sessionStorage.setItem('teamId', team.id);
       sessionStorage.setItem('teamName', team.name);
+      // Persist the code across browser restarts so it prefills on the next visit
+      localStorage.setItem('playCode', team.code);
       navigate('/play/dashboard');
     } catch {
       setError('Kunde inte ansluta. Kontrollera din uppkoppling.');

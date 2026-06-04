@@ -144,7 +144,7 @@ export default function Hero() {
       <div className="relative z-10 h-screen flex flex-col items-center justify-center px-6 -mt-8 md:mt-0">
         {/* Main Title */}
         <h1 ref={titleRef} className={cn(
-          'relative z-30 text-5xl md:text-[6.5rem] font-display text-white hdr-white-fill uppercase tracking-wider text-center mb-0 px-1 pointer-events-none transition-all duration-700',
+          'relative z-30 text-[clamp(1.75rem,9vw,3rem)] md:text-[6.5rem] leading-tight font-display text-white hdr-white-fill uppercase tracking-wider text-center mb-0 px-1 pointer-events-none transition-all duration-700',
           diving && 'opacity-0 -translate-y-20',
         )}>
           {EVENT_INFO.name}

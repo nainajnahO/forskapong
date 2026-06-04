@@ -21,6 +21,8 @@ import {
   generateKnockoutBracket,
   advanceKnockoutRound,
   calculateRankings,
+  countByesPerTeam,
+  deriveByes,
   type TournamentTeam,
   type MatchResult,
   type Pairing,
@@ -132,6 +134,28 @@ function pKey(a: string, b: string): string {
   return [a, b].sort().join('-');
 }
 
+/* ─── Bye credit ──────────────────────────────────────────────── */
+
+/**
+ * Per-team bye count, derived the same way the live flow derives it — a bye is
+ * the one team missing from a round's results (issue #26). Feeding this to
+ * calculateRankings keeps the simulator's standings in lockstep with the real
+ * tournament (bye = win + average-margin cup credit).
+ */
+function byeCountFromHistory(
+  teams: { id: string }[],
+  roundHistory: { round: number; results: MatchResult[] }[],
+): Map<string, number> {
+  return countByesPerTeam(
+    deriveByes(
+      teams.map((t) => t.id),
+      roundHistory.flatMap((rh) =>
+        rh.results.map((r) => ({ round: rh.round, team1Id: r.team1Id, team2Id: r.team2Id })),
+      ),
+    ),
+  );
+}
+
 /* ─── Simulate one match (respecting overrides + bias) ────────── */
 
 function simMatch(
@@ -206,7 +230,11 @@ function runRemainingSwiss(state: SimState): SimState {
     s = { ...s, currentRound: nextRound };
   }
 
-  const standings = calculateRankings(s.teams, s.allResults);
+  const standings = calculateRankings(
+    s.teams,
+    s.allResults,
+    byeCountFromHistory(s.teams, s.roundHistory),
+  );
   return {
     ...s,
     phase: 'standings',
@@ -295,7 +323,10 @@ function reducer(state: SimState, action: SimAction): SimState {
           const updatedTeams = state.teams.map((t) => {
             const won = state.roundResults.filter((r) => r.winnerId === t.id).length;
             const lost = state.roundResults.filter((r) => r.loserId === t.id).length;
-            return { ...t, wins: t.wins + won, losses: t.losses + lost };
+            // A bye counts as a win for next-round seeding (issue #26), matching
+            // the skip-to-end path so step-by-step play groups teams identically.
+            const byeWin = state.roundPairings?.bye === t.id ? 1 : 0;
+            return { ...t, wins: t.wins + won + byeWin, losses: t.losses + lost };
           });
           const newAllResults = [...state.allResults, ...state.roundResults];
           return {
@@ -328,7 +359,11 @@ function reducer(state: SimState, action: SimAction): SimState {
               roundHistory: updatedHistory,
             };
           }
-          const standings = calculateRankings(state.teams, state.allResults);
+          const standings = calculateRankings(
+            state.teams,
+            state.allResults,
+            byeCountFromHistory(state.teams, updatedHistory),
+          );
           return { ...state, phase: 'standings', standings, roundHistory: updatedHistory };
         }
 
@@ -359,11 +394,11 @@ function reducer(state: SimState, action: SimAction): SimState {
         // ── QF (top-8 uses existing bracket, top-16 uses simBracket) ──
         case 'knockout_qf': {
           if (state.bracket) {
-            // Top-8 path
-            const results = state.bracket.quarterfinals.map((qf) =>
+            // Top-8 path (QF is round index 0)
+            const results = state.bracket.rounds[0].map((qf) =>
               simMatch({ team1Id: qf.team1Id!, team2Id: qf.team2Id! }, state.matchOverrides, state.skillRatings),
             );
-            const bracket = advanceKnockoutRound(state.bracket, results, 'quarterfinals');
+            const bracket = advanceKnockoutRound(state.bracket, results, 0);
             return {
               ...state,
               phase: 'knockout_qf_results',
@@ -391,10 +426,10 @@ function reducer(state: SimState, action: SimAction): SimState {
         // ── SF ──
         case 'knockout_sf': {
           if (state.bracket) {
-            const results = state.bracket.semifinals.map((sf) =>
+            const results = state.bracket.rounds[1].map((sf) =>
               simMatch({ team1Id: sf.team1Id!, team2Id: sf.team2Id! }, state.matchOverrides, state.skillRatings),
             );
-            const bracket = advanceKnockoutRound(state.bracket, results, 'semifinals');
+            const bracket = advanceKnockoutRound(state.bracket, results, 1);
             return {
               ...state,
               phase: 'knockout_sf_results',
@@ -423,7 +458,7 @@ function reducer(state: SimState, action: SimAction): SimState {
         // ── Final ──
         case 'knockout_final': {
           if (state.bracket) {
-            const f = state.bracket.final;
+            const f = state.bracket.rounds[2][0];
             if (!f.team1Id || !f.team2Id) return state;
             const result = simMatch({ team1Id: f.team1Id, team2Id: f.team2Id }, state.matchOverrides, state.skillRatings);
             return {
@@ -513,6 +548,7 @@ function simResultToMatch(r: MatchResult, round: number, idx: number): Match {
   return {
     id: `sim-${round}-${idx}`,
     round,
+    wave: 1,
     team1_id: r.team1Id,
     team2_id: r.team2Id,
     winner_id: r.winnerId,
@@ -915,7 +951,11 @@ function StatsPanel({ state }: { state: SimState }) {
       state.roundHistory,
       state.standings.length > 0
         ? state.standings
-        : calculateRankings(state.teams, state.allResults),
+        : calculateRankings(
+            state.teams,
+            state.allResults,
+            byeCountFromHistory(state.teams, state.roundHistory),
+          ),
     );
   }, [state.teams, state.allResults, state.roundHistory, state.standings]);
 
@@ -980,13 +1020,13 @@ function StatsPanel({ state }: { state: SimState }) {
                 </div>
               </div>
 
-              {/* Buchholz correlation */}
+              {/* Wins vs cup diff correlation */}
               <div className="flex items-center gap-2 text-xs">
-                <span className={stats.buchholzCorrelation > 0.7 ? 'text-emerald-400' : stats.buchholzCorrelation > 0.4 ? 'text-amber-400' : 'text-red-400'}>
-                  {stats.buchholzCorrelation > 0.7 ? '✓' : '⚠'}
+                <span className={stats.cupDiffCorrelation > 0.7 ? 'text-emerald-400' : stats.cupDiffCorrelation > 0.4 ? 'text-amber-400' : 'text-red-400'}>
+                  {stats.cupDiffCorrelation > 0.7 ? '✓' : '⚠'}
                 </span>
-                <span className="text-zinc-400">Buchholz-korrelation:</span>
-                <span className="text-white">{stats.buchholzCorrelation}</span>
+                <span className="text-zinc-400">Vinst/Cup diff-korrelation:</span>
+                <span className="text-white">{stats.cupDiffCorrelation}</span>
               </div>
 
               {/* Score diff per round */}
