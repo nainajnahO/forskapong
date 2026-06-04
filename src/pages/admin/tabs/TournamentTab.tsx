@@ -51,6 +51,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   const [draftTieOrder, setDraftTieOrder] = useState<string[]>([]);
   const [savingTieOrder, setSavingTieOrder] = useState(false);
   const [tieOrderError, setTieOrderError] = useState('');
+  const [tieResolverOpen, setTieResolverOpen] = useState(true);
   const [flowError, setFlowError] = useState('');
 
   const loadData = useCallback(async () => {
@@ -95,7 +96,9 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     void loadData();
     const channel = supabase
       .channel('admin-tournament')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament' }, () => loadData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament' }, () =>
+        loadData(),
+      )
       .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, () => loadData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'teams' }, () => loadData())
       .subscribe();
@@ -106,19 +109,19 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
 
   // Build name map
   const teamNameMap = new Map(teams.map((t) => [t.id, t.name]));
-  const completedResults = matches
-    .map(dbMatchToResult)
-    .filter(Boolean) as MatchResult[];
-  const unresolvedCutoffTie = detectUnresolvedCutoffTie(standings, completedResults, PLAYOFF_CUTOFF);
+  const completedResults = matches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
+  const unresolvedCutoffTie = detectUnresolvedCutoffTie(
+    standings,
+    completedResults,
+    PLAYOFF_CUTOFF,
+  );
   const tieGroupIds = unresolvedCutoffTie?.teamIds ?? null;
   const storedTieOrder = tieOrderByCutoff[PLAYOFF_CUTOFF] ?? [];
 
   // The tied group occupies a contiguous run of standings slots starting at this
   // placement; the Top-8 cutoff falls somewhere inside it, so draft position k
   // lands at placement firstTieRank + k and qualifies iff that is ≤ PLAYOFF_CUTOFF.
-  const firstTieRank = tieGroupIds
-    ? standings.findIndex((s) => tieGroupIds.includes(s.id)) + 1
-    : 0;
+  const firstTieRank = tieGroupIds ? standings.findIndex((s) => tieGroupIds.includes(s.id)) + 1 : 0;
 
   // A tie is resolved once a stored order covers exactly the tied group (any N≥2).
   const tieResolved =
@@ -231,13 +234,11 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     try {
       const activeTableCount = normalizeTableCount(tournament?.table_count ?? tableCount);
       const engineTeams = teamsToEngine(teams, completedResults);
-      const pairings = generateSwissPairings(
-        engineTeams,
-        completedResults,
-        currentRound,
-      );
+      const pairings = generateSwissPairings(engineTeams, completedResults, currentRound);
 
-      const swissHistory = matches.filter((m) => m.round <= (tournament?.total_rounds ?? roundCount));
+      const swissHistory = matches.filter(
+        (m) => m.round <= (tournament?.total_rounds ?? roundCount),
+      );
       const orientedPairings = orientSwissPairings(pairings.pairings, swissHistory);
       const scheduledPairings = assignTablesAndWaves(orientedPairings, activeTableCount);
 
@@ -481,9 +482,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
 
   // Build a live knockout bracket from matches in the knockout rounds
   const knockoutMatches = matches.filter((m) => m.round >= KNOCKOUT_START_ROUND);
-  const knockoutResults = knockoutMatches
-    .map(dbMatchToResult)
-    .filter(Boolean) as MatchResult[];
+  const knockoutResults = knockoutMatches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
   let liveBracket: KnockoutBracketType | null = null;
 
   if (status === 'knockout' && knockoutMatches.length >= 4) {
@@ -534,7 +533,9 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     }
   }
 
-  const finalResult = knockoutMatches.find((m) => m.round === KNOCKOUT_START_ROUND + 2 && m.winner_id);
+  const finalResult = knockoutMatches.find(
+    (m) => m.round === KNOCKOUT_START_ROUND + 2 && m.winner_id,
+  );
   const champion = finalResult?.winner_id ?? null;
 
   if (loading) {
@@ -549,7 +550,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     );
   }
 
-  const championName = champion ? teamNameMap.get(champion) ?? null : null;
+  const championName = champion ? (teamNameMap.get(champion) ?? null) : null;
   const disputed = matches.filter((m) => m.confirmed_by === 'disputed' && !m.confirmed);
   const schedulePreview = {
     matchCount: Math.floor(teams.length / 2),
@@ -589,10 +590,10 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
 
         {/* View toggle */}
         <div className="flex items-center gap-1.5 ml-auto">
-          {([
+          {[
             { key: 'list' as const, label: 'Lista', Icon: List },
             { key: 'map' as const, label: 'Karta', Icon: LayoutGrid },
-          ]).map(({ key, label, Icon }) => (
+          ].map(({ key, label, Icon }) => (
             <button
               key={key}
               onClick={() => setView(key)}
@@ -613,97 +614,124 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       {/* Scoring HUD */}
       <div className="flex items-center gap-4 px-3 py-2 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[11px] font-mono text-zinc-500">
         <span className="text-zinc-600 uppercase tracking-wider text-[10px]">Ranking</span>
-        <span><span className="text-zinc-300">1.</span> Vinster</span>
-        <span><span className="text-zinc-300">2.</span> Cup diff</span>
-        <span><span className="text-zinc-300">3.</span> Inbördes möte (2 lag)</span>
+        <span>
+          <span className="text-zinc-300">1.</span> Vinster
+        </span>
+        <span>
+          <span className="text-zinc-300">2.</span> Cup diff
+        </span>
+        <span>
+          <span className="text-zinc-300">3.</span> Inbördes möte (2 lag)
+        </span>
       </div>
 
       {unresolvedCutoffTie && (
         <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4 space-y-3">
-          <div className="text-sm text-amber-300">
-            ⚠ Oavgjort vid slutspelsgränsen (Topp {PLAYOFF_CUTOFF}).{' '}
-            {unresolvedCutoffTie.teamIds.length} lag är lika på vinster och cup diff och kan inte
-            avgöras automatiskt.
-          </div>
-          <div className="text-xs text-amber-200/90">
-            Kör sten-sax-påse (eller en tiebreak-match) framför admins och sätt slutordningen nedan.
-            Lagen ovanför gränsen går till slutspel (Topp {PLAYOFF_CUTOFF}), lagen under slås ut.
-            Slutspelet låses upp när ordningen sparats.
-          </div>
-          <div className="space-y-1.5">
-            {draftTieOrder.map((teamId, i) => {
-              const placement = firstTieRank + i;
-              const qualifies = placement <= PLAYOFF_CUTOFF;
-              return (
-                <div key={teamId}>
-                  <div
-                    className={cn(
-                      'flex items-center gap-2 px-3 py-1.5 rounded-lg border',
-                      qualifies
-                        ? 'border-emerald-400/25 bg-emerald-400/[0.06]'
-                        : 'border-white/[0.08] bg-white/[0.02] opacity-70',
-                    )}
-                  >
-                    <span className="font-mono text-xs text-zinc-400 w-6">#{placement}</span>
-                    <span className="text-sm text-zinc-200 flex-1">
-                      {teamNameMap.get(teamId) ?? teamId}
-                    </span>
-                    <span
+          <button
+            type="button"
+            onClick={() => setTieResolverOpen((v) => !v)}
+            aria-expanded={tieResolverOpen}
+            className="flex w-full items-start gap-2 text-left"
+          >
+            <span className="text-sm text-amber-300 flex-1">
+              ⚠ Oavgjort vid slutspelsgränsen (Topp {PLAYOFF_CUTOFF}).{' '}
+              {unresolvedCutoffTie.teamIds.length} lag är lika på vinster och cup diff och kan inte
+              avgöras automatiskt.
+              {tieResolved && <span className="text-emerald-300"> ✓ Ordning sparad.</span>}
+            </span>
+            {tieResolverOpen ? (
+              <ChevronUp size={16} className="mt-0.5 shrink-0 text-amber-300/70" />
+            ) : (
+              <ChevronDown size={16} className="mt-0.5 shrink-0 text-amber-300/70" />
+            )}
+          </button>
+          {tieResolverOpen && (
+            <div className="text-xs text-amber-200/90">
+              Kör sten-sax-påse (eller en tiebreak-match) framför admins och sätt slutordningen
+              nedan. Lagen ovanför gränsen går till slutspel (Topp {PLAYOFF_CUTOFF}), lagen under
+              slås ut. Slutspelet låses upp när ordningen sparats.
+            </div>
+          )}
+          {tieResolverOpen && (
+            <div className="space-y-1.5">
+              {draftTieOrder.map((teamId, i) => {
+                const placement = firstTieRank + i;
+                const qualifies = placement <= PLAYOFF_CUTOFF;
+                return (
+                  <div key={teamId}>
+                    <div
                       className={cn(
-                        'text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded',
-                        qualifies ? 'text-emerald-300 bg-emerald-400/10' : 'text-zinc-500',
+                        'flex items-center gap-2 px-3 py-1.5 rounded-lg border',
+                        qualifies
+                          ? 'border-emerald-400/25 bg-emerald-400/[0.06]'
+                          : 'border-white/[0.08] bg-white/[0.02] opacity-70',
                       )}
                     >
-                      {qualifies ? 'Slutspel' : 'Utslagen'}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => moveTieTeam(i, -1)}
-                        disabled={i === 0 || savingTieOrder}
-                        aria-label="Flytta upp"
-                        className="p-1 rounded-md border border-white/[0.1] text-zinc-400 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+                      <span className="font-mono text-xs text-zinc-400 w-6">#{placement}</span>
+                      <span className="text-sm text-zinc-200 flex-1">
+                        {teamNameMap.get(teamId) ?? teamId}
+                      </span>
+                      <span
+                        className={cn(
+                          'text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded',
+                          qualifies ? 'text-emerald-300 bg-emerald-400/10' : 'text-zinc-500',
+                        )}
                       >
-                        <ChevronUp size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => moveTieTeam(i, 1)}
-                        disabled={i === draftTieOrder.length - 1 || savingTieOrder}
-                        aria-label="Flytta ner"
-                        className="p-1 rounded-md border border-white/[0.1] text-zinc-400 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:hover:bg-transparent transition-all"
-                      >
-                        <ChevronDown size={14} />
-                      </button>
+                        {qualifies ? 'Slutspel' : 'Utslagen'}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => moveTieTeam(i, -1)}
+                          disabled={i === 0 || savingTieOrder}
+                          aria-label="Flytta upp"
+                          className="p-1 rounded-md border border-white/[0.1] text-zinc-400 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+                        >
+                          <ChevronUp size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveTieTeam(i, 1)}
+                          disabled={i === draftTieOrder.length - 1 || savingTieOrder}
+                          aria-label="Flytta ner"
+                          className="p-1 rounded-md border border-white/[0.1] text-zinc-400 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+                        >
+                          <ChevronDown size={14} />
+                        </button>
+                      </div>
                     </div>
+                    {placement === PLAYOFF_CUTOFF && i < draftTieOrder.length - 1 && (
+                      <div className="flex items-center gap-2 py-1 px-1 text-[10px] uppercase tracking-wider text-amber-300/70">
+                        <span className="flex-1 border-t border-amber-400/30" />
+                        Slutspelsgräns
+                        <span className="flex-1 border-t border-amber-400/30" />
+                      </div>
+                    )}
                   </div>
-                  {placement === PLAYOFF_CUTOFF && i < draftTieOrder.length - 1 && (
-                    <div className="flex items-center gap-2 py-1 px-1 text-[10px] uppercase tracking-wider text-amber-300/70">
-                      <span className="flex-1 border-t border-amber-400/30" />
-                      Slutspelsgräns
-                      <span className="flex-1 border-t border-amber-400/30" />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => void handleSaveTieOrder()}
-              disabled={savingTieOrder || draftTieOrder.length === 0}
-              className="px-3 py-1.5 rounded-lg text-xs border border-amber-300/50 bg-amber-400/20 text-amber-100 hover:bg-amber-400/30 transition-all disabled:opacity-60"
-            >
-              {savingTieOrder ? 'Sparar…' : 'Spara ordning'}
-            </button>
-            {tieResolved && (
-              <span className="text-xs text-emerald-300">
-                ✓ Ordning sparad — slutspelet kan genereras.
-              </span>
-            )}
-          </div>
-          {tieOrderError && <p className="text-red-400 text-sm">{tieOrderError}</p>}
+                );
+              })}
+            </div>
+          )}
+          {tieResolverOpen && (
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => void handleSaveTieOrder()}
+                disabled={savingTieOrder || draftTieOrder.length === 0}
+                className="px-3 py-1.5 rounded-lg text-xs border border-amber-300/50 bg-amber-400/20 text-amber-100 hover:bg-amber-400/30 transition-all disabled:opacity-60"
+              >
+                {savingTieOrder ? 'Sparar…' : 'Spara ordning'}
+              </button>
+              {tieResolved && (
+                <span className="text-xs text-emerald-300">
+                  ✓ Ordning sparad — slutspelet kan genereras.
+                </span>
+              )}
+            </div>
+          )}
+          {tieResolverOpen && tieOrderError && (
+            <p className="text-red-400 text-sm">{tieOrderError}</p>
+          )}
         </div>
       )}
 
@@ -757,11 +785,11 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
                     className="w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all bg-amber-500/[0.06] border-amber-500/20 hover:bg-amber-500/[0.1]"
                   >
                     <span className="text-sm text-white">
-                      {teamNameMap.get(m.team1_id) ?? '?'} vs{' '}
-                      {teamNameMap.get(m.team2_id) ?? '?'}
+                      {teamNameMap.get(m.team1_id) ?? '?'} vs {teamNameMap.get(m.team2_id) ?? '?'}
                     </span>
                     <span className="text-xs text-amber-400">
-                      R{m.round} · P{m.wave} · B{m.table_number ?? '—'} · {m.score_team1}–{m.score_team2} · Klicka för att avgöra
+                      R{m.round} · P{m.wave} · B{m.table_number ?? '—'} · {m.score_team1}–
+                      {m.score_team2} · Klicka för att avgöra
                     </span>
                   </button>
                 )}
@@ -857,7 +885,9 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
                               <span
                                 className={cn(
                                   'truncate text-left',
-                                  m.winner_id === m.team1_id ? 'text-emerald-400 font-medium' : 'text-white',
+                                  m.winner_id === m.team1_id
+                                    ? 'text-emerald-400 font-medium'
+                                    : 'text-white',
                                 )}
                               >
                                 {teamNameMap.get(m.team1_id) ?? m.team1_id}
@@ -870,7 +900,9 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
                               <span
                                 className={cn(
                                   'truncate text-right',
-                                  m.winner_id === m.team2_id ? 'text-emerald-400 font-medium' : 'text-white',
+                                  m.winner_id === m.team2_id
+                                    ? 'text-emerald-400 font-medium'
+                                    : 'text-white',
                                 )}
                               >
                                 {teamNameMap.get(m.team2_id) ?? m.team2_id}
@@ -902,11 +934,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
                       team1Id: m.team1_id,
                       team2Id: m.team2_id,
                     }))}
-                    results={
-                      roundMatches
-                        .map(dbMatchToResult)
-                        .filter(Boolean) as MatchResult[]
-                    }
+                    results={roundMatches.map(dbMatchToResult).filter(Boolean) as MatchResult[]}
                     teamNameMap={teamNameMap}
                     editingMatchId={editingMatchId}
                     matches={roundMatches}
@@ -928,11 +956,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       )}
 
       {/* Danger Zone */}
-      <DangerZone
-        tournament={tournament}
-        currentRound={currentRound}
-        onActionComplete={loadData}
-      />
+      <DangerZone tournament={tournament} currentRound={currentRound} onActionComplete={loadData} />
     </div>
   );
 }
