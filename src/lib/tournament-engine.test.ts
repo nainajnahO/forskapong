@@ -185,162 +185,121 @@ describe('generateSwissPairings', () => {
 /* ─── Knockout Bracket Tests ──────────────────────────────────── */
 
 describe('generateKnockoutBracket', () => {
-  function makeTop8(): TournamentTeam[] {
-    return Array.from({ length: 8 }, (_, i) => ({
+  /** Seeds in rank order: seed-1 is the top seed. */
+  function makeSeeds(n: number): TournamentTeam[] {
+    return Array.from({ length: n }, (_, i) => ({
       id: `seed-${i + 1}`,
       name: `Seed ${i + 1}`,
-      wins: 7 - i,
+      wins: n - i,
       losses: i,
     }));
   }
 
-  it('creates correct bracket structure: 4 QF, 2 SF, 1 Final', () => {
-    const bracket = generateKnockoutBracket(makeTop8());
-    expect(bracket.quarterfinals).toHaveLength(4);
-    expect(bracket.semifinals).toHaveLength(2);
-    expect(bracket.final).toBeDefined();
-  });
-
-  it('places seed 1 and seed 2 in opposite halves', () => {
-    const bracket = generateKnockoutBracket(makeTop8());
-
-    // Seed 1 in QF0 (top half), Seed 2 in QF3 (bottom half)
-    const qf0Teams = [
-      bracket.quarterfinals[0].team1Id,
-      bracket.quarterfinals[0].team2Id,
-    ];
-    const qf3Teams = [
-      bracket.quarterfinals[3].team1Id,
-      bracket.quarterfinals[3].team2Id,
-    ];
-
-    expect(qf0Teams).toContain('seed-1');
-    expect(qf3Teams).toContain('seed-2');
-
-    // Seed 1 is always team1 (top position)
-    expect(bracket.quarterfinals[0].team1Id).toBe('seed-1');
-    expect(bracket.quarterfinals[3].team1Id).toBe('seed-2');
-  });
-
-  it('places seeds 3-4 in QF1 and QF2 top positions', () => {
-    const bracket = generateKnockoutBracket(makeTop8());
-
-    const middleTopSeeds = [
-      bracket.quarterfinals[1].team1Id,
-      bracket.quarterfinals[2].team1Id,
-    ];
-
-    expect(middleTopSeeds).toContain('seed-3');
-    expect(middleTopSeeds).toContain('seed-4');
-  });
-
-  it('places seeds 5-8 in remaining slots', () => {
-    const bracket = generateKnockoutBracket(makeTop8());
-
-    const bottomSlots = [
-      bracket.quarterfinals[0].team2Id,
-      bracket.quarterfinals[1].team2Id,
-      bracket.quarterfinals[2].team2Id,
-      bracket.quarterfinals[3].team2Id,
-    ];
-
-    for (let i = 5; i <= 8; i++) {
-      expect(bottomSlots).toContain(`seed-${i}`);
+  it.each([
+    [2, 1, ['Final']],
+    [4, 2, ['Semifinal', 'Final']],
+    [8, 3, ['Kvartsfinal', 'Semifinal', 'Final']],
+    [16, 4, ['Åttondelsfinal', 'Kvartsfinal', 'Semifinal', 'Final']],
+    [32, 5, ['Sextondelsfinal', 'Åttondelsfinal', 'Kvartsfinal', 'Semifinal', 'Final']],
+  ] as const)('builds a %i-team bracket: %i rounds with halving match counts and correct labels', (size, numRounds, labels) => {
+    const bracket = generateKnockoutBracket(makeSeeds(size));
+    expect(bracket.rounds).toHaveLength(numRounds);
+    expect(bracket.labels).toEqual(labels);
+    // round r has size / 2^(r+1) matches: size/2, size/4, … 1
+    bracket.rounds.forEach((round, r) => {
+      expect(round).toHaveLength(size / 2 ** (r + 1));
+    });
+    // every team appears exactly once in the first round, all later rounds are empty
+    const firstRoundTeams = bracket.rounds[0].flatMap((m) => [m.team1Id, m.team2Id]);
+    expect(new Set(firstRoundTeams).size).toBe(size);
+    for (const round of bracket.rounds.slice(1)) {
+      for (const m of round) {
+        expect(m.team1Id).toBeNull();
+        expect(m.team2Id).toBeNull();
+      }
     }
   });
 
-  it('initializes SF and Final slots as null', () => {
-    const bracket = generateKnockoutBracket(makeTop8());
+  // The 06-06 event runs size 8 — these are the legacy invariants, now on rounds[0].
+  describe('size-8 regression (legacy randomized-tier layout)', () => {
+    it('anchors seed 1 at the first match top and seed 2 at the last match top', () => {
+      const r0 = generateKnockoutBracket(makeSeeds(8)).rounds[0];
+      expect(r0[0].team1Id).toBe('seed-1');
+      expect(r0[3].team1Id).toBe('seed-2');
+    });
 
-    for (const sf of bracket.semifinals) {
-      expect(sf.team1Id).toBeNull();
-      expect(sf.team2Id).toBeNull();
-    }
-    expect(bracket.final.team1Id).toBeNull();
-    expect(bracket.final.team2Id).toBeNull();
+    it('shuffles seeds 3-4 into the middle top slots', () => {
+      const r0 = generateKnockoutBracket(makeSeeds(8)).rounds[0];
+      expect([r0[1].team1Id, r0[2].team1Id]).toEqual(
+        expect.arrayContaining(['seed-3', 'seed-4']),
+      );
+    });
+
+    it('shuffles seeds 5-8 across the bottom slots', () => {
+      const r0 = generateKnockoutBracket(makeSeeds(8)).rounds[0];
+      const bottom = r0.map((m) => m.team2Id);
+      for (let i = 5; i <= 8; i++) expect(bottom).toContain(`seed-${i}`);
+    });
+
+    it('places seed 1 and seed 2 in opposite halves (can only meet in the final)', () => {
+      const r0 = generateKnockoutBracket(makeSeeds(8)).rounds[0];
+      // matches 0,1 feed SF0; matches 2,3 feed SF1
+      const seed1Match = r0.findIndex((m) => m.team1Id === 'seed-1' || m.team2Id === 'seed-1');
+      const seed2Match = r0.findIndex((m) => m.team1Id === 'seed-2' || m.team2Id === 'seed-2');
+      expect(Math.floor(seed1Match / 2)).not.toBe(Math.floor(seed2Match / 2));
+    });
   });
 
-  it('throws for non-8 team input', () => {
-    expect(() =>
-      generateKnockoutBracket(makeTeams(6) as TournamentTeam[]),
-    ).toThrow();
+  it('throws for a non-power-of-2 field', () => {
+    expect(() => generateKnockoutBracket(makeTeams(6))).toThrow();
+    expect(() => generateKnockoutBracket(makeTeams(1))).toThrow();
   });
 });
 
 describe('advanceKnockoutRound', () => {
-  function setupBracket() {
-    const top8: TournamentTeam[] = Array.from({ length: 8 }, (_, i) => ({
+  function makeSeeds(n: number): TournamentTeam[] {
+    return Array.from({ length: n }, (_, i) => ({
       id: `seed-${i + 1}`,
       name: `Seed ${i + 1}`,
-      wins: 7 - i,
+      wins: n - i,
       losses: i,
     }));
-    return generateKnockoutBracket(top8);
   }
 
-  it('fills semifinal slots from QF results', () => {
-    const bracket = setupBracket();
-
-    // Simulate QF results: top seeds win
-    const qfResults: MatchResult[] = bracket.quarterfinals.map((qf) =>
-      simulateResult(qf.team1Id!, qf.team2Id!, true),
-    );
-
-    const advanced = advanceKnockoutRound(bracket, qfResults, 'quarterfinals');
-
-    // SF0 gets QF0 winner (team1) and QF1 winner (team1)
-    expect(advanced.semifinals[0].team1Id).toBe(bracket.quarterfinals[0].team1Id);
-    expect(advanced.semifinals[0].team2Id).toBe(bracket.quarterfinals[1].team1Id);
-
-    // SF1 gets QF2 winner and QF3 winner
-    expect(advanced.semifinals[1].team1Id).toBe(bracket.quarterfinals[2].team1Id);
-    expect(advanced.semifinals[1].team2Id).toBe(bracket.quarterfinals[3].team1Id);
+  it('routes a match winner to the correct next-round slot (top if even, bottom if odd)', () => {
+    const bracket = generateKnockoutBracket(makeSeeds(8));
+    const r0 = bracket.rounds[0];
+    const results = r0.map((m) => simulateResult(m.team1Id!, m.team2Id!, true));
+    const advanced = advanceKnockoutRound(bracket, results, 0);
+    // match0 winner → SF0.team1, match1 winner → SF0.team2, etc.
+    expect(advanced.rounds[1][0].team1Id).toBe(r0[0].team1Id);
+    expect(advanced.rounds[1][0].team2Id).toBe(r0[1].team1Id);
+    expect(advanced.rounds[1][1].team1Id).toBe(r0[2].team1Id);
+    expect(advanced.rounds[1][1].team2Id).toBe(r0[3].team1Id);
   });
 
-  it('fills final slots from SF results', () => {
-    let bracket = setupBracket();
-
-    // Advance QF
-    const qfResults: MatchResult[] = bracket.quarterfinals.map((qf) =>
-      simulateResult(qf.team1Id!, qf.team2Id!, true),
-    );
-    bracket = advanceKnockoutRound(bracket, qfResults, 'quarterfinals');
-
-    // Advance SF
-    const sfResults: MatchResult[] = bracket.semifinals.map((sf) =>
-      simulateResult(sf.team1Id!, sf.team2Id!, true),
-    );
-    bracket = advanceKnockoutRound(bracket, sfResults, 'semifinals');
-
-    expect(bracket.final.team1Id).toBe(bracket.semifinals[0].team1Id);
-    expect(bracket.final.team2Id).toBe(bracket.semifinals[1].team1Id);
+  it('is a no-op on the final round (no next round to fill)', () => {
+    const bracket = generateKnockoutBracket(makeSeeds(2));
+    const results = [simulateResult(bracket.rounds[0][0].team1Id!, bracket.rounds[0][0].team2Id!, true)];
+    const advanced = advanceKnockoutRound(bracket, results, 0);
+    expect(advanced.rounds).toHaveLength(1);
   });
 
-  it('produces a champion end-to-end: QF → SF → Final', () => {
-    let bracket = setupBracket();
-
-    // QF
-    const qfResults = bracket.quarterfinals.map((qf) =>
-      simulateResult(qf.team1Id!, qf.team2Id!, true),
-    );
-    bracket = advanceKnockoutRound(bracket, qfResults, 'quarterfinals');
-
-    // SF
-    const sfResults = bracket.semifinals.map((sf) =>
-      simulateResult(sf.team1Id!, sf.team2Id!, true),
-    );
-    bracket = advanceKnockoutRound(bracket, sfResults, 'semifinals');
-
-    // Final
-    expect(bracket.final.team1Id).not.toBeNull();
-    expect(bracket.final.team2Id).not.toBeNull();
-
-    const finalResult = simulateResult(
-      bracket.final.team1Id!,
-      bracket.final.team2Id!,
-      true,
-    );
-    expect(finalResult.winnerId).toBeTruthy();
+  // Top seed always sits in team1 and team1 always wins → seed-1 wins every size.
+  it.each([2, 4, 8, 16, 32])('crowns a champion end-to-end for size %i', (size) => {
+    let bracket = generateKnockoutBracket(makeSeeds(size));
+    for (let r = 0; r < bracket.rounds.length; r++) {
+      const round = bracket.rounds[r];
+      // every slot in the round being played must be filled
+      for (const m of round) {
+        expect(m.team1Id).not.toBeNull();
+        expect(m.team2Id).not.toBeNull();
+      }
+      const results = round.map((m) => simulateResult(m.team1Id!, m.team2Id!, true));
+      if (r < bracket.rounds.length - 1) bracket = advanceKnockoutRound(bracket, results, r);
+    }
+    const finalMatch = bracket.rounds[bracket.rounds.length - 1][0];
+    expect(finalMatch.team1Id).toBe('seed-1');
   });
 });
 
@@ -721,32 +680,29 @@ describe('full tournament simulation', () => {
     }));
 
     let bracket = generateKnockoutBracket(top8);
-    expect(bracket.quarterfinals).toHaveLength(4);
+    expect(bracket.rounds).toHaveLength(3); // QF, SF, Final
+    expect(bracket.rounds[0]).toHaveLength(4);
 
-    // QF
-    const qfResults = bracket.quarterfinals.map((qf) =>
-      simulateResult(qf.team1Id!, qf.team2Id!, Math.random() < 0.5),
-    );
-    bracket = advanceKnockoutRound(bracket, qfResults, 'quarterfinals');
-
-    for (const sf of bracket.semifinals) {
-      expect(sf.team1Id).not.toBeNull();
-      expect(sf.team2Id).not.toBeNull();
+    // Play QF and SF, advancing the winners through the bracket.
+    for (let r = 0; r < bracket.rounds.length - 1; r++) {
+      const round = bracket.rounds[r];
+      for (const m of round) {
+        expect(m.team1Id).not.toBeNull();
+        expect(m.team2Id).not.toBeNull();
+      }
+      const results = round.map((m) =>
+        simulateResult(m.team1Id!, m.team2Id!, Math.random() < 0.5),
+      );
+      bracket = advanceKnockoutRound(bracket, results, r);
     }
 
-    // SF
-    const sfResults = bracket.semifinals.map((sf) =>
-      simulateResult(sf.team1Id!, sf.team2Id!, Math.random() < 0.5),
-    );
-    bracket = advanceKnockoutRound(bracket, sfResults, 'semifinals');
-
-    expect(bracket.final.team1Id).not.toBeNull();
-    expect(bracket.final.team2Id).not.toBeNull();
-
     // Final
+    const finalMatch = bracket.rounds[bracket.rounds.length - 1][0];
+    expect(finalMatch.team1Id).not.toBeNull();
+    expect(finalMatch.team2Id).not.toBeNull();
     const finalResult = simulateResult(
-      bracket.final.team1Id!,
-      bracket.final.team2Id!,
+      finalMatch.team1Id!,
+      finalMatch.team2Id!,
       Math.random() < 0.5,
     );
 

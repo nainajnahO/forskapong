@@ -6,12 +6,13 @@ import type { Team, Match, Tournament } from '@/lib/database.types';
 import {
   generateSwissPairings,
   generateKnockoutBracket,
-  advanceKnockoutRound,
+  knockoutLabels,
   countByesPerTeam,
   detectUnresolvedCutoffTie,
   applyCutoffTieOrder,
   type MatchResult,
   type TeamStanding,
+  type BracketSlot,
   type KnockoutBracket as KnockoutBracketType,
 } from '@/lib/tournament-engine';
 import { List, LayoutGrid, ChevronUp, ChevronDown } from 'lucide-react';
@@ -22,10 +23,10 @@ import TournamentMapView from '../components/TournamentMapView';
 import TournamentFlowCard from '../components/TournamentFlowCard';
 import DangerZone from '../components/DangerZone';
 import { byesByRound, dbMatchToResult, standingsFromMatches, teamsToEngine } from '../lib/match-utils';
-import { decideKnockoutHomeTeam, orientSwissPairings } from '@/lib/home-away';
+import { decideKnockoutHomeTeam, orientSwissPairings, type OrientedPairing } from '@/lib/home-away';
 import type { AdminTab } from '@/contexts/AdminTabContextDef';
 import { assignTablesAndWaves, getWaveCount, normalizeTableCount } from '@/lib/table-scheduling';
-import { getKnockoutStartRound, PLAYOFF_CUTOFF } from '@/lib/constants';
+import { getKnockoutStartRound, DEFAULT_KNOCKOUT_SIZE } from '@/lib/constants';
 
 /* ─── Component ───────────────────────────────────────────────── */
 
@@ -45,6 +46,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   const [roundTime, setRoundTime] = useState('');
   const [roundCount, setRoundCount] = useState(7);
   const [tableCount, setTableCount] = useState(16);
+  const [knockoutSize, setKnockoutSize] = useState(DEFAULT_KNOCKOUT_SIZE);
   // Persisted N-way tie ordering, keyed by cutoff → team ids in rank order.
   // A 2-team tie is just N=2; this supersedes the old pairwise RPS flow.
   const [tieOrderByCutoff, setTieOrderByCutoff] = useState<Record<number, string[]>>({});
@@ -74,6 +76,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     setTournament(t);
     if (t?.total_rounds) setRoundCount(t.total_rounds);
     if (t?.table_count) setTableCount(t.table_count);
+    if (t?.knockout_size) setKnockoutSize(t.knockout_size);
     setTeams(allTeams);
     setMatches(allMatches);
     // Rows arrive sorted by (cutoff, rank), so pushing yields each cutoff's
@@ -109,24 +112,30 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   // Knockout starts the round after the last Swiss round; once started, total_rounds
   // is authoritative (falls back to the local round-count input pre-start).
   const knockoutStartRound = getKnockoutStartRound(tournament?.total_rounds ?? roundCount);
+  // Teams advancing into the knockout bracket; once started, knockout_size is
+  // authoritative (falls back to the local size input pre-start). Always a power of 2,
+  // so the bracket has log2(size) rounds (e.g. 8 → Kvarts/Semi/Final).
+  const playoffSize = tournament?.knockout_size ?? knockoutSize;
+  const numKnockoutRounds = Math.log2(playoffSize);
   const completedResults = matches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
   // Per-round bye team (odd field only); knockout rounds never register a bye.
   const swissByeByRound = byesByRound(teams, matches);
-  // The Top-8 cutoff tie only matters at the Swiss→knockout seeding step: all Swiss
-  // rounds are done (status is 'knockout') but the QF bracket isn't generated yet.
-  // Outside that step the detection would fire spuriously — e.g. before play starts
-  // every team is 0–0 with equal cup diff, so the whole field reads as one big tie.
+  // The cutoff tie only matters at the Swiss→knockout seeding step: all Swiss
+  // rounds are done (status is 'knockout') but the first knockout round isn't
+  // generated yet. Outside that step the detection would fire spuriously — e.g.
+  // before play starts every team is 0–0 with equal cup diff, so the whole field
+  // reads as one big tie.
   const atKnockoutSeedingStep =
     tournament?.status === 'knockout' && !matches.some((m) => m.round === knockoutStartRound);
   const unresolvedCutoffTie = atKnockoutSeedingStep
-    ? detectUnresolvedCutoffTie(standings, completedResults, PLAYOFF_CUTOFF)
+    ? detectUnresolvedCutoffTie(standings, completedResults, playoffSize)
     : null;
   const tieGroupIds = unresolvedCutoffTie?.teamIds ?? null;
-  const storedTieOrder = tieOrderByCutoff[PLAYOFF_CUTOFF] ?? [];
+  const storedTieOrder = tieOrderByCutoff[playoffSize] ?? [];
 
   // The tied group occupies a contiguous run of standings slots starting at this
-  // placement; the Top-8 cutoff falls somewhere inside it, so draft position k
-  // lands at placement firstTieRank + k and qualifies iff that is ≤ PLAYOFF_CUTOFF.
+  // placement; the cutoff (Top playoffSize) falls somewhere inside it, so draft
+  // position k lands at placement firstTieRank + k and qualifies iff that is ≤ playoffSize.
   const firstTieRank = tieGroupIds ? standings.findIndex((s) => tieGroupIds.includes(s.id)) + 1 : 0;
 
   // A tie is resolved once a stored order covers exactly the tied group (any N≥2).
@@ -182,12 +191,12 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       // writable with the public anon key (issues #18, #24, #27). The RPC clears
       // and rewrites the cutoff's order atomically.
       const { error } = await supabase.rpc('set_tiebreak_order', {
-        p_cutoff: PLAYOFF_CUTOFF,
+        p_cutoff: playoffSize,
         p_team_ids: draftTieOrder,
         admin_code: adminCode,
       });
       if (error) throw error;
-      setTieOrderByCutoff((prev) => ({ ...prev, [PLAYOFF_CUTOFF]: [...draftTieOrder] }));
+      setTieOrderByCutoff((prev) => ({ ...prev, [playoffSize]: [...draftTieOrder] }));
     } catch (err) {
       setTieOrderError(err instanceof Error ? err.message : 'Kunde inte spara ordningen');
     } finally {
@@ -218,14 +227,20 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     try {
       const adminCode = sessionStorage.getItem('adminCode');
       if (!adminCode) throw new Error('Logga in som admin igen');
+      // Clamp the knockout size to the largest power of 2 that fits the field, so a
+      // leftover default can't exceed the number of teams.
+      const maxKnockout = teams.length >= 2 ? 2 ** Math.floor(Math.log2(teams.length)) : 2;
+      const effectiveKnockoutSize = Math.min(knockoutSize, maxKnockout);
       const { error } = await supabase.rpc('admin_set_tournament', {
         admin_code: adminCode,
         p_current_round: 1,
         p_total_rounds: roundCount,
         p_table_count: tableCount,
+        p_knockout_size: effectiveKnockoutSize,
         p_status: 'swiss',
       });
       if (error) throw error;
+      setKnockoutSize(effectiveKnockoutSize);
       await loadData();
     } catch (err) {
       setFlowError(err instanceof Error ? err.message : 'Kunde inte starta turneringen');
@@ -312,164 +327,98 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     }
   }
 
-  async function handleGenerateKnockout() {
+  // Generate the next knockout round: the seeded first round, or pair the previous
+  // round's winners. One handler drives the whole bracket (QF → … → Final) for any
+  // power-of-2 knockout size.
+  async function handleGenerateNextKnockoutRound() {
     setFlowError('');
     setGenerating(true);
     try {
       const activeTableCount = normalizeTableCount(tournament?.table_count ?? tableCount);
-      if (knockoutBlockedByTie) {
-        return;
+
+      // Knockout rounds live at knockoutStartRound .. +(numKnockoutRounds - 1).
+      const generatedRounds = matches
+        .filter((m) => m.round >= knockoutStartRound)
+        .map((m) => m.round);
+      const lastGenerated = generatedRounds.length
+        ? Math.max(...generatedRounds)
+        : knockoutStartRound - 1;
+      const nextRoundIndex = lastGenerated - knockoutStartRound + 1; // 0 = first round
+      if (nextRoundIndex >= numKnockoutRounds) return; // bracket already complete
+      const targetRound = knockoutStartRound + nextRoundIndex;
+
+      let pairings: OrientedPairing[];
+
+      if (nextRoundIndex === 0) {
+        // First round: seed the top `playoffSize` standings into the bracket.
+        if (knockoutBlockedByTie) return;
+        const playoffStandings = getPlayoffQualifiedStandings();
+        const seeds = playoffStandings.slice(0, playoffSize).map((s) => ({
+          id: s.id,
+          name: s.name,
+          wins: s.wins,
+          losses: s.losses,
+        }));
+        if (seeds.length !== playoffSize) {
+          throw new Error(`Behöver ${playoffSize} lag för slutspelet, har ${seeds.length}`);
+        }
+        // Tiebreak-resolved ranks so a team promoted past a cutoff tie is seeded by
+        // its resolved position, not its pre-resolution rank.
+        const standingsRankMap = new Map(playoffStandings.map((s) => [s.id, s.rank]));
+        const bracket = generateKnockoutBracket(seeds);
+        pairings = bracket.rounds[0].map((slot) =>
+          decideKnockoutHomeTeam(
+            slot.team1Id!,
+            slot.team2Id!,
+            targetRound,
+            matches,
+            standingsRankMap,
+            knockoutStartRound,
+          ),
+        );
+      } else {
+        // Later round: pair the previous round's winners in bracket order (recovered
+        // by sorting on wave then table). Winners i and i+1 meet. Home team is decided
+        // by latest knockout performance.
+        const prevRound = matches
+          .filter((m) => m.round === lastGenerated && m.confirmed)
+          .sort((a, b) => a.wave - b.wave || (a.table_number ?? 0) - (b.table_number ?? 0));
+        const winners = prevRound.map((m) => m.winner_id).filter(Boolean) as string[];
+        if (winners.length !== playoffSize >> nextRoundIndex) return; // round not decided
+        const standingsRankMap = new Map(standings.map((s) => [s.id, s.rank]));
+        pairings = [];
+        for (let i = 0; i < winners.length; i += 2) {
+          pairings.push(
+            decideKnockoutHomeTeam(
+              winners[i],
+              winners[i + 1],
+              targetRound,
+              matches,
+              standingsRankMap,
+              knockoutStartRound,
+            ),
+          );
+        }
       }
 
-      const playoffStandings = getPlayoffQualifiedStandings();
-      const top8 = playoffStandings.slice(0, PLAYOFF_CUTOFF).map((s) => ({
-        id: s.id,
-        name: s.name,
-        wins: s.wins,
-        losses: s.losses,
-      }));
-      // Use the tiebreak-resolved ranks so a team promoted past a cutoff tie is
-      // seeded/oriented by its resolved position, not its pre-resolution rank.
-      const standingsRankMap = new Map(playoffStandings.map((s) => [s.id, s.rank]));
-      const bracket = generateKnockoutBracket(top8);
-
-      // Insert QF matches as the first knockout round (orientation falls back to standings)
-      const qfScheduled = assignTablesAndWaves(bracket.quarterfinals, activeTableCount);
-      const qfInserts = qfScheduled.map((qf) => {
-        const orientation = decideKnockoutHomeTeam(
-          qf.team1Id!,
-          qf.team2Id!,
-          knockoutStartRound,
-          matches,
-          standingsRankMap,
-          knockoutStartRound,
-        );
-        return {
-          round: knockoutStartRound,
-          wave: qf.wave,
-          team1_id: orientation.homeTeamId,
-          team2_id: orientation.awayTeamId,
-          table_number: qf.tableNumber,
-          scheduled_time: roundTime || null,
-        };
-      });
-      const { error } = await supabase.rpc('admin_create_matches', {
-        admin_code: sessionStorage.getItem('adminCode') ?? '',
-        rows: qfInserts,
-      });
-      if (error) throw error;
-      setRoundTime('');
-      await loadData();
-    } catch (err) {
-      setFlowError(err instanceof Error ? err.message : 'Kunde inte generera kvartsfinaler');
-    } finally {
-      setGenerating(false);
-    }
-  }
-
-  async function handleGenerateSemifinals() {
-    if (!tournament) return;
-    setFlowError('');
-    setGenerating(true);
-    try {
-      const activeTableCount = normalizeTableCount(tournament.table_count ?? tableCount);
-      const standingsRankMap = new Map(standings.map((s) => [s.id, s.rank]));
-      const qfMatches = matches
-        .filter((m) => m.round === knockoutStartRound && m.confirmed)
-        .sort((a, b) => {
-          const waveDelta = a.wave - b.wave;
-          if (waveDelta !== 0) return waveDelta;
-          return (a.table_number ?? 0) - (b.table_number ?? 0);
-        });
-      const qfWinners = qfMatches.map((m) => m.winner_id!);
-      if (qfWinners.length !== 4) return;
-
-      // QF1 winner vs QF2 winner, QF3 winner vs QF4 winner.
-      // Home team is decided by latest knockout performance.
-      const sf1 = decideKnockoutHomeTeam(
-        qfWinners[0],
-        qfWinners[1],
-        knockoutStartRound + 1,
-        matches,
-        standingsRankMap,
-        knockoutStartRound,
-      );
-      const sf2 = decideKnockoutHomeTeam(
-        qfWinners[2],
-        qfWinners[3],
-        knockoutStartRound + 1,
-        matches,
-        standingsRankMap,
-        knockoutStartRound,
-      );
-      const sfScheduled = assignTablesAndWaves([sf1, sf2], activeTableCount);
-      const sfInserts = sfScheduled.map((sf) => ({
-        round: knockoutStartRound + 1,
-        wave: sf.wave,
-        team1_id: sf.homeTeamId,
-        team2_id: sf.awayTeamId,
-        table_number: sf.tableNumber,
+      const scheduled = assignTablesAndWaves(pairings, activeTableCount);
+      const inserts = scheduled.map((p) => ({
+        round: targetRound,
+        wave: p.wave,
+        team1_id: p.homeTeamId,
+        team2_id: p.awayTeamId,
+        table_number: p.tableNumber,
         scheduled_time: roundTime || null,
       }));
       const { error } = await supabase.rpc('admin_create_matches', {
         admin_code: sessionStorage.getItem('adminCode') ?? '',
-        rows: sfInserts,
+        rows: inserts,
       });
       if (error) throw error;
       setRoundTime('');
       await loadData();
     } catch (err) {
-      setFlowError(err instanceof Error ? err.message : 'Kunde inte generera semifinaler');
-    } finally {
-      setGenerating(false);
-    }
-  }
-
-  async function handleGenerateFinal() {
-    if (!tournament) return;
-    setFlowError('');
-    setGenerating(true);
-    try {
-      const activeTableCount = normalizeTableCount(tournament.table_count ?? tableCount);
-      const standingsRankMap = new Map(standings.map((s) => [s.id, s.rank]));
-      const sfMatches = matches
-        .filter((m) => m.round === knockoutStartRound + 1 && m.confirmed)
-        .sort((a, b) => {
-          const waveDelta = a.wave - b.wave;
-          if (waveDelta !== 0) return waveDelta;
-          return (a.table_number ?? 0) - (b.table_number ?? 0);
-        });
-      const sfWinners = sfMatches.map((m) => m.winner_id!);
-      if (sfWinners.length !== 2) return;
-
-      const finalOrientation = decideKnockoutHomeTeam(
-        sfWinners[0],
-        sfWinners[1],
-        knockoutStartRound + 2,
-        matches,
-        standingsRankMap,
-        knockoutStartRound,
-      );
-
-      const [finalSlot] = assignTablesAndWaves([finalOrientation], activeTableCount);
-      const { error } = await supabase.rpc('admin_create_matches', {
-        admin_code: sessionStorage.getItem('adminCode') ?? '',
-        rows: [
-          {
-            round: knockoutStartRound + 2,
-            wave: finalSlot.wave,
-            team1_id: finalSlot.homeTeamId,
-            team2_id: finalSlot.awayTeamId,
-            table_number: finalSlot.tableNumber,
-            scheduled_time: roundTime || null,
-          },
-        ],
-      });
-      if (error) throw error;
-      setRoundTime('');
-      await loadData();
-    } catch (err) {
-      setFlowError(err instanceof Error ? err.message : 'Kunde inte generera finalen');
+      setFlowError(err instanceof Error ? err.message : 'Kunde inte generera slutspelsrundan');
     } finally {
       setGenerating(false);
     }
@@ -496,59 +445,32 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   // Build a live knockout bracket from matches in the knockout rounds
   const knockoutMatches = matches.filter((m) => m.round >= knockoutStartRound);
   const knockoutResults = knockoutMatches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
+
+  // Build the live bracket straight from the generated match rows: each knockout
+  // round's matches give that round's pairings (recovered in bracket order by sorting
+  // on wave then table); rounds not yet generated stay empty (TBD).
   let liveBracket: KnockoutBracketType | null = null;
-
-  if (status === 'knockout' && knockoutMatches.length >= 4) {
-    const qfMatches = knockoutMatches.filter((m) => m.round === knockoutStartRound);
-    if (qfMatches.length === 4) {
-      liveBracket = {
-        quarterfinals: qfMatches.map((m, i) => ({
+  const firstRoundMatches = knockoutMatches.filter((m) => m.round === knockoutStartRound);
+  if (status === 'knockout' && firstRoundMatches.length === playoffSize / 2) {
+    const rounds: BracketSlot[][] = [];
+    for (let r = 0; r < numKnockoutRounds; r++) {
+      const roundMatches = knockoutMatches
+        .filter((m) => m.round === knockoutStartRound + r)
+        .sort((a, b) => a.wave - b.wave || (a.table_number ?? 0) - (b.table_number ?? 0));
+      const slotCount = playoffSize >> (r + 1); // matches in round r
+      rounds.push(
+        Array.from({ length: slotCount }, (_, i) => ({
           matchIndex: i,
-          team1Id: m.team1_id,
-          team2Id: m.team2_id,
+          team1Id: roundMatches[i]?.team1_id ?? null,
+          team2Id: roundMatches[i]?.team2_id ?? null,
         })),
-        semifinals: [
-          { matchIndex: 0, team1Id: null, team2Id: null },
-          { matchIndex: 1, team1Id: null, team2Id: null },
-        ],
-        final: { matchIndex: 0, team1Id: null, team2Id: null },
-      };
-
-      // Try advance QF
-      const qfResults = qfMatches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
-      if (qfResults.length === 4) {
-        liveBracket = advanceKnockoutRound(liveBracket, qfResults, 'quarterfinals');
-      }
-
-      // Try advance SF
-      const sfMatches = knockoutMatches.filter((m) => m.round === knockoutStartRound + 1);
-      if (sfMatches.length === 2) {
-        liveBracket.semifinals = sfMatches.map((m, i) => ({
-          matchIndex: i,
-          team1Id: m.team1_id,
-          team2Id: m.team2_id,
-        }));
-        const sfResults = sfMatches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
-        if (sfResults.length === 2) {
-          liveBracket = advanceKnockoutRound(liveBracket, sfResults, 'semifinals');
-        }
-      }
-
-      // Try set final
-      const finalMatch = knockoutMatches.find((m) => m.round === knockoutStartRound + 2);
-      if (finalMatch) {
-        liveBracket.final = {
-          matchIndex: 0,
-          team1Id: finalMatch.team1_id,
-          team2Id: finalMatch.team2_id,
-        };
-      }
+      );
     }
+    liveBracket = { rounds, labels: knockoutLabels(playoffSize) };
   }
 
-  const finalResult = knockoutMatches.find(
-    (m) => m.round === knockoutStartRound + 2 && m.winner_id,
-  );
+  const lastKnockoutRound = knockoutStartRound + numKnockoutRounds - 1;
+  const finalResult = knockoutMatches.find((m) => m.round === lastKnockoutRound && m.winner_id);
   const champion = finalResult?.winner_id ?? null;
 
   if (loading) {
@@ -647,7 +569,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
             className="flex w-full items-start gap-2 text-left"
           >
             <span className="text-sm text-amber-300 flex-1">
-              ⚠ Oavgjort vid slutspelsgränsen (Topp {PLAYOFF_CUTOFF}).{' '}
+              ⚠ Oavgjort vid slutspelsgränsen (Topp {playoffSize}).{' '}
               {unresolvedCutoffTie.teamIds.length} lag är lika på vinster och cup diff och kan inte
               avgöras automatiskt.
               {tieResolved && <span className="text-emerald-300"> ✓ Ordning sparad.</span>}
@@ -661,7 +583,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
           {tieResolverOpen && (
             <div className="text-xs text-amber-200/90">
               Kör sten-sax-påse (eller en tiebreak-match) framför admins och sätt slutordningen
-              nedan. Lagen ovanför gränsen går till slutspel (Topp {PLAYOFF_CUTOFF}), lagen under
+              nedan. Lagen ovanför gränsen går till slutspel (Topp {playoffSize}), lagen under
               slås ut. Slutspelet låses upp när ordningen sparats.
             </div>
           )}
@@ -669,7 +591,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
             <div className="space-y-1.5">
               {draftTieOrder.map((teamId, i) => {
                 const placement = firstTieRank + i;
-                const qualifies = placement <= PLAYOFF_CUTOFF;
+                const qualifies = placement <= playoffSize;
                 return (
                   <div key={teamId}>
                     <div
@@ -713,7 +635,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
                         </button>
                       </div>
                     </div>
-                    {placement === PLAYOFF_CUTOFF && i < draftTieOrder.length - 1 && (
+                    {placement === playoffSize && i < draftTieOrder.length - 1 && (
                       <div className="flex items-center gap-2 py-1 px-1 text-[10px] uppercase tracking-wider text-amber-300/70">
                         <span className="flex-1 border-t border-amber-400/30" />
                         Slutspelsgräns
@@ -758,17 +680,17 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
         onRoundTimeChange={setRoundTime}
         roundCount={roundCount}
         tableCount={tableCount}
+        knockoutSize={knockoutSize}
         schedulePreview={schedulePreview}
         onRoundCountChange={setRoundCount}
         onTableCountChange={setTableCount}
+        onKnockoutSizeChange={setKnockoutSize}
         onStartTournament={handleStartTournament}
         onGeneratePairings={handleGeneratePairings}
         onAdvanceRound={handleAdvanceRound}
         onStartKnockout={handleStartKnockout}
-        onGenerateKnockout={handleGenerateKnockout}
+        onGenerateNextKnockoutRound={handleGenerateNextKnockoutRound}
         knockoutBlockedByTie={knockoutBlockedByTie}
-        onGenerateSemifinals={handleGenerateSemifinals}
-        onGenerateFinal={handleGenerateFinal}
         onFinishTournament={handleFinishTournament}
         onTabChange={onTabChange}
         championName={championName}
@@ -862,11 +784,8 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
             <div className="space-y-3">
               <h3 className="text-sm font-medium text-zinc-400">Slutspelsmatcher</h3>
               <div className="rounded-2xl border border-white/[0.06] overflow-hidden divide-y divide-white/[0.04]">
-                {[
-                  { round: knockoutStartRound, label: 'Kvartsfinal' },
-                  { round: knockoutStartRound + 1, label: 'Semifinal' },
-                  { round: knockoutStartRound + 2, label: 'Final' },
-                ]
+                {knockoutLabels(playoffSize)
+                  .map((label, r) => ({ round: knockoutStartRound + r, label }))
                   .filter(({ round }) => knockoutMatches.some((m) => m.round === round))
                   .map(({ round, label }) => (
                     <div key={round}>

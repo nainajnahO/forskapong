@@ -2,11 +2,12 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
-import { getKnockoutStartRound } from '@/lib/constants';
+import { getKnockoutStartRound, DEFAULT_KNOCKOUT_SIZE } from '@/lib/constants';
 import type { Team, Match, Tournament } from '@/lib/database.types';
 import {
-  advanceKnockoutRound,
+  knockoutLabels,
   type MatchResult,
+  type BracketSlot,
   type KnockoutBracket,
 } from '@/lib/tournament-engine';
 import { dbMatchToResult, standingsFromMatches } from '@/pages/admin/lib/match-utils';
@@ -88,6 +89,8 @@ export default function DisplayPage() {
   const status = tournament?.status ?? 'not_started';
   const currentRound = tournament?.current_round ?? 0;
   const knockoutStartRound = getKnockoutStartRound(tournament?.total_rounds ?? 7);
+  const playoffSize = tournament?.knockout_size ?? DEFAULT_KNOCKOUT_SIZE;
+  const numKnockoutRounds = Math.log2(playoffSize);
   const standings = standingsFromMatches(teams, matches);
 
   // Group matches by round
@@ -99,57 +102,33 @@ export default function DisplayPage() {
   }
   const rounds = [...roundsMap.entries()].sort(([a], [b]) => a - b);
 
-  // Build knockout bracket
+  // Build the knockout bracket straight from the generated match rows: each round's
+  // matches give its pairings (bracket order recovered by sorting on wave then table);
+  // ungenerated rounds stay empty (TBD).
   const knockoutMatches = matches.filter((m) => m.round >= knockoutStartRound);
   const knockoutResults = knockoutMatches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
   let liveBracket: KnockoutBracket | null = null;
-
-  if (status === 'knockout' && knockoutMatches.length >= 4) {
-    const qfMatches = knockoutMatches.filter((m) => m.round === knockoutStartRound);
-    if (qfMatches.length === 4) {
-      liveBracket = {
-        quarterfinals: qfMatches.map((m, i) => ({
+  const firstRoundMatches = knockoutMatches.filter((m) => m.round === knockoutStartRound);
+  if (status === 'knockout' && firstRoundMatches.length === playoffSize / 2) {
+    const bracketRounds: BracketSlot[][] = [];
+    for (let r = 0; r < numKnockoutRounds; r++) {
+      const roundMatches = knockoutMatches
+        .filter((m) => m.round === knockoutStartRound + r)
+        .sort((a, b) => a.wave - b.wave || (a.table_number ?? 0) - (b.table_number ?? 0));
+      const slotCount = playoffSize >> (r + 1);
+      bracketRounds.push(
+        Array.from({ length: slotCount }, (_, i) => ({
           matchIndex: i,
-          team1Id: m.team1_id,
-          team2Id: m.team2_id,
+          team1Id: roundMatches[i]?.team1_id ?? null,
+          team2Id: roundMatches[i]?.team2_id ?? null,
         })),
-        semifinals: [
-          { matchIndex: 0, team1Id: null, team2Id: null },
-          { matchIndex: 1, team1Id: null, team2Id: null },
-        ],
-        final: { matchIndex: 0, team1Id: null, team2Id: null },
-      };
-
-      const qfResults = qfMatches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
-      if (qfResults.length === 4) {
-        liveBracket = advanceKnockoutRound(liveBracket, qfResults, 'quarterfinals');
-      }
-
-      const sfMatches = knockoutMatches.filter((m) => m.round === knockoutStartRound + 1);
-      if (sfMatches.length === 2) {
-        liveBracket.semifinals = sfMatches.map((m, i) => ({
-          matchIndex: i,
-          team1Id: m.team1_id,
-          team2Id: m.team2_id,
-        }));
-        const sfResults = sfMatches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
-        if (sfResults.length === 2) {
-          liveBracket = advanceKnockoutRound(liveBracket, sfResults, 'semifinals');
-        }
-      }
-
-      const finalMatch = knockoutMatches.find((m) => m.round === knockoutStartRound + 2);
-      if (finalMatch) {
-        liveBracket.final = {
-          matchIndex: 0,
-          team1Id: finalMatch.team1_id,
-          team2Id: finalMatch.team2_id,
-        };
-      }
+      );
     }
+    liveBracket = { rounds: bracketRounds, labels: knockoutLabels(playoffSize) };
   }
 
-  const finalResult = knockoutMatches.find((m) => m.round === knockoutStartRound + 2 && m.winner_id);
+  const lastKnockoutRound = knockoutStartRound + numKnockoutRounds - 1;
+  const finalResult = knockoutMatches.find((m) => m.round === lastKnockoutRound && m.winner_id);
   const champion = finalResult?.winner_id ?? null;
 
   if (status === 'not_started') {

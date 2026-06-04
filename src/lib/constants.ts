@@ -200,15 +200,20 @@ export const VENUE_MAP_CONFIG = {
 } as const;
 
 // Tournament structure
-/** Number of teams that advance from the Swiss stage into the knockout bracket. */
-export const PLAYOFF_CUTOFF = 8;
 /**
- * Round number of the first knockout match (the quarterfinal), derived from the
- * tournament's configured Swiss round count. Swiss occupies rounds 1..totalRounds,
- * so the quarterfinal is totalRounds + 1, the semifinal totalRounds + 2, and the
- * final totalRounds + 3. Deriving it (rather than fixing it at 8) lets the knockout
- * float for variable event sizes; the bracket itself is still a fixed 8-team
- * QF/SF/Final (see PLAYOFF_CUTOFF and generateKnockoutBracket).
+ * Default number of teams that advance from the Swiss stage into the knockout
+ * bracket. Configurable per tournament via `tournament.knockout_size`; must be a
+ * power of 2 (2/4/8/16/32…) so the single-elimination bracket has no first-round
+ * byes. The 2026-06-06 event runs the default, 8.
+ */
+export const DEFAULT_KNOCKOUT_SIZE = 8;
+/**
+ * Round number of the first knockout match (the quarterfinal for an 8-team
+ * bracket), derived from the tournament's configured Swiss round count. Swiss
+ * occupies rounds 1..totalRounds, so the first knockout round is totalRounds + 1.
+ * Deriving it (rather than fixing it at 8) lets the knockout float for variable
+ * event sizes; the bracket depth then follows knockout_size (see DEFAULT_KNOCKOUT_SIZE
+ * and generateKnockoutBracket).
  */
 export const getKnockoutStartRound = (totalRounds: number): number => totalRounds + 1;
 

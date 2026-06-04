@@ -394,11 +394,11 @@ function reducer(state: SimState, action: SimAction): SimState {
         // ── QF (top-8 uses existing bracket, top-16 uses simBracket) ──
         case 'knockout_qf': {
           if (state.bracket) {
-            // Top-8 path
-            const results = state.bracket.quarterfinals.map((qf) =>
+            // Top-8 path (QF is round index 0)
+            const results = state.bracket.rounds[0].map((qf) =>
               simMatch({ team1Id: qf.team1Id!, team2Id: qf.team2Id! }, state.matchOverrides, state.skillRatings),
             );
-            const bracket = advanceKnockoutRound(state.bracket, results, 'quarterfinals');
+            const bracket = advanceKnockoutRound(state.bracket, results, 0);
             return {
               ...state,
               phase: 'knockout_qf_results',
@@ -426,10 +426,10 @@ function reducer(state: SimState, action: SimAction): SimState {
         // ── SF ──
         case 'knockout_sf': {
           if (state.bracket) {
-            const results = state.bracket.semifinals.map((sf) =>
+            const results = state.bracket.rounds[1].map((sf) =>
               simMatch({ team1Id: sf.team1Id!, team2Id: sf.team2Id! }, state.matchOverrides, state.skillRatings),
             );
-            const bracket = advanceKnockoutRound(state.bracket, results, 'semifinals');
+            const bracket = advanceKnockoutRound(state.bracket, results, 1);
             return {
               ...state,
               phase: 'knockout_sf_results',
@@ -458,7 +458,7 @@ function reducer(state: SimState, action: SimAction): SimState {
         // ── Final ──
         case 'knockout_final': {
           if (state.bracket) {
-            const f = state.bracket.final;
+            const f = state.bracket.rounds[2][0];
             if (!f.team1Id || !f.team2Id) return state;
             const result = simMatch({ team1Id: f.team1Id, team2Id: f.team2Id }, state.matchOverrides, state.skillRatings);
             return {

@@ -120,59 +120,30 @@ export default function KnockoutBracketView({
 }: Props) {
   return (
     <div className="space-y-4">
-      {/* Bracket grid */}
-      <div className="grid grid-cols-3 gap-4 items-center">
-        {/* Quarterfinals */}
-        <div className="space-y-3">
-          <h4 className="text-xs text-zinc-500 font-medium uppercase tracking-wider">
-            Kvartsfinal
-          </h4>
-          {bracket.quarterfinals.map((qf, i) => (
-            <MatchCard
-              key={i}
-              team1Id={qf.team1Id}
-              team2Id={qf.team2Id}
-              teamNameMap={teamNameMap}
-              results={results}
-              animated={animated}
-            />
-          ))}
-        </div>
-
-        {/* Semifinals */}
-        <div className="space-y-3">
-          <h4 className="text-xs text-zinc-500 font-medium uppercase tracking-wider">
-            Semifinal
-          </h4>
-          <div className="space-y-16 pt-8">
-            {bracket.semifinals.map((sf, i) => (
-              <MatchCard
-                key={i}
-                team1Id={sf.team1Id}
-                team2Id={sf.team2Id}
-                teamNameMap={teamNameMap}
-                results={results}
-                animated={animated}
-              />
-            ))}
+      {/* Bracket grid: one column per knockout round, later rounds vertically centered */}
+      <div
+        className="grid gap-4 items-stretch"
+        style={{ gridTemplateColumns: `repeat(${bracket.rounds.length}, minmax(0, 1fr))` }}
+      >
+        {bracket.rounds.map((round, ri) => (
+          <div key={ri} className="space-y-3">
+            <h4 className="text-xs text-zinc-500 font-medium uppercase tracking-wider">
+              {bracket.labels[ri]}
+            </h4>
+            <div className="flex flex-col justify-around gap-3 h-full">
+              {round.map((slot) => (
+                <MatchCard
+                  key={slot.matchIndex}
+                  team1Id={slot.team1Id}
+                  team2Id={slot.team2Id}
+                  teamNameMap={teamNameMap}
+                  results={results}
+                  animated={animated}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-
-        {/* Final */}
-        <div className="space-y-3">
-          <h4 className="text-xs text-zinc-500 font-medium uppercase tracking-wider">
-            Final
-          </h4>
-          <div className="pt-24">
-            <MatchCard
-              team1Id={bracket.final.team1Id}
-              team2Id={bracket.final.team2Id}
-              teamNameMap={teamNameMap}
-              results={results}
-              animated={animated}
-            />
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* Champion */}

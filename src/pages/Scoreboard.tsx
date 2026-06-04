@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase';
 import type { Team, Match } from '@/lib/database.types';
 import { type TeamStanding } from '@/lib/tournament-engine';
 import { standingsFromMatches } from '@/pages/admin/lib/match-utils';
-import { PLAYOFF_CUTOFF } from '@/lib/constants';
+import { DEFAULT_KNOCKOUT_SIZE } from '@/lib/constants';
 import FluidBackground from '@/components/common/FluidBackground';
 import StaticNoise from '@/components/common/StaticNoise';
 import RealtimeIndicator from '@/components/common/RealtimeIndicator';
@@ -54,12 +54,17 @@ export default function Scoreboard() {
   }, [teamId, navigate]);
 
   const [standings, setStandings] = useState<ScoreboardStanding[]>([]);
+  const [playoffSize, setPlayoffSize] = useState(DEFAULT_KNOCKOUT_SIZE);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const loadData = useCallback(async () => {
     try {
-      const [teams, matches] = await Promise.all([fetchAllTeams(), fetchAllMatches()]);
+      const [teams, matches, tournamentRes] = await Promise.all([
+        fetchAllTeams(),
+        fetchAllMatches(),
+        supabase.from('tournament').select('knockout_size').maybeSingle(),
+      ]);
       const engineStandings = standingsFromMatches(teams, matches);
       const playerMap = new Map(teams.map((t) => [t.id, { player1: t.player1, player2: t.player2 }]));
       const merged = engineStandings.map((s) => ({
@@ -68,6 +73,7 @@ export default function Scoreboard() {
         player2: playerMap.get(s.id)?.player2 ?? null,
       }));
       setStandings(merged);
+      setPlayoffSize(tournamentRes.data?.knockout_size ?? DEFAULT_KNOCKOUT_SIZE);
       setError('');
     } catch {
       setError('Kunde inte ladda ställningen.');
@@ -159,7 +165,7 @@ export default function Scoreboard() {
             />
           </div>
           <p className={cn('text-sm', themeText(theme, 'secondary'))}>
-            Topp {PLAYOFF_CUTOFF} går vidare till slutspel
+            Topp {playoffSize} går vidare till slutspel
           </p>
         </motion.div>
       </div>
@@ -221,9 +227,9 @@ export default function Scoreboard() {
 
         {/* ── Table rows ──────────────────────── */}
         {standings.map((team, i) => {
-          const inPlayoff = team.rank <= PLAYOFF_CUTOFF;
+          const inPlayoff = team.rank <= playoffSize;
           const isCurrentTeam = team.id === teamId;
-          const isAtCutoff = team.rank === PLAYOFF_CUTOFF;
+          const isAtCutoff = team.rank === playoffSize;
 
           return (
             <motion.div

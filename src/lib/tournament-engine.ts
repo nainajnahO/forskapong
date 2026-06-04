@@ -33,10 +33,15 @@ export interface BracketSlot {
   team2Id: string | null;
 }
 
+/**
+ * A single-elimination knockout bracket of any power-of-2 size.
+ * `rounds[0]` is the first round (size/2 matches), each subsequent round halves
+ * until `rounds[last]` is the single final. `labels[i]` names `rounds[i]`
+ * (e.g. ['Kvartsfinal', 'Semifinal', 'Final'] for 8 teams).
+ */
 export interface KnockoutBracket {
-  quarterfinals: BracketSlot[];
-  semifinals: BracketSlot[];
-  final: BracketSlot;
+  rounds: BracketSlot[][];
+  labels: string[];
 }
 
 export interface TeamStanding {
@@ -188,80 +193,105 @@ export function generateSwissPairings(
 
 /* ─── Knockout Bracket ────────────────────────────────────────── */
 
-export function generateKnockoutBracket(top8: TournamentTeam[]): KnockoutBracket {
-  if (top8.length !== 8) {
-    throw new Error(`Expected exactly 8 teams for knockout, got ${top8.length}`);
-  }
+/** First round → final, e.g. 8 → ['Kvartsfinal', 'Semifinal', 'Final']. */
+const KNOCKOUT_ROUND_NAMES = [
+  'Final', // 2 teams
+  'Semifinal', // 4
+  'Kvartsfinal', // 8
+  'Åttondelsfinal', // 16
+  'Sextondelsfinal', // 32
+] as const;
 
-  // Seeds are by array index: top8[0] = seed 1, top8[1] = seed 2, etc.
-  const seed1 = top8[0].id;
-  const seed2 = top8[1].id;
-
-  // Seeds 3-4: randomized into QF2 top and QF3 top
-  const seeds34 = shuffle([top8[2].id, top8[3].id]);
-
-  // Seeds 5-8: randomized into the 4 remaining bottom slots
-  const seeds58 = shuffle([top8[4].id, top8[5].id, top8[6].id, top8[7].id]);
-
-  // Bracket layout:
-  // QF1: seed1 vs seeds58[0]  → SF1
-  // QF2: seeds34[0] vs seeds58[1] → SF1
-  // QF3: seeds34[1] vs seeds58[2] → SF2
-  // QF4: seed2 vs seeds58[3]  → SF2
-  const quarterfinals: BracketSlot[] = [
-    { matchIndex: 0, team1Id: seed1, team2Id: seeds58[0] },
-    { matchIndex: 1, team1Id: seeds34[0], team2Id: seeds58[1] },
-    { matchIndex: 2, team1Id: seeds34[1], team2Id: seeds58[2] },
-    { matchIndex: 3, team1Id: seed2, team2Id: seeds58[3] },
-  ];
-
-  const semifinals: BracketSlot[] = [
-    { matchIndex: 0, team1Id: null, team2Id: null },
-    { matchIndex: 1, team1Id: null, team2Id: null },
-  ];
-
-  const final: BracketSlot = { matchIndex: 0, team1Id: null, team2Id: null };
-
-  return { quarterfinals, semifinals, final };
+export function isPowerOfTwo(n: number): boolean {
+  return n >= 1 && (n & (n - 1)) === 0;
 }
 
+/** Labels for a `size`-team knockout, ordered first round → final. */
+export function knockoutLabels(size: number): string[] {
+  const numRounds = Math.log2(size);
+  const labels: string[] = [];
+  for (let r = 0; r < numRounds; r++) {
+    const teamsInRound = size >> r; // size, size/2, … 2
+    // Final(2)→idx0, Semifinal(4)→idx1, …
+    const nameIdx = Math.log2(teamsInRound) - 1;
+    labels.push(KNOCKOUT_ROUND_NAMES[nameIdx] ?? `Omgång med ${teamsInRound} lag`);
+  }
+  return labels;
+}
+
+/**
+ * Seed `seeds` (rank order, seeds[0] = seed 1) into a single-elimination bracket
+ * of `seeds.length` teams (a power of 2 ≥ 2). Seeding generalizes the legacy
+ * 8-team scheme — "randomized tiers":
+ *  • the top half of seeds take the "top" slot of each first-round match, the
+ *    bottom half take the "bottom" slot;
+ *  • seed 1 anchors the first match and seed 2 the last (opposite bracket halves,
+ *    so they can only meet in the final), with the remaining top-half seeds
+ *    shuffled into the middle top slots;
+ *  • the bottom half is shuffled across all bottom slots.
+ * At size 8 this is identical to the original QF layout.
+ */
+export function generateKnockoutBracket(seeds: TournamentTeam[]): KnockoutBracket {
+  const size = seeds.length;
+  if (size < 2 || !isPowerOfTwo(size)) {
+    throw new Error(`Knockout size must be a power of 2 ≥ 2, got ${size}`);
+  }
+
+  const numMatches = size / 2;
+  const ids = seeds.map((t) => t.id);
+  const topHalf = ids.slice(0, numMatches); // seeds 1..n/2
+  const bottomHalf = ids.slice(numMatches); // seeds n/2+1..n
+
+  // Top slots: seed 1 first, seed 2 last, the rest shuffled into the middle.
+  const topSlots = [topHalf[0], ...shuffle(topHalf.slice(2)), ...(numMatches > 1 ? [topHalf[1]] : [])];
+  const bottomSlots = shuffle([...bottomHalf]);
+
+  const firstRound: BracketSlot[] = Array.from({ length: numMatches }, (_, i) => ({
+    matchIndex: i,
+    team1Id: topSlots[i],
+    team2Id: bottomSlots[i],
+  }));
+
+  const rounds: BracketSlot[][] = [firstRound];
+  for (let matches = numMatches >> 1; matches >= 1; matches >>= 1) {
+    rounds.push(
+      Array.from({ length: matches }, (_, i) => ({ matchIndex: i, team1Id: null, team2Id: null })),
+    );
+  }
+
+  return { rounds, labels: knockoutLabels(size) };
+}
+
+/**
+ * Fill `rounds[roundIndex + 1]` from the winners of `rounds[roundIndex]`.
+ * Match i's winner flows to slot floor(i/2) — top slot if i is even, bottom if odd.
+ * A no-op on the final round (there is no next round).
+ */
 export function advanceKnockoutRound(
   bracket: KnockoutBracket,
   results: MatchResult[],
-  stage: 'quarterfinals' | 'semifinals' | 'final',
+  roundIndex: number,
 ): KnockoutBracket {
-  const next = structuredClone(bracket);
+  const next: KnockoutBracket = {
+    rounds: bracket.rounds.map((round) => round.map((slot) => ({ ...slot }))),
+    labels: [...bracket.labels],
+  };
 
-  if (stage === 'quarterfinals') {
-    // QF results fill SF slots
-    // QF0 winner → SF0.team1, QF1 winner → SF0.team2
-    // QF2 winner → SF1.team1, QF3 winner → SF1.team2
-    const qfWinners = next.quarterfinals.map((qf) => {
-      const result = results.find(
-        (r) =>
-          (r.team1Id === qf.team1Id && r.team2Id === qf.team2Id) ||
-          (r.team1Id === qf.team2Id && r.team2Id === qf.team1Id),
-      );
-      return result?.winnerId ?? null;
-    });
+  const current = next.rounds[roundIndex];
+  const nextRound = next.rounds[roundIndex + 1];
+  if (!current || !nextRound) return next;
 
-    next.semifinals[0].team1Id = qfWinners[0];
-    next.semifinals[0].team2Id = qfWinners[1];
-    next.semifinals[1].team1Id = qfWinners[2];
-    next.semifinals[1].team2Id = qfWinners[3];
-  } else if (stage === 'semifinals') {
-    const sfWinners = next.semifinals.map((sf) => {
-      const result = results.find(
-        (r) =>
-          (r.team1Id === sf.team1Id && r.team2Id === sf.team2Id) ||
-          (r.team1Id === sf.team2Id && r.team2Id === sf.team1Id),
-      );
-      return result?.winnerId ?? null;
-    });
-
-    next.final.team1Id = sfWinners[0];
-    next.final.team2Id = sfWinners[1];
-  }
+  current.forEach((slot, i) => {
+    const result = results.find(
+      (r) =>
+        (r.team1Id === slot.team1Id && r.team2Id === slot.team2Id) ||
+        (r.team1Id === slot.team2Id && r.team2Id === slot.team1Id),
+    );
+    if (!result) return;
+    const nextSlot = nextRound[Math.floor(i / 2)];
+    if (i % 2 === 0) nextSlot.team1Id = result.winnerId;
+    else nextSlot.team2Id = result.winnerId;
+  });
 
   return next;
 }

@@ -14,6 +14,7 @@ import {
 import type { Match, Tournament } from '@/lib/database.types';
 import type { AdminTab } from '@/contexts/AdminTabContextDef';
 import { getKnockoutStartRound } from '@/lib/constants';
+import { knockoutLabels } from '@/lib/tournament-engine';
 
 interface Props {
   tournament: Tournament | null;
@@ -23,18 +24,18 @@ interface Props {
   roundTime: string;
   roundCount: number;
   tableCount: number;
+  knockoutSize: number;
   schedulePreview: { matchCount: number; waveCount: number } | null;
   onRoundTimeChange: (v: string) => void;
   onRoundCountChange: (v: number) => void;
   onTableCountChange: (v: number) => void;
+  onKnockoutSizeChange: (v: number) => void;
   onStartTournament: () => void;
   onGeneratePairings: () => void;
   onAdvanceRound: () => void;
   onStartKnockout: () => void;
-  onGenerateKnockout: () => void;
+  onGenerateNextKnockoutRound: () => void;
   knockoutBlockedByTie: boolean;
-  onGenerateSemifinals: () => void;
-  onGenerateFinal: () => void;
   onFinishTournament: () => void;
   onTabChange: (tab: AdminTab) => void;
   championName: string | null;
@@ -47,20 +48,49 @@ type FlowState =
   | 'swiss_in_progress'
   | 'swiss_round_done'
   | 'swiss_done'
-  | 'knockout_generate_qf'
-  | 'knockout_qf_in_progress'
-  | 'knockout_qf_done'
-  | 'knockout_sf_in_progress'
-  | 'knockout_sf_done'
-  | 'knockout_final_in_progress'
-  | 'knockout_final_done'
+  | 'knockout_generate'
+  | 'knockout_round_in_progress'
+  | 'knockout_round_done'
+  | 'knockout_complete'
   | 'finished';
+
+/** Where the knockout bracket currently stands, derived from the match rows. */
+interface KnockoutInfo {
+  size: number;
+  startRound: number;
+  numRounds: number; // log2(size)
+  labels: string[]; // first round → final
+  currentIdx: number; // highest generated round index, -1 if none generated yet
+  currentMatches: Match[];
+  currentConfirmed: boolean; // current round generated AND all its matches confirmed
+}
+
+function summarizeKnockout(
+  roundsMap: Map<number, Match[]>,
+  totalRounds: number,
+  knockoutSize: number,
+): KnockoutInfo {
+  const startRound = getKnockoutStartRound(totalRounds);
+  const numRounds = Math.log2(knockoutSize);
+  let currentIdx = -1;
+  for (let r = 0; r < numRounds; r++) {
+    if ((roundsMap.get(startRound + r) ?? []).length > 0) currentIdx = r;
+  }
+  const currentMatches = currentIdx >= 0 ? (roundsMap.get(startRound + currentIdx) ?? []) : [];
+  const expected = currentIdx >= 0 ? knockoutSize >> (currentIdx + 1) : 0;
+  const currentConfirmed =
+    currentIdx >= 0 &&
+    currentMatches.length === expected &&
+    currentMatches.every((m) => m.confirmed);
+  return { size: knockoutSize, startRound, numRounds, labels: knockoutLabels(knockoutSize), currentIdx, currentMatches, currentConfirmed };
+}
 
 function deriveFlowState(
   tournament: Tournament | null,
   teamsCount: number,
   roundsMap: Map<number, Match[]>,
   totalRounds: number,
+  ko: KnockoutInfo,
 ): FlowState {
   const status = tournament?.status ?? 'not_started';
   const currentRound = tournament?.current_round ?? 0;
@@ -81,27 +111,10 @@ function deriveFlowState(
   }
 
   if (status === 'knockout') {
-    const knockoutStartRound = getKnockoutStartRound(totalRounds);
-    const qfMatches = roundsMap.get(knockoutStartRound) ?? [];
-    const sfMatches = roundsMap.get(knockoutStartRound + 1) ?? [];
-    const finalMatches = roundsMap.get(knockoutStartRound + 2) ?? [];
-
-    if (qfMatches.length === 0) return 'knockout_generate_qf';
-
-    const allQfConfirmed = qfMatches.length === 4 && qfMatches.every((m) => m.confirmed);
-    if (!allQfConfirmed) return 'knockout_qf_in_progress';
-
-    if (sfMatches.length === 0) return 'knockout_qf_done';
-
-    const allSfConfirmed = sfMatches.length === 2 && sfMatches.every((m) => m.confirmed);
-    if (!allSfConfirmed) return 'knockout_sf_in_progress';
-
-    if (finalMatches.length === 0) return 'knockout_sf_done';
-
-    const finalDone = finalMatches.length === 1 && finalMatches[0].confirmed;
-    if (!finalDone) return 'knockout_final_in_progress';
-
-    return 'knockout_final_done';
+    if (ko.currentIdx === -1) return 'knockout_generate';
+    if (!ko.currentConfirmed) return 'knockout_round_in_progress';
+    if (ko.currentIdx >= ko.numRounds - 1) return 'knockout_complete';
+    return 'knockout_round_done';
   }
 
   return 'not_started';
@@ -122,32 +135,36 @@ export default function TournamentFlowCard(props: Props) {
     roundTime,
     roundCount,
     tableCount,
+    knockoutSize,
     schedulePreview,
     onRoundTimeChange,
     onRoundCountChange,
     onTableCountChange,
+    onKnockoutSizeChange,
     onStartTournament,
     onGeneratePairings,
     onAdvanceRound,
     onStartKnockout,
-    onGenerateKnockout,
+    onGenerateNextKnockoutRound,
     knockoutBlockedByTie,
-    onGenerateSemifinals,
-    onGenerateFinal,
     onFinishTournament,
     onTabChange,
     championName,
   } = props;
 
   const totalRounds = tournament?.total_rounds ?? roundCount;
-  const flowState = deriveFlowState(tournament, teams.length, roundsMap, totalRounds);
+  const ko = summarizeKnockout(roundsMap, totalRounds, knockoutSize);
+  const flowState = deriveFlowState(tournament, teams.length, roundsMap, totalRounds, ko);
   const currentRound = tournament?.current_round ?? 0;
   // The knockout floats to total_rounds + 1, so the old "≤ 7" cap is gone. The only
   // real ceiling is the number of distinct opponents: at most teams.length - 1 Swiss
   // rounds before rematches are unavoidable.
   const maxRounds = Math.max(1, teams.length - 1);
+  // Selectable knockout sizes: powers of 2 up to the team count (no first-round byes).
+  const knockoutSizeOptions: number[] = [];
+  for (let n = 2; n <= teams.length; n *= 2) knockoutSizeOptions.push(n);
 
-  const config = getCardConfig(flowState, currentRound, roundsMap, championName, totalRounds);
+  const config = getCardConfig(flowState, currentRound, roundsMap, championName, totalRounds, ko);
 
   return (
     <motion.div
@@ -217,6 +234,23 @@ export default function TournamentFlowCard(props: Props) {
               </div>
             )}
 
+            {config.showKnockoutSizeInput && knockoutSizeOptions.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-zinc-500">Slutspel:</span>
+                <select
+                  value={knockoutSize}
+                  onChange={(e) => onKnockoutSizeChange(Number(e.target.value))}
+                  className="h-9 px-2 rounded-xl text-sm bg-white/[0.04] border border-white/[0.08] text-white outline-none focus:border-brand-500"
+                >
+                  {knockoutSizeOptions.map((n) => (
+                    <option key={n} value={n}>
+                      Topp {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {config.showTableCountInput && (
               <div className="flex items-center gap-2">
                 <span className="text-xs text-zinc-500">Bord:</span>
@@ -249,15 +283,13 @@ export default function TournamentFlowCard(props: Props) {
                     case 'generate_pairings': onGeneratePairings(); break;
                     case 'advance_round': onAdvanceRound(); break;
                     case 'start_knockout': onStartKnockout(); break;
-                    case 'generate_knockout': onGenerateKnockout(); break;
-                    case 'generate_sf': onGenerateSemifinals(); break;
-                    case 'generate_final': onGenerateFinal(); break;
+                    case 'generate_next_knockout': onGenerateNextKnockoutRound(); break;
                     case 'finish': onFinishTournament(); break;
                   }
                 }}
                 disabled={
                   generating ||
-                  (config.action.handler === 'generate_knockout' && knockoutBlockedByTie)
+                  (config.action.handler === 'generate_next_knockout' && knockoutBlockedByTie)
                 }
                 className={cn(
                   'px-4 py-2 rounded-xl text-sm font-medium transition-all inline-flex items-center gap-2',
@@ -290,9 +322,7 @@ type ActionHandler =
   | 'generate_pairings'
   | 'advance_round'
   | 'start_knockout'
-  | 'generate_knockout'
-  | 'generate_sf'
-  | 'generate_final'
+  | 'generate_next_knockout'
   | 'finish';
 
 interface CardConfig {
@@ -309,6 +339,7 @@ interface CardConfig {
   showTimeInput: boolean;
   showRoundCountInput: boolean;
   showTableCountInput: boolean;
+  showKnockoutSizeInput: boolean;
   action: {
     label: string;
     handler: ActionHandler;
@@ -349,8 +380,8 @@ function getCardConfig(
   roundsMap: Map<number, Match[]>,
   championName: string | null,
   totalRounds: number,
+  ko: KnockoutInfo,
 ): CardConfig {
-  const knockoutStartRound = getKnockoutStartRound(totalRounds);
   const base: CardConfig = {
     Icon: Clock,
     iconClass: 'text-zinc-400',
@@ -365,8 +396,15 @@ function getCardConfig(
     showTimeInput: false,
     showRoundCountInput: false,
     showTableCountInput: false,
+    showKnockoutSizeInput: false,
     action: null,
   };
+
+  // Labels for the round just played / to be generated, used by the knockout states.
+  const currentLabel = ko.labels[ko.currentIdx] ?? 'Slutspel';
+  const nextLabel = ko.labels[ko.currentIdx + 1] ?? 'Slutspel';
+  const firstLabel = ko.labels[0] ?? 'Slutspel';
+  const isFinalRound = ko.currentIdx === ko.numRounds - 1;
 
   switch (flowState) {
     case 'no_teams':
@@ -391,8 +429,9 @@ function getCardConfig(
         ...BRAND_THEME,
         Icon: Play,
         title: 'Steg 2: Starta turneringen',
-        subtitle: 'Alla lag är redo. Välj swiss-rundor och antal bord innan start.',
+        subtitle: 'Alla lag är redo. Välj swiss-rundor, slutspelsstorlek och antal bord innan start.',
         showRoundCountInput: true,
+        showKnockoutSizeInput: true,
         showTableCountInput: true,
         action: { label: 'Starta turnering', handler: 'start', buttonClass: BRAND_PRIMARY_BTN },
       };
@@ -408,16 +447,14 @@ function getCardConfig(
         action: { label: 'Generera lottning', handler: 'generate_pairings', buttonClass: BRAND_PRIMARY_BTN },
       };
 
-    case 'swiss_in_progress': {
-      const roundMatches = roundsMap.get(currentRound) ?? [];
+    case 'swiss_in_progress':
       return {
         ...base,
         ...BRAND_THEME,
         title: `Runda ${currentRound}: Väntar på resultat`,
         subtitle: 'Resultat rapporteras av lagen. Bekräfta disputerade matcher nedan.',
-        progress: getProgress(roundMatches),
+        progress: getProgress(roundsMap.get(currentRound) ?? []),
       };
-    }
 
     case 'swiss_round_done':
       return {
@@ -443,75 +480,48 @@ function getCardConfig(
         action: { label: 'Gå till slutspel', handler: 'start_knockout', buttonClass: AMBER_BTN },
       };
 
-    case 'knockout_generate_qf':
+    case 'knockout_generate':
       return {
         ...base,
         ...AMBER_THEME,
         Icon: Swords,
-        title: 'Slutspel: Generera kvartsfinaler',
-        subtitle: 'Top 8 från swiss möts i kvartsfinal. Generera matcherna.',
+        title: `Slutspel: Generera ${firstLabel.toLowerCase()}`,
+        subtitle: `Topp ${ko.size} från swiss möts. Generera matcherna.`,
         showTimeInput: true,
-        action: { label: 'Generera kvartsfinaler', handler: 'generate_knockout', buttonClass: AMBER_BTN },
+        action: {
+          label: `Generera ${firstLabel.toLowerCase()}`,
+          handler: 'generate_next_knockout',
+          buttonClass: AMBER_BTN,
+        },
       };
 
-    case 'knockout_qf_in_progress': {
-      const qfMatches = roundsMap.get(knockoutStartRound) ?? [];
+    case 'knockout_round_in_progress':
       return {
         ...base,
         ...AMBER_THEME,
-        title: 'Kvartsfinal: Väntar på resultat',
-        subtitle: 'Kvartsfinalmatcherna pågår.',
-        progress: getProgress(qfMatches),
+        Icon: isFinalRound ? Trophy : Clock,
+        title: `${currentLabel}: Väntar på resultat`,
+        subtitle: isFinalRound ? 'Finalen pågår!' : `${currentLabel}matcherna pågår.`,
+        progress: getProgress(ko.currentMatches),
         progressBarClass: 'bg-amber-500',
       };
-    }
 
-    case 'knockout_qf_done':
+    case 'knockout_round_done':
       return {
         ...base,
         ...AMBER_THEME,
         Icon: CheckCircle2,
-        title: 'Kvartsfinal klar!',
-        subtitle: 'Alla kvartsfinaler avgjorda. Generera semifinalerna.',
-        action: { label: 'Generera semifinaler', handler: 'generate_sf', buttonClass: AMBER_BTN },
+        title: `${currentLabel} klar!`,
+        subtitle: `Alla ${currentLabel.toLowerCase()}matcher avgjorda. Generera ${nextLabel.toLowerCase()}.`,
+        showTimeInput: true,
+        action: {
+          label: `Generera ${nextLabel.toLowerCase()}`,
+          handler: 'generate_next_knockout',
+          buttonClass: AMBER_BTN,
+        },
       };
 
-    case 'knockout_sf_in_progress': {
-      const sfMatches = roundsMap.get(knockoutStartRound + 1) ?? [];
-      return {
-        ...base,
-        ...AMBER_THEME,
-        title: 'Semifinal: Väntar på resultat',
-        subtitle: 'Semifinalerna pågår.',
-        progress: getProgress(sfMatches),
-        progressBarClass: 'bg-amber-500',
-      };
-    }
-
-    case 'knockout_sf_done':
-      return {
-        ...base,
-        ...AMBER_THEME,
-        Icon: CheckCircle2,
-        title: 'Semifinal klar!',
-        subtitle: 'Båda semifinalerna avgjorda. Generera finalen.',
-        action: { label: 'Generera final', handler: 'generate_final', buttonClass: AMBER_BTN },
-      };
-
-    case 'knockout_final_in_progress': {
-      const finalMatches = roundsMap.get(knockoutStartRound + 2) ?? [];
-      return {
-        ...base,
-        ...AMBER_THEME,
-        Icon: Trophy,
-        title: 'Final: Väntar på resultat',
-        subtitle: 'Finalen pågår!',
-        progress: getProgress(finalMatches),
-        progressBarClass: 'bg-amber-500',
-      };
-    }
-
-    case 'knockout_final_done':
+    case 'knockout_complete':
       return {
         ...base,
         ...AMBER_THEME,

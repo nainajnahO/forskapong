@@ -260,6 +260,7 @@ export type Database = {
         Row: {
           current_round: number
           id: number
+          knockout_size: number
           status: string
           table_count: number
           total_rounds: number
@@ -267,6 +268,7 @@ export type Database = {
         Insert: {
           current_round?: number
           id?: number
+          knockout_size?: number
           status?: string
           table_count?: number
           total_rounds?: number
@@ -274,6 +276,7 @@ export type Database = {
         Update: {
           current_round?: number
           id?: number
+          knockout_size?: number
           status?: string
           table_count?: number
           total_rounds?: number
@@ -379,6 +382,7 @@ export type Database = {
         Args: {
           admin_code: string
           p_current_round?: number
+          p_knockout_size?: number
           p_status?: string
           p_table_count?: number
           p_total_rounds?: number
@@ -386,6 +390,7 @@ export type Database = {
         Returns: {
           current_round: number
           id: number
+          knockout_size: number
           status: string
           table_count: number
           total_rounds: number
