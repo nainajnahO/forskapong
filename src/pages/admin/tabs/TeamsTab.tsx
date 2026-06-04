@@ -3,8 +3,7 @@ import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import type { AdminTeam, Match } from '@/lib/database.types';
-import { calculateRankings, type MatchResult } from '@/lib/tournament-engine';
-import { dbMatchToResult, teamsToEngine } from '../lib/match-utils';
+import { standingsFromMatches } from '../lib/match-utils';
 import TeamFormModal from '../components/TeamFormModal';
 import TeamBulkImportModal from '../components/TeamBulkImportModal';
 import DeleteConfirmModal from '../components/DeleteConfirmModal';
@@ -47,10 +46,7 @@ export default function TeamsTab() {
   }, [loadData]);
 
   // Compute standings for sorting & stats
-  const standings = useMemo(() => {
-    const results = matches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
-    return calculateRankings(teamsToEngine(teams, results), results);
-  }, [teams, matches]);
+  const standings = useMemo(() => standingsFromMatches(teams, matches), [teams, matches]);
 
   // Map team id → standing for quick lookup
   const standingMap = useMemo(

@@ -34,6 +34,7 @@ interface RoundDisplay {
   needsConfirmation: boolean;
   canReport: boolean;
   isHomeTeam: boolean;
+  isBye: boolean;
 }
 
 /* ─── Data fetching ───────────────────────────────────────────── */
@@ -105,6 +106,45 @@ function matchToRound(match: MatchWithTeams, teamId: string): RoundDisplay {
     needsConfirmation,
     canReport,
     isHomeTeam: match.team1_id === teamId,
+    isBye: false,
+  };
+}
+
+/**
+ * Total Swiss rounds and every round that has matches, for deriving this team's
+ * byes. A bye leaves no match row, so it's inferred: a generated Swiss round
+ * (round ≤ total_rounds) where the team has no match. The bye-aware scoreboard
+ * counts a bye as a win (issue #26); the Dashboard mirrors that. Knockout rounds
+ * are excluded by the total_rounds bound. Kept consistent with the engine's
+ * `deriveByes` (which works the whole field at once); update both if the rule changes.
+ */
+async function fetchByeContext(): Promise<{ totalRounds: number; generatedRounds: number[] }> {
+  const [{ data: tournament }, { data: rows }] = await Promise.all([
+    supabase.from('tournament').select('total_rounds').maybeSingle(),
+    supabase.from('matches').select('round'),
+  ]);
+  return {
+    totalRounds: tournament?.total_rounds ?? 0,
+    generatedRounds: [...new Set((rows ?? []).map((r) => r.round))],
+  };
+}
+
+function byeToRound(round: number): RoundDisplay {
+  return {
+    round,
+    wave: 0,
+    matchId: `bye-${round}`,
+    time: null,
+    table: null,
+    opponent: null,
+    opponentId: null,
+    result: 'win', // a bye is a win (issue #26)
+    scoreDisplay: null,
+    confirmed: true,
+    needsConfirmation: false,
+    canReport: false,
+    isHomeTeam: false,
+    isBye: true,
   };
 }
 
@@ -197,11 +237,25 @@ export default function Dashboard() {
   const loadData = useCallback(async () => {
     if (!teamId) return;
     try {
-      const [teamData, matchData] = await Promise.all([fetchTeam(teamId), fetchMatches(teamId)]);
+      const [teamData, matchData, byeCtx] = await Promise.all([
+        fetchTeam(teamId),
+        fetchMatches(teamId),
+        fetchByeContext(),
+      ]);
       setTeam(teamData);
       setPlayer1(teamData.player1 ?? '');
       setPlayer2(teamData.player2 ?? '');
-      setRounds(matchData.map((m) => matchToRound(m, teamId)));
+      // Played matches + bye rounds (counted as wins), in round order.
+      const teamRounds = new Set(matchData.map((m) => m.round));
+      const byeRounds = byeCtx.generatedRounds.filter(
+        (round) => round <= byeCtx.totalRounds && !teamRounds.has(round),
+      );
+      const playedRounds = matchData.map((m) => matchToRound(m, teamId));
+      setRounds(
+        [...playedRounds, ...byeRounds.map(byeToRound)].sort(
+          (a, b) => a.round - b.round || a.wave - b.wave,
+        ),
+      );
       setError('');
     } catch {
       setError('Kunde inte ladda data. Försök igen.');
@@ -441,6 +495,51 @@ export default function Dashboard() {
               const isPlayed = round.result !== null;
               const isWin = round.result === 'win';
               const isTbd = round.opponent === null;
+
+              if (round.isBye) {
+                return (
+                  <motion.div
+                    key={round.matchId}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: i * 0.04 }}
+                  >
+                    <div
+                      className={cn('grid gap-x-3 py-3', 'grid-cols-1', 'sm:grid-cols-[4rem_1fr_4rem]')}
+                    >
+                      <div
+                        className={cn(
+                          'text-[11px] font-mono tabular-nums sm:text-right mb-1 sm:mb-0',
+                          themeText(theme, 'muted'),
+                        )}
+                      >
+                        ——:——
+                      </div>
+                      <div>
+                        <p className="text-sm">
+                          <span className={cn('mr-1.5', themeText(theme, 'muted'))}>▸</span>
+                          <span className={themeText(theme, 'secondary')}>Spelfri runda</span>
+                        </p>
+                        <p className={cn('text-[11px] mt-0.5 ml-4', themeText(theme, 'muted'))}>
+                          Gruppspel runda {round.round}
+                          <span className="ml-2">Vinst utan match</span>
+                        </p>
+                      </div>
+                      <div className="text-[11px] font-mono tabular-nums sm:text-left flex items-center mt-1 sm:mt-0 ml-4 sm:ml-0 sm:block">
+                        <span className="font-black uppercase sm:block text-emerald-400">W</span>
+                      </div>
+                    </div>
+                    {i < rounds.length - 1 && (
+                      <div
+                        className={cn(
+                          'h-px ml-0 sm:ml-[4.75rem]',
+                          theme === 'dark' ? 'bg-zinc-800/40' : 'bg-zinc-100',
+                        )}
+                      />
+                    )}
+                  </motion.div>
+                );
+              }
 
               return (
                 <motion.div

@@ -7,7 +7,7 @@ import {
   generateSwissPairings,
   generateKnockoutBracket,
   advanceKnockoutRound,
-  calculateRankings,
+  countByesPerTeam,
   detectUnresolvedCutoffTie,
   applyCutoffTieOrder,
   type MatchResult,
@@ -21,7 +21,7 @@ import MatchResultEditor from '../components/MatchResultEditor';
 import TournamentMapView from '../components/TournamentMapView';
 import TournamentFlowCard from '../components/TournamentFlowCard';
 import DangerZone from '../components/DangerZone';
-import { dbMatchToResult, teamsToEngine } from '../lib/match-utils';
+import { byesByRound, dbMatchToResult, standingsFromMatches, teamsToEngine } from '../lib/match-utils';
 import { decideKnockoutHomeTeam, orientSwissPairings } from '@/lib/home-away';
 import type { AdminTab } from '@/contexts/AdminTabContextDef';
 import { assignTablesAndWaves, getWaveCount, normalizeTableCount } from '@/lib/table-scheduling';
@@ -84,11 +84,8 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     }
     setTieOrderByCutoff(orderMap);
 
-    // Calculate standings
-    const results = allMatches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
-    const engineTeams = teamsToEngine(allTeams, results);
-    const s = calculateRankings(engineTeams, results);
-    setStandings(s);
+    // Standings (bye-aware: a bye is a win + cup credit — issue #26)
+    setStandings(standingsFromMatches(allTeams, allMatches));
     setLoading(false);
   }, []);
 
@@ -110,6 +107,8 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   // Build name map
   const teamNameMap = new Map(teams.map((t) => [t.id, t.name]));
   const completedResults = matches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
+  // Per-round bye team (odd field only); knockout rounds never register a bye.
+  const swissByeByRound = byesByRound(teams, matches);
   // The Top-8 cutoff tie only matters at the Swiss→knockout seeding step: all Swiss
   // rounds are done (status is 'knockout') but the QF bracket isn't generated yet.
   // Outside that step the detection would fire spuriously — e.g. before play starts
@@ -237,7 +236,10 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     setGenerating(true);
     try {
       const activeTableCount = normalizeTableCount(tournament?.table_count ?? tableCount);
-      const engineTeams = teamsToEngine(teams, completedResults);
+      // Prior-round byes count as wins, so the bye team lands in the right win
+      // group when seeding this round (issue #26).
+      const priorByes = countByesPerTeam(byesByRound(teams, matches));
+      const engineTeams = teamsToEngine(teams, completedResults, priorByes);
       const pairings = generateSwissPairings(engineTeams, completedResults, currentRound);
 
       const swissHistory = matches.filter(
@@ -934,6 +936,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
                   <SwissRoundCard
                     key={round}
                     round={round}
+                    bye={swissByeByRound.get(round) ?? null}
                     pairings={roundMatches.map((m) => ({
                       team1Id: m.team1_id,
                       team2Id: m.team2_id,

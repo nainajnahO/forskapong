@@ -4,12 +4,11 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import type { Team, Match, Tournament } from '@/lib/database.types';
 import {
-  calculateRankings,
   advanceKnockoutRound,
   type MatchResult,
   type KnockoutBracket,
 } from '@/lib/tournament-engine';
-import { dbMatchToResult, teamsToEngine } from '@/pages/admin/lib/match-utils';
+import { dbMatchToResult, standingsFromMatches } from '@/pages/admin/lib/match-utils';
 import TournamentMapView from '@/pages/admin/components/TournamentMapView';
 
 /* ─── Champion overlay ────────────────────────────────── */
@@ -87,9 +86,7 @@ export default function DisplayPage() {
   const teamNameMap = new Map(teams.map((t) => [t.id, t.name]));
   const status = tournament?.status ?? 'not_started';
   const currentRound = tournament?.current_round ?? 0;
-  const results = matches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
-  const engineTeams = teamsToEngine(teams, results);
-  const standings = calculateRankings(engineTeams, results);
+  const standings = standingsFromMatches(teams, matches);
 
   // Group matches by round
   const roundsMap = new Map<number, Match[]>();

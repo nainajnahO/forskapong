@@ -21,6 +21,8 @@ import {
   generateKnockoutBracket,
   advanceKnockoutRound,
   calculateRankings,
+  countByesPerTeam,
+  deriveByes,
   type TournamentTeam,
   type MatchResult,
   type Pairing,
@@ -132,6 +134,28 @@ function pKey(a: string, b: string): string {
   return [a, b].sort().join('-');
 }
 
+/* ─── Bye credit ──────────────────────────────────────────────── */
+
+/**
+ * Per-team bye count, derived the same way the live flow derives it — a bye is
+ * the one team missing from a round's results (issue #26). Feeding this to
+ * calculateRankings keeps the simulator's standings in lockstep with the real
+ * tournament (bye = win + average-margin cup credit).
+ */
+function byeCountFromHistory(
+  teams: { id: string }[],
+  roundHistory: { round: number; results: MatchResult[] }[],
+): Map<string, number> {
+  return countByesPerTeam(
+    deriveByes(
+      teams.map((t) => t.id),
+      roundHistory.flatMap((rh) =>
+        rh.results.map((r) => ({ round: rh.round, team1Id: r.team1Id, team2Id: r.team2Id })),
+      ),
+    ),
+  );
+}
+
 /* ─── Simulate one match (respecting overrides + bias) ────────── */
 
 function simMatch(
@@ -206,7 +230,11 @@ function runRemainingSwiss(state: SimState): SimState {
     s = { ...s, currentRound: nextRound };
   }
 
-  const standings = calculateRankings(s.teams, s.allResults);
+  const standings = calculateRankings(
+    s.teams,
+    s.allResults,
+    byeCountFromHistory(s.teams, s.roundHistory),
+  );
   return {
     ...s,
     phase: 'standings',
@@ -295,7 +323,10 @@ function reducer(state: SimState, action: SimAction): SimState {
           const updatedTeams = state.teams.map((t) => {
             const won = state.roundResults.filter((r) => r.winnerId === t.id).length;
             const lost = state.roundResults.filter((r) => r.loserId === t.id).length;
-            return { ...t, wins: t.wins + won, losses: t.losses + lost };
+            // A bye counts as a win for next-round seeding (issue #26), matching
+            // the skip-to-end path so step-by-step play groups teams identically.
+            const byeWin = state.roundPairings?.bye === t.id ? 1 : 0;
+            return { ...t, wins: t.wins + won + byeWin, losses: t.losses + lost };
           });
           const newAllResults = [...state.allResults, ...state.roundResults];
           return {
@@ -328,7 +359,11 @@ function reducer(state: SimState, action: SimAction): SimState {
               roundHistory: updatedHistory,
             };
           }
-          const standings = calculateRankings(state.teams, state.allResults);
+          const standings = calculateRankings(
+            state.teams,
+            state.allResults,
+            byeCountFromHistory(state.teams, updatedHistory),
+          );
           return { ...state, phase: 'standings', standings, roundHistory: updatedHistory };
         }
 
@@ -916,7 +951,11 @@ function StatsPanel({ state }: { state: SimState }) {
       state.roundHistory,
       state.standings.length > 0
         ? state.standings
-        : calculateRankings(state.teams, state.allResults),
+        : calculateRankings(
+            state.teams,
+            state.allResults,
+            byeCountFromHistory(state.teams, state.roundHistory),
+          ),
     );
   }, [state.teams, state.allResults, state.roundHistory, state.standings]);
 

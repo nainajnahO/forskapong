@@ -350,6 +350,9 @@ export async function runBatchSimulation(
         ? generateSkillRatings(teams)
         : null;
       let allResults: MatchResult[] = [];
+      // A bye counts as a win + average-margin cup credit (issue #26); track the
+      // count per team so the final standings match the live tournament.
+      const byeCount = new Map<string, number>();
 
       // Swiss rounds
       for (let round = 1; round <= config.swissRounds; round++) {
@@ -374,10 +377,11 @@ export async function runBatchSimulation(
           teams = teams.map((t) =>
             t.id === rp.bye ? { ...t, wins: t.wins + 1 } : t,
           );
+          byeCount.set(rp.bye, (byeCount.get(rp.bye) ?? 0) + 1);
         }
       }
 
-      const standings = calculateRankings(teams, allResults);
+      const standings = calculateRankings(teams, allResults, byeCount);
 
       // Track stats by seed (original index)
       for (const s of standings) {

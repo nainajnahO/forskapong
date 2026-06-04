@@ -7,12 +7,8 @@ import { themeText } from '@/lib/theme-utils';
 
 import { supabase } from '@/lib/supabase';
 import type { Team, Match } from '@/lib/database.types';
-import {
-  calculateRankings,
-  type MatchResult,
-  type TeamStanding,
-} from '@/lib/tournament-engine';
-import { dbMatchToResult, teamsToEngine } from '@/pages/admin/lib/match-utils';
+import { type TeamStanding } from '@/lib/tournament-engine';
+import { standingsFromMatches } from '@/pages/admin/lib/match-utils';
 import { PLAYOFF_CUTOFF } from '@/lib/constants';
 import FluidBackground from '@/components/common/FluidBackground';
 import StaticNoise from '@/components/common/StaticNoise';
@@ -64,8 +60,7 @@ export default function Scoreboard() {
   const loadData = useCallback(async () => {
     try {
       const [teams, matches] = await Promise.all([fetchAllTeams(), fetchAllMatches()]);
-      const results = matches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
-      const engineStandings = calculateRankings(teamsToEngine(teams, results), results);
+      const engineStandings = standingsFromMatches(teams, matches);
       const playerMap = new Map(teams.map((t) => [t.id, { player1: t.player1, player2: t.player2 }]));
       const merged = engineStandings.map((s) => ({
         ...s,

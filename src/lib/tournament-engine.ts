@@ -266,11 +266,67 @@ export function advanceKnockoutRound(
   return next;
 }
 
+/* ─── Byes ────────────────────────────────────────────────────── */
+
+/**
+ * Derive which team sat out (got a bye) in each round, from match rows alone.
+ *
+ * A bye is "exactly one team absent from a round's matches" — which only happens
+ * with an odd Swiss field. Knockout rounds have many teams absent (only the top N
+ * play), so they never read as a bye and are excluded automatically, without
+ * needing to know which rounds are Swiss. Rounds with no rows aren't represented,
+ * so an ungenerated round is never mistaken for a bye.
+ *
+ * The player Dashboard derives a single team's byes independently (its
+ * `fetchByeContext`, since it doesn't load the whole field) — keep the two in sync
+ * if the bye rule changes.
+ *
+ * The "exactly one absent ⇒ bye" rule is load-bearing. It is exact for a static
+ * odd field (every Swiss round sits one team out) but can misfire in two cases
+ * that don't occur at the planned 54-team (even) event: a team removed from play
+ * yet still present in `teamIds` makes a round read as two-absent (real bye then
+ * uncredited), and a field of exactly knockout_size + 1 makes the first knockout
+ * round read as one-absent (a phantom bye for an already-eliminated team — cosmetic
+ * only). If either becomes real, gate on `round <= total_rounds` instead.
+ */
+export function deriveByes(
+  teamIds: readonly string[],
+  matches: readonly { round: number; team1Id: string; team2Id: string }[],
+): Map<number, string> {
+  const playedByRound = new Map<number, Set<string>>();
+  for (const m of matches) {
+    let played = playedByRound.get(m.round);
+    if (!played) {
+      played = new Set();
+      playedByRound.set(m.round, played);
+    }
+    played.add(m.team1Id);
+    played.add(m.team2Id);
+  }
+
+  const byes = new Map<number, string>();
+  for (const [round, played] of playedByRound) {
+    const absent = teamIds.filter((id) => !played.has(id));
+    if (absent.length === 1) byes.set(round, absent[0]);
+  }
+  return byes;
+}
+
+/** Reduce a round→byeTeamId map to a per-team bye count. */
+export function countByesPerTeam(byeRounds: ReadonlyMap<number, string>): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const teamId of byeRounds.values()) {
+    counts.set(teamId, (counts.get(teamId) ?? 0) + 1);
+  }
+  return counts;
+}
+
 /* ─── Rankings ────────────────────────────────────────────────── */
 
 export function calculateRankings(
   teams: TournamentTeam[],
   results: MatchResult[],
+  byes: ReadonlyMap<string, number> = new Map(),
 ): TeamStanding[] {
   const teamStats = new Map<string, { wins: number; losses: number; cupsFor: number; cupsAgainst: number }>();
 
@@ -295,6 +351,33 @@ export function calculateRankings(
     if (t2) {
       t2.cupsFor += result.scoreTeam2;
       t2.cupsAgainst += result.scoreTeam1;
+    }
+  }
+
+  // A bye counts as a win plus a synthetic cup-diff credit (issue #26): the team's
+  // average margin of victory so far, falling back to the tournament-wide average
+  // winning margin when the team has no win yet. Rounded to whole cups so every
+  // standings view stays integer like the rest of the cup counts. Added to cupsFor
+  // to keep the cupDiff = cupsFor − cupsAgainst invariant intact.
+  if (byes.size > 0) {
+    let tournamentMarginSum = 0;
+    const winMarginSum = new Map<string, number>();
+    const winCount = new Map<string, number>();
+    for (const r of results) {
+      const margin = Math.abs(r.scoreTeam1 - r.scoreTeam2);
+      tournamentMarginSum += margin;
+      winMarginSum.set(r.winnerId, (winMarginSum.get(r.winnerId) ?? 0) + margin);
+      winCount.set(r.winnerId, (winCount.get(r.winnerId) ?? 0) + 1);
+    }
+    const tournamentAvgMargin = results.length > 0 ? tournamentMarginSum / results.length : 0;
+
+    for (const [teamId, count] of byes) {
+      const stats = teamStats.get(teamId);
+      if (!stats || count <= 0) continue;
+      const wins = winCount.get(teamId) ?? 0;
+      const avgMargin = wins > 0 ? (winMarginSum.get(teamId) ?? 0) / wins : tournamentAvgMargin;
+      stats.wins += count;
+      stats.cupsFor += count * Math.round(avgMargin);
     }
   }
 

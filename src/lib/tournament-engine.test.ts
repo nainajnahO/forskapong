@@ -4,6 +4,8 @@ import {
   generateKnockoutBracket,
   advanceKnockoutRound,
   calculateRankings,
+  deriveByes,
+  countByesPerTeam,
   detectUnresolvedCutoffTie,
   applyCutoffTieOrder,
   type TournamentTeam,
@@ -447,6 +449,151 @@ describe('calculateRankings', () => {
 
     expect(warning).not.toBeNull();
     expect(new Set(warning?.teamIds)).toEqual(new Set(['a', 'b']));
+  });
+});
+
+/* ─── Bye Derivation + Credit Tests (issue #26) ───────────────── */
+
+describe('deriveByes', () => {
+  it('returns no byes for an even field where everyone plays', () => {
+    const matches = [
+      { round: 1, team1Id: 'a', team2Id: 'b' },
+      { round: 1, team1Id: 'c', team2Id: 'd' },
+    ];
+    expect(deriveByes(['a', 'b', 'c', 'd'], matches).size).toBe(0);
+  });
+
+  it('flags the one team absent from an odd round', () => {
+    const matches = [
+      { round: 1, team1Id: 'a', team2Id: 'b' },
+      { round: 1, team1Id: 'c', team2Id: 'd' },
+      // e sits out round 1
+      { round: 2, team1Id: 'a', team2Id: 'e' },
+      { round: 2, team1Id: 'b', team2Id: 'c' },
+      // d sits out round 2
+    ];
+    const byes = deriveByes(['a', 'b', 'c', 'd', 'e'], matches);
+    expect(byes.get(1)).toBe('e');
+    expect(byes.get(2)).toBe('d');
+  });
+
+  it('ignores knockout rounds where many teams are absent', () => {
+    const teamIds = Array.from({ length: 12 }, (_, i) => `t${i + 1}`);
+    // A 4-match quarterfinal: 8 of 12 teams play, 4 are absent — not a bye.
+    const matches = [
+      { round: 8, team1Id: 't1', team2Id: 't2' },
+      { round: 8, team1Id: 't3', team2Id: 't4' },
+      { round: 8, team1Id: 't5', team2Id: 't6' },
+      { round: 8, team1Id: 't7', team2Id: 't8' },
+    ];
+    expect(deriveByes(teamIds, matches).size).toBe(0);
+  });
+
+  it('ignores rounds that have no matches yet', () => {
+    const matches = [{ round: 1, team1Id: 'a', team2Id: 'b' }];
+    const byes = deriveByes(['a', 'b', 'c'], matches);
+    // Round 1 has both a and b; c is absent -> that's a real bye.
+    expect(byes.get(1)).toBe('c');
+    // No round 2 rows exist, so no phantom round-2 bye.
+    expect(byes.has(2)).toBe(false);
+  });
+});
+
+describe('countByesPerTeam', () => {
+  it('counts repeated byes per team', () => {
+    const byeRounds = new Map<number, string>([
+      [1, 'a'],
+      [2, 'b'],
+      [3, 'a'],
+    ]);
+    const counts = countByesPerTeam(byeRounds);
+    expect(counts.get('a')).toBe(2);
+    expect(counts.get('b')).toBe(1);
+    expect(counts.has('c')).toBe(false);
+  });
+});
+
+describe('calculateRankings bye credit', () => {
+  it('credits a bye as a win', () => {
+    const teams: TournamentTeam[] = [
+      { id: 'a', name: 'A', wins: 0, losses: 0 },
+      { id: 'b', name: 'B', wins: 0, losses: 0 },
+      { id: 'c', name: 'C', wins: 0, losses: 0 },
+    ];
+    // a beats b (margin 5); c got a bye.
+    const results = [simulateResult('a', 'b', true)];
+    const standings = calculateRankings(teams, results, new Map([['c', 1]]));
+
+    const c = standings.find((s) => s.id === 'c')!;
+    const b = standings.find((s) => s.id === 'b')!;
+    expect(c.wins).toBe(1); // bye is a win
+    expect(b.wins).toBe(0);
+    expect(c.rank).toBeLessThan(b.rank); // bye team outranks the 0-win team
+  });
+
+  it("credits cup-diff = the bye team's average margin of victory", () => {
+    const teams: TournamentTeam[] = [
+      { id: 'a', name: 'A', wins: 0, losses: 0 },
+      { id: 'b', name: 'B', wins: 0, losses: 0 },
+      { id: 'c', name: 'C', wins: 0, losses: 0 },
+      { id: 'd', name: 'D', wins: 0, losses: 0 },
+    ];
+    // a wins twice, each by 5 cups (10-5) -> avg margin 5. a also gets a bye.
+    const results = [simulateResult('a', 'b', true), simulateResult('a', 'c', true)];
+    const standings = calculateRankings(teams, results, new Map([['a', 1]]));
+
+    const a = standings.find((s) => s.id === 'a')!;
+    expect(a.wins).toBe(3); // 2 real + 1 bye
+    // Real cup-diff +10, plus the bye credit of +5 (avg winning margin).
+    expect(a.cupDiff).toBe(15);
+  });
+
+  it('rounds a fractional average margin to whole cups', () => {
+    const teams: TournamentTeam[] = [
+      { id: 'a', name: 'A', wins: 0, losses: 0 },
+      { id: 'b', name: 'B', wins: 0, losses: 0 },
+      { id: 'c', name: 'C', wins: 0, losses: 0 },
+    ];
+    // a wins by 3 then by 4 -> avg 3.5, rounds to 4.
+    const results: MatchResult[] = [
+      { team1Id: 'a', team2Id: 'b', winnerId: 'a', loserId: 'b', scoreTeam1: 10, scoreTeam2: 7 },
+      { team1Id: 'a', team2Id: 'c', winnerId: 'a', loserId: 'c', scoreTeam1: 10, scoreTeam2: 6 },
+    ];
+    const standings = calculateRankings(teams, results, new Map([['a', 1]]));
+
+    const a = standings.find((s) => s.id === 'a')!;
+    // Real cup-diff +7 (3 + 4), plus rounded bye credit +4.
+    expect(a.cupDiff).toBe(11);
+  });
+
+  it('falls back to the tournament-wide average winning margin when the team has no win', () => {
+    const teams: TournamentTeam[] = [
+      { id: 'a', name: 'A', wins: 0, losses: 0 },
+      { id: 'b', name: 'B', wins: 0, losses: 0 },
+      { id: 'x', name: 'X', wins: 0, losses: 0 },
+    ];
+    // Tournament winning margins: 3 and 4 -> avg 3.5 -> rounds to 4.
+    // x only lost (cup-diff -4) and got a bye -> credit +4 -> net 0.
+    const results: MatchResult[] = [
+      { team1Id: 'a', team2Id: 'b', winnerId: 'a', loserId: 'b', scoreTeam1: 10, scoreTeam2: 7 },
+      { team1Id: 'a', team2Id: 'x', winnerId: 'a', loserId: 'x', scoreTeam1: 10, scoreTeam2: 6 },
+    ];
+    const standings = calculateRankings(teams, results, new Map([['x', 1]]));
+
+    const x = standings.find((s) => s.id === 'x')!;
+    expect(x.wins).toBe(1); // the bye
+    expect(x.cupDiff).toBe(0); // -4 real + 4 fallback credit
+  });
+
+  it('leaves standings unchanged when no byes are passed', () => {
+    const teams: TournamentTeam[] = [
+      { id: 'a', name: 'A', wins: 0, losses: 0 },
+      { id: 'b', name: 'B', wins: 0, losses: 0 },
+    ];
+    const results = [simulateResult('a', 'b', true)];
+    const standings = calculateRankings(teams, results);
+    expect(standings.find((s) => s.id === 'a')!.wins).toBe(1);
+    expect(standings.find((s) => s.id === 'b')!.wins).toBe(0);
   });
 });
 
