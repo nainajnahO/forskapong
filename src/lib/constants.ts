@@ -203,12 +203,14 @@ export const VENUE_MAP_CONFIG = {
 /** Number of teams that advance from the Swiss stage into the knockout bracket. */
 export const PLAYOFF_CUTOFF = 8;
 /**
- * Round number of the first knockout match (quarterfinals); the semifinal is
- * KNOCKOUT_START_ROUND + 1 and the final is KNOCKOUT_START_ROUND + 2. Swiss rounds
- * occupy 1..KNOCKOUT_START_ROUND - 1, so the configurable Swiss round count is capped
- * below this to keep a Swiss round from colliding with the quarterfinals.
+ * Round number of the first knockout match (the quarterfinal), derived from the
+ * tournament's configured Swiss round count. Swiss occupies rounds 1..totalRounds,
+ * so the quarterfinal is totalRounds + 1, the semifinal totalRounds + 2, and the
+ * final totalRounds + 3. Deriving it (rather than fixing it at 8) lets the knockout
+ * float for variable event sizes; the bracket itself is still a fixed 8-team
+ * QF/SF/Final (see PLAYOFF_CUTOFF and generateKnockoutBracket).
  */
-export const KNOCKOUT_START_ROUND = 8;
+export const getKnockoutStartRound = (totalRounds: number): number => totalRounds + 1;
 
 // Sponsors
 export const SPONSORS: readonly { name: string; logo: string; href?: string }[] = [

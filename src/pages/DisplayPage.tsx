@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
+import { getKnockoutStartRound } from '@/lib/constants';
 import type { Team, Match, Tournament } from '@/lib/database.types';
 import {
   advanceKnockoutRound,
@@ -86,6 +87,7 @@ export default function DisplayPage() {
   const teamNameMap = new Map(teams.map((t) => [t.id, t.name]));
   const status = tournament?.status ?? 'not_started';
   const currentRound = tournament?.current_round ?? 0;
+  const knockoutStartRound = getKnockoutStartRound(tournament?.total_rounds ?? 7);
   const standings = standingsFromMatches(teams, matches);
 
   // Group matches by round
@@ -98,12 +100,12 @@ export default function DisplayPage() {
   const rounds = [...roundsMap.entries()].sort(([a], [b]) => a - b);
 
   // Build knockout bracket
-  const knockoutMatches = matches.filter((m) => m.round >= 8);
+  const knockoutMatches = matches.filter((m) => m.round >= knockoutStartRound);
   const knockoutResults = knockoutMatches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
   let liveBracket: KnockoutBracket | null = null;
 
   if (status === 'knockout' && knockoutMatches.length >= 4) {
-    const qfMatches = knockoutMatches.filter((m) => m.round === 8);
+    const qfMatches = knockoutMatches.filter((m) => m.round === knockoutStartRound);
     if (qfMatches.length === 4) {
       liveBracket = {
         quarterfinals: qfMatches.map((m, i) => ({
@@ -123,7 +125,7 @@ export default function DisplayPage() {
         liveBracket = advanceKnockoutRound(liveBracket, qfResults, 'quarterfinals');
       }
 
-      const sfMatches = knockoutMatches.filter((m) => m.round === 9);
+      const sfMatches = knockoutMatches.filter((m) => m.round === knockoutStartRound + 1);
       if (sfMatches.length === 2) {
         liveBracket.semifinals = sfMatches.map((m, i) => ({
           matchIndex: i,
@@ -136,7 +138,7 @@ export default function DisplayPage() {
         }
       }
 
-      const finalMatch = knockoutMatches.find((m) => m.round === 10);
+      const finalMatch = knockoutMatches.find((m) => m.round === knockoutStartRound + 2);
       if (finalMatch) {
         liveBracket.final = {
           matchIndex: 0,
@@ -147,7 +149,7 @@ export default function DisplayPage() {
     }
   }
 
-  const finalResult = knockoutMatches.find((m) => m.round === 10 && m.winner_id);
+  const finalResult = knockoutMatches.find((m) => m.round === knockoutStartRound + 2 && m.winner_id);
   const champion = finalResult?.winner_id ?? null;
 
   if (status === 'not_started') {

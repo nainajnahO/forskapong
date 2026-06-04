@@ -5,6 +5,7 @@ import { useTheme } from '@/contexts/useTheme';
 import { cn } from '@/lib/utils';
 import { themeText } from '@/lib/theme-utils';
 import { canAwayTeamConfirm, canHomeTeamReport } from '@/lib/home-away';
+import { getKnockoutStartRound } from '@/lib/constants';
 
 import { supabase } from '@/lib/supabase';
 import type { Team, Match } from '@/lib/database.types';
@@ -223,6 +224,8 @@ export default function Dashboard() {
 
   const [team, setTeam] = useState<Team | null>(null);
   const [rounds, setRounds] = useState<RoundDisplay[]>([]);
+  // Tournament's configured Swiss round count; rounds beyond it are knockout.
+  const [swissRounds, setSwissRounds] = useState(7);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [player1, setPlayer1] = useState('');
@@ -245,6 +248,8 @@ export default function Dashboard() {
       setTeam(teamData);
       setPlayer1(teamData.player1 ?? '');
       setPlayer2(teamData.player2 ?? '');
+      // Falls back to 7 before the tournament row sets total_rounds.
+      setSwissRounds(byeCtx.totalRounds || 7);
       // Played matches + bye rounds (counted as wins), in round order.
       const teamRounds = new Set(matchData.map((m) => m.round));
       const byeRounds = byeCtx.generatedRounds.filter(
@@ -588,7 +593,8 @@ export default function Dashboard() {
                         )}
                       </p>
                       <p className={cn('text-[11px] mt-0.5 ml-4', themeText(theme, 'muted'))}>
-                        {round.round >= 8 ? 'Slutspel' : 'Gruppspel'} runda {round.round}
+                        {round.round >= getKnockoutStartRound(swissRounds) ? 'Slutspel' : 'Gruppspel'}{' '}
+                        runda {round.round}
                         <span className="ml-2">Spelpass {round.wave}</span>
                         <span className="ml-2">{round.isHomeTeam ? 'Hemma' : 'Borta'}</span>
                         {isCurrent && (

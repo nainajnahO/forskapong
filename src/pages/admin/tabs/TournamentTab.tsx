@@ -25,7 +25,7 @@ import { byesByRound, dbMatchToResult, standingsFromMatches, teamsToEngine } fro
 import { decideKnockoutHomeTeam, orientSwissPairings } from '@/lib/home-away';
 import type { AdminTab } from '@/contexts/AdminTabContextDef';
 import { assignTablesAndWaves, getWaveCount, normalizeTableCount } from '@/lib/table-scheduling';
-import { KNOCKOUT_START_ROUND, PLAYOFF_CUTOFF } from '@/lib/constants';
+import { getKnockoutStartRound, PLAYOFF_CUTOFF } from '@/lib/constants';
 
 /* ─── Component ───────────────────────────────────────────────── */
 
@@ -106,6 +106,9 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
 
   // Build name map
   const teamNameMap = new Map(teams.map((t) => [t.id, t.name]));
+  // Knockout starts the round after the last Swiss round; once started, total_rounds
+  // is authoritative (falls back to the local round-count input pre-start).
+  const knockoutStartRound = getKnockoutStartRound(tournament?.total_rounds ?? roundCount);
   const completedResults = matches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
   // Per-round bye team (odd field only); knockout rounds never register a bye.
   const swissByeByRound = byesByRound(teams, matches);
@@ -114,7 +117,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   // Outside that step the detection would fire spuriously — e.g. before play starts
   // every team is 0–0 with equal cup diff, so the whole field reads as one big tie.
   const atKnockoutSeedingStep =
-    tournament?.status === 'knockout' && !matches.some((m) => m.round === KNOCKOUT_START_ROUND);
+    tournament?.status === 'knockout' && !matches.some((m) => m.round === knockoutStartRound);
   const unresolvedCutoffTie = atKnockoutSeedingStep
     ? detectUnresolvedCutoffTie(standings, completedResults, PLAYOFF_CUTOFF)
     : null;
@@ -298,7 +301,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       const { error } = await supabase.rpc('admin_set_tournament', {
         admin_code: sessionStorage.getItem('adminCode') ?? '',
         p_status: 'knockout',
-        p_current_round: KNOCKOUT_START_ROUND,
+        p_current_round: knockoutStartRound,
       });
       if (error) throw error;
       await loadData();
@@ -336,12 +339,13 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
         const orientation = decideKnockoutHomeTeam(
           qf.team1Id!,
           qf.team2Id!,
-          KNOCKOUT_START_ROUND,
+          knockoutStartRound,
           matches,
           standingsRankMap,
+          knockoutStartRound,
         );
         return {
-          round: KNOCKOUT_START_ROUND,
+          round: knockoutStartRound,
           wave: qf.wave,
           team1_id: orientation.homeTeamId,
           team2_id: orientation.awayTeamId,
@@ -371,7 +375,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       const activeTableCount = normalizeTableCount(tournament.table_count ?? tableCount);
       const standingsRankMap = new Map(standings.map((s) => [s.id, s.rank]));
       const qfMatches = matches
-        .filter((m) => m.round === KNOCKOUT_START_ROUND && m.confirmed)
+        .filter((m) => m.round === knockoutStartRound && m.confirmed)
         .sort((a, b) => {
           const waveDelta = a.wave - b.wave;
           if (waveDelta !== 0) return waveDelta;
@@ -385,20 +389,22 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       const sf1 = decideKnockoutHomeTeam(
         qfWinners[0],
         qfWinners[1],
-        KNOCKOUT_START_ROUND + 1,
+        knockoutStartRound + 1,
         matches,
         standingsRankMap,
+        knockoutStartRound,
       );
       const sf2 = decideKnockoutHomeTeam(
         qfWinners[2],
         qfWinners[3],
-        KNOCKOUT_START_ROUND + 1,
+        knockoutStartRound + 1,
         matches,
         standingsRankMap,
+        knockoutStartRound,
       );
       const sfScheduled = assignTablesAndWaves([sf1, sf2], activeTableCount);
       const sfInserts = sfScheduled.map((sf) => ({
-        round: KNOCKOUT_START_ROUND + 1,
+        round: knockoutStartRound + 1,
         wave: sf.wave,
         team1_id: sf.homeTeamId,
         team2_id: sf.awayTeamId,
@@ -427,7 +433,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       const activeTableCount = normalizeTableCount(tournament.table_count ?? tableCount);
       const standingsRankMap = new Map(standings.map((s) => [s.id, s.rank]));
       const sfMatches = matches
-        .filter((m) => m.round === KNOCKOUT_START_ROUND + 1 && m.confirmed)
+        .filter((m) => m.round === knockoutStartRound + 1 && m.confirmed)
         .sort((a, b) => {
           const waveDelta = a.wave - b.wave;
           if (waveDelta !== 0) return waveDelta;
@@ -439,9 +445,10 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       const finalOrientation = decideKnockoutHomeTeam(
         sfWinners[0],
         sfWinners[1],
-        KNOCKOUT_START_ROUND + 2,
+        knockoutStartRound + 2,
         matches,
         standingsRankMap,
+        knockoutStartRound,
       );
 
       const [finalSlot] = assignTablesAndWaves([finalOrientation], activeTableCount);
@@ -449,7 +456,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
         admin_code: sessionStorage.getItem('adminCode') ?? '',
         rows: [
           {
-            round: KNOCKOUT_START_ROUND + 2,
+            round: knockoutStartRound + 2,
             wave: finalSlot.wave,
             team1_id: finalSlot.homeTeamId,
             team2_id: finalSlot.awayTeamId,
@@ -487,12 +494,12 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   }
 
   // Build a live knockout bracket from matches in the knockout rounds
-  const knockoutMatches = matches.filter((m) => m.round >= KNOCKOUT_START_ROUND);
+  const knockoutMatches = matches.filter((m) => m.round >= knockoutStartRound);
   const knockoutResults = knockoutMatches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
   let liveBracket: KnockoutBracketType | null = null;
 
   if (status === 'knockout' && knockoutMatches.length >= 4) {
-    const qfMatches = knockoutMatches.filter((m) => m.round === KNOCKOUT_START_ROUND);
+    const qfMatches = knockoutMatches.filter((m) => m.round === knockoutStartRound);
     if (qfMatches.length === 4) {
       liveBracket = {
         quarterfinals: qfMatches.map((m, i) => ({
@@ -514,7 +521,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       }
 
       // Try advance SF
-      const sfMatches = knockoutMatches.filter((m) => m.round === KNOCKOUT_START_ROUND + 1);
+      const sfMatches = knockoutMatches.filter((m) => m.round === knockoutStartRound + 1);
       if (sfMatches.length === 2) {
         liveBracket.semifinals = sfMatches.map((m, i) => ({
           matchIndex: i,
@@ -528,7 +535,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       }
 
       // Try set final
-      const finalMatch = knockoutMatches.find((m) => m.round === KNOCKOUT_START_ROUND + 2);
+      const finalMatch = knockoutMatches.find((m) => m.round === knockoutStartRound + 2);
       if (finalMatch) {
         liveBracket.final = {
           matchIndex: 0,
@@ -540,7 +547,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   }
 
   const finalResult = knockoutMatches.find(
-    (m) => m.round === KNOCKOUT_START_ROUND + 2 && m.winner_id,
+    (m) => m.round === knockoutStartRound + 2 && m.winner_id,
   );
   const champion = finalResult?.winner_id ?? null;
 
@@ -856,9 +863,9 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
               <h3 className="text-sm font-medium text-zinc-400">Slutspelsmatcher</h3>
               <div className="rounded-2xl border border-white/[0.06] overflow-hidden divide-y divide-white/[0.04]">
                 {[
-                  { round: KNOCKOUT_START_ROUND, label: 'Kvartsfinal' },
-                  { round: KNOCKOUT_START_ROUND + 1, label: 'Semifinal' },
-                  { round: KNOCKOUT_START_ROUND + 2, label: 'Final' },
+                  { round: knockoutStartRound, label: 'Kvartsfinal' },
+                  { round: knockoutStartRound + 1, label: 'Semifinal' },
+                  { round: knockoutStartRound + 2, label: 'Final' },
                 ]
                   .filter(({ round }) => knockoutMatches.some((m) => m.round === round))
                   .map(({ round, label }) => (

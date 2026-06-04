@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import type { Match, Tournament } from '@/lib/database.types';
 import type { AdminTab } from '@/contexts/AdminTabContextDef';
-import { KNOCKOUT_START_ROUND } from '@/lib/constants';
+import { getKnockoutStartRound } from '@/lib/constants';
 
 interface Props {
   tournament: Tournament | null;
@@ -81,9 +81,10 @@ function deriveFlowState(
   }
 
   if (status === 'knockout') {
-    const qfMatches = roundsMap.get(KNOCKOUT_START_ROUND) ?? [];
-    const sfMatches = roundsMap.get(KNOCKOUT_START_ROUND + 1) ?? [];
-    const finalMatches = roundsMap.get(KNOCKOUT_START_ROUND + 2) ?? [];
+    const knockoutStartRound = getKnockoutStartRound(totalRounds);
+    const qfMatches = roundsMap.get(knockoutStartRound) ?? [];
+    const sfMatches = roundsMap.get(knockoutStartRound + 1) ?? [];
+    const finalMatches = roundsMap.get(knockoutStartRound + 2) ?? [];
 
     if (qfMatches.length === 0) return 'knockout_generate_qf';
 
@@ -141,6 +142,10 @@ export default function TournamentFlowCard(props: Props) {
   const totalRounds = tournament?.total_rounds ?? roundCount;
   const flowState = deriveFlowState(tournament, teams.length, roundsMap, totalRounds);
   const currentRound = tournament?.current_round ?? 0;
+  // The knockout floats to total_rounds + 1, so the old "≤ 7" cap is gone. The only
+  // real ceiling is the number of distinct opponents: at most teams.length - 1 Swiss
+  // rounds before rematches are unavoidable.
+  const maxRounds = Math.max(1, teams.length - 1);
 
   const config = getCardConfig(flowState, currentRound, roundsMap, championName, totalRounds);
 
@@ -202,12 +207,10 @@ export default function TournamentFlowCard(props: Props) {
                 <input
                   type="number"
                   min={1}
-                  max={KNOCKOUT_START_ROUND - 1}
+                  max={maxRounds}
                   value={roundCount}
                   onChange={(e) =>
-                    onRoundCountChange(
-                      Math.max(1, Math.min(KNOCKOUT_START_ROUND - 1, Number(e.target.value))),
-                    )
+                    onRoundCountChange(Math.max(1, Math.min(maxRounds, Number(e.target.value))))
                   }
                   className="w-14 h-9 px-2 rounded-xl text-sm bg-white/[0.04] border border-white/[0.08] text-white text-center outline-none focus:border-brand-500"
                 />
@@ -347,6 +350,7 @@ function getCardConfig(
   championName: string | null,
   totalRounds: number,
 ): CardConfig {
+  const knockoutStartRound = getKnockoutStartRound(totalRounds);
   const base: CardConfig = {
     Icon: Clock,
     iconClass: 'text-zinc-400',
@@ -451,7 +455,7 @@ function getCardConfig(
       };
 
     case 'knockout_qf_in_progress': {
-      const qfMatches = roundsMap.get(KNOCKOUT_START_ROUND) ?? [];
+      const qfMatches = roundsMap.get(knockoutStartRound) ?? [];
       return {
         ...base,
         ...AMBER_THEME,
@@ -473,7 +477,7 @@ function getCardConfig(
       };
 
     case 'knockout_sf_in_progress': {
-      const sfMatches = roundsMap.get(KNOCKOUT_START_ROUND + 1) ?? [];
+      const sfMatches = roundsMap.get(knockoutStartRound + 1) ?? [];
       return {
         ...base,
         ...AMBER_THEME,
@@ -495,7 +499,7 @@ function getCardConfig(
       };
 
     case 'knockout_final_in_progress': {
-      const finalMatches = roundsMap.get(KNOCKOUT_START_ROUND + 2) ?? [];
+      const finalMatches = roundsMap.get(knockoutStartRound + 2) ?? [];
       return {
         ...base,
         ...AMBER_THEME,

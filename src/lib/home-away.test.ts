@@ -63,7 +63,7 @@ describe('decideKnockoutHomeTeam', () => {
       ['B', 5],
     ]);
 
-    const decision = decideKnockoutHomeTeam('A', 'B', 8, [], standings);
+    const decision = decideKnockoutHomeTeam('A', 'B', 8, [], standings, 8);
     expect(decision).toEqual({ homeTeamId: 'A', awayTeamId: 'B' });
   });
 
@@ -93,7 +93,7 @@ describe('decideKnockoutHomeTeam', () => {
       }),
     ];
 
-    const decision = decideKnockoutHomeTeam('A', 'B', 9, matches, standings);
+    const decision = decideKnockoutHomeTeam('A', 'B', 9, matches, standings, 8);
     expect(decision).toEqual({ homeTeamId: 'A', awayTeamId: 'B' });
   });
 
@@ -123,8 +123,32 @@ describe('decideKnockoutHomeTeam', () => {
       }),
     ];
 
-    const decision = decideKnockoutHomeTeam('A', 'B', 9, matches, standings);
+    const decision = decideKnockoutHomeTeam('A', 'B', 9, matches, standings, 8);
     expect(decision).toEqual({ homeTeamId: 'A', awayTeamId: 'B' });
+  });
+
+  it('respects a derived knockout start round so Swiss matches are not read as prior knockout', () => {
+    // 5-round event → knockout starts at round 6. A round-5 Swiss win must not be
+    // mistaken for a prior knockout result when orienting the round-7 match.
+    const standings = new Map<string, number>([
+      ['A', 4],
+      ['B', 1],
+    ]);
+    const matches: Match[] = [
+      makeMatch({
+        round: 5, // Swiss, below the derived start (6) — must be ignored
+        team1_id: 'A',
+        team2_id: 'X',
+        winner_id: 'A',
+        loser_id: 'X',
+        score_team1: 6,
+        score_team2: 0, // huge diff, but Swiss → ignored
+      }),
+    ];
+
+    // No qualifying prior knockout, so it falls back to standings: B (rank 1) is home.
+    const decision = decideKnockoutHomeTeam('A', 'B', 7, matches, standings, 6);
+    expect(decision).toEqual({ homeTeamId: 'B', awayTeamId: 'A' });
   });
 });
 
