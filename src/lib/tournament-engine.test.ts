@@ -711,3 +711,74 @@ describe('full tournament simulation', () => {
     expect(top8.map((t) => t.id)).toContain(finalResult.winnerId);
   });
 });
+
+/* ─── Small odd field: 5-team lifecycle (clamps, byes, top-4 KO) ─ */
+
+describe('5-team tournament lifecycle', () => {
+  const FIELD = 5;
+  // Mirror the admin start-screen clamps (handleStartTournament) for 5 teams.
+  const rounds = Math.min(7, Math.max(1, FIELD - 1));
+  const knockout = Math.min(8, 2 ** Math.floor(Math.log2(FIELD)));
+
+  it('clamps the default top-8 / 7-round config down to top-4 / 4 rounds', () => {
+    expect(rounds).toBe(4);
+    expect(knockout).toBe(4);
+  });
+
+  // A 5-team field is the small-field stress case: an odd field (one rest every
+  // round) where only 4 opponents exist, so the greedy bye picker can occasionally
+  // fall back to a Swiss rematch (hence no no-rematch assertion). The tournament
+  // must still always complete to a single champion.
+  it('runs 4 Swiss rounds with one rest each, then a top-4 bracket to a champion (200 runs)', () => {
+    for (let run = 0; run < 200; run++) {
+      const teams = makeTeams(FIELD);
+      const results: MatchResult[] = [];
+      const swissRows: { round: number; team1Id: string; team2Id: string }[] = [];
+      const byeTeams: string[] = [];
+
+      for (let r = 1; r <= rounds; r++) {
+        const byeCount = countByesPerTeam(deriveByes(teams.map((t) => t.id), swissRows));
+        const engineTeams: TournamentTeam[] = teams.map((t) => ({
+          ...t,
+          wins: results.filter((x) => x.winnerId === t.id).length + (byeCount.get(t.id) ?? 0),
+          losses: results.filter((x) => x.loserId === t.id).length,
+        }));
+        const pairing = generateSwissPairings(engineTeams, results, r);
+
+        expect(pairing.pairings.length).toBe(2); // 2 matches…
+        expect(pairing.bye).not.toBeNull(); // …and exactly one rest (odd field)
+        byeTeams.push(pairing.bye!);
+
+        for (const p of pairing.pairings) {
+          results.push(simulateResult(p.team1Id, p.team2Id, Math.random() < 0.5));
+          swissRows.push({ round: r, team1Id: p.team1Id, team2Id: p.team2Id });
+        }
+      }
+
+      // Four distinct rests — 4 byes over 5 teams never repeat a team in 4 rounds.
+      expect(new Set(byeTeams).size).toBe(rounds);
+
+      const byeCount = countByesPerTeam(deriveByes(teams.map((t) => t.id), swissRows));
+      const standings = calculateRankings(teams, results, byeCount);
+      expect(standings).toHaveLength(FIELD);
+      // 8 match wins + 4 bye wins credited (#26).
+      expect(standings.reduce((sum, s) => sum + s.wins, 0)).toBe(8 + rounds);
+
+      const seeds = standings.slice(0, knockout);
+      let bracket = generateKnockoutBracket(seeds);
+      expect(bracket.rounds.map((rd) => rd.length)).toEqual([2, 1]); // Semifinal, Final
+      expect(bracket.labels).toEqual(['Semifinal', 'Final']);
+
+      const semis = bracket.rounds[0].map((m) =>
+        simulateResult(m.team1Id!, m.team2Id!, Math.random() < 0.5),
+      );
+      bracket = advanceKnockoutRound(bracket, semis, 0);
+      const final = bracket.rounds[1][0];
+      expect(final.team1Id).not.toBeNull();
+      expect(final.team2Id).not.toBeNull();
+
+      const champion = simulateResult(final.team1Id!, final.team2Id!, Math.random() < 0.5);
+      expect(seeds.map((s) => s.id)).toContain(champion.winnerId);
+    }
+  });
+});

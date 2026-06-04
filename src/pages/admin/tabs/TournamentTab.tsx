@@ -235,16 +235,21 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       // leftover default can't exceed the number of teams.
       const maxKnockout = teams.length >= 2 ? 2 ** Math.floor(Math.log2(teams.length)) : 2;
       const effectiveKnockoutSize = Math.min(knockoutSize, maxKnockout);
+      // Clamp Swiss rounds to the number of distinct opponents (teams - 1). The round
+      // input's `max` only applies while editing, so an untouched default could
+      // otherwise exceed the field and force rematches.
+      const effectiveRoundCount = Math.min(roundCount, Math.max(1, teams.length - 1));
       const { error } = await supabase.rpc('admin_set_tournament', {
         admin_code: adminCode,
         p_current_round: 1,
-        p_total_rounds: roundCount,
+        p_total_rounds: effectiveRoundCount,
         p_table_count: tableCount,
         p_knockout_size: effectiveKnockoutSize,
         p_status: 'swiss',
       });
       if (error) throw error;
       setKnockoutSize(effectiveKnockoutSize);
+      setRoundCount(effectiveRoundCount);
       await loadData();
     } catch (err) {
       setFlowError(err instanceof Error ? err.message : 'Kunde inte starta turneringen');
