@@ -460,7 +460,10 @@ declare n integer;
 begin
   if not public.verify_admin_code(admin_code) then raise exception 'INVALID_ADMIN_CODE'; end if;
   if p_team_id is null then
-    update public.teams set checked_in = p_value;
+    -- `where id is not null` is an always-true guard required by the safeupdate
+    -- extension (preloaded for the PostgREST role), which rejects unqualified
+    -- UPDATE/DELETE — even inside SECURITY DEFINER functions.
+    update public.teams set checked_in = p_value where id is not null;
   else
     update public.teams set checked_in = p_value where id = p_team_id;
   end if;
@@ -502,9 +505,12 @@ returns void
 language plpgsql security definer set search_path = public as $$
 begin
   if not public.verify_admin_code(admin_code) then raise exception 'INVALID_ADMIN_CODE'; end if;
-  delete from public.matches;
-  update public.tournament set current_round = 0, status = 'not_started';
-  update public.teams set wins = 0, losses = 0;
+  -- `where id is not null` is an always-true guard required by the safeupdate
+  -- extension (preloaded for the PostgREST role), which rejects unqualified
+  -- UPDATE/DELETE — even inside SECURITY DEFINER functions.
+  delete from public.matches where id is not null;
+  update public.tournament set current_round = 0, status = 'not_started' where id is not null;
+  update public.teams set wins = 0, losses = 0 where id is not null;
 end;
 $$;
 grant execute on function public.admin_reset_tournament(text) to anon, authenticated;
