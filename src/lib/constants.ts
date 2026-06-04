@@ -37,7 +37,7 @@ export const SCHEDULE_PHASES = [
       {
         time: '17:00-17:30',
         title: 'Anmälan',
-        description: 'Hämta eran lagkod och enheter.',
+        description: 'Hämta eran lagkod och enheter\nfrån sekretariatet.',
       },
       {
         time: '17:30-',
@@ -61,13 +61,13 @@ export const SCHEDULE_PHASES = [
       {
         time: '18:30-19:30',
         title: 'Slutspel',
-        description: '8 lag kvar',
+        description: '',
         bold: true,
       },
       {
         time: '19:30-19:45',
         title: 'Semi-Final',
-        description: '4 lag kvar',
+        description: '',
         bold: true,
       },
       {

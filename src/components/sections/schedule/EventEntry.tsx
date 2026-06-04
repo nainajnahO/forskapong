@@ -65,14 +65,16 @@ export default function EventEntry({ ev, isLast, isPast, theme, side }: EventEnt
       </h4>
 
       {/* Description */}
-      <p
-        className={cn(
-          'text-sm md:text-base leading-relaxed whitespace-pre-wrap mt-1 transition-colors duration-500',
-          themeText(theme, 'secondary'),
-        )}
-      >
-        {linkify(ev.description)}
-      </p>
+      {ev.description && (
+        <p
+          className={cn(
+            'text-sm md:text-base leading-relaxed whitespace-pre-wrap mt-1 transition-colors duration-500',
+            themeText(theme, 'secondary'),
+          )}
+        >
+          {linkify(ev.description)}
+        </p>
+      )}
 
       {/* Speakers */}
       {ev.speakers && ev.speakers.length > 0 && (
