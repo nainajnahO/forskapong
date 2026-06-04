@@ -5,16 +5,20 @@ import { supabase } from '@/lib/supabase';
 import type { Team, Match, Tournament } from '@/lib/database.types';
 import {
   generateSwissPairings,
-  generateKnockoutBracket,
   knockoutLabels,
   countByesPerTeam,
   detectUnresolvedCutoffTie,
   applyCutoffTieOrder,
   type MatchResult,
   type TeamStanding,
-  type BracketSlot,
   type KnockoutBracket as KnockoutBracketType,
 } from '@/lib/tournament-engine';
+import {
+  buildLiveBracket,
+  nextKnockoutRoundIndex,
+  seedFirstKnockoutRound,
+  pairKnockoutWinners,
+} from '@/lib/live-knockout';
 import { List, LayoutGrid, ChevronUp, ChevronDown } from 'lucide-react';
 import SwissRoundCard from '../components/SwissRoundCard';
 import KnockoutBracketView from '../components/KnockoutBracketView';
@@ -23,7 +27,7 @@ import TournamentMapView from '../components/TournamentMapView';
 import TournamentFlowCard from '../components/TournamentFlowCard';
 import DangerZone from '../components/DangerZone';
 import { byesByRound, dbMatchToResult, standingsFromMatches, teamsToEngine } from '../lib/match-utils';
-import { decideKnockoutHomeTeam, orientSwissPairings, type OrientedPairing } from '@/lib/home-away';
+import { orientSwissPairings, type OrientedPairing } from '@/lib/home-away';
 import type { AdminTab } from '@/contexts/AdminTabContextDef';
 import { assignTablesAndWaves, getWaveCount, normalizeTableCount } from '@/lib/table-scheduling';
 import { getKnockoutStartRound, DEFAULT_KNOCKOUT_SIZE } from '@/lib/constants';
@@ -337,13 +341,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
       const activeTableCount = normalizeTableCount(tournament?.table_count ?? tableCount);
 
       // Knockout rounds live at knockoutStartRound .. +(numKnockoutRounds - 1).
-      const generatedRounds = matches
-        .filter((m) => m.round >= knockoutStartRound)
-        .map((m) => m.round);
-      const lastGenerated = generatedRounds.length
-        ? Math.max(...generatedRounds)
-        : knockoutStartRound - 1;
-      const nextRoundIndex = lastGenerated - knockoutStartRound + 1; // 0 = first round
+      const nextRoundIndex = nextKnockoutRoundIndex(matches, knockoutStartRound);
       if (nextRoundIndex >= numKnockoutRounds) return; // bracket already complete
       const targetRound = knockoutStartRound + nextRoundIndex;
 
@@ -365,40 +363,21 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
         // Tiebreak-resolved ranks so a team promoted past a cutoff tie is seeded by
         // its resolved position, not its pre-resolution rank.
         const standingsRankMap = new Map(playoffStandings.map((s) => [s.id, s.rank]));
-        const bracket = generateKnockoutBracket(seeds);
-        pairings = bracket.rounds[0].map((slot) =>
-          decideKnockoutHomeTeam(
-            slot.team1Id!,
-            slot.team2Id!,
-            targetRound,
-            matches,
-            standingsRankMap,
-            knockoutStartRound,
-          ),
-        );
+        pairings = seedFirstKnockoutRound(seeds, matches, knockoutStartRound, standingsRankMap);
       } else {
-        // Later round: pair the previous round's winners in bracket order (recovered
-        // by sorting on wave then table). Winners i and i+1 meet. Home team is decided
-        // by latest knockout performance.
-        const prevRound = matches
-          .filter((m) => m.round === lastGenerated && m.confirmed)
-          .sort((a, b) => a.wave - b.wave || (a.table_number ?? 0) - (b.table_number ?? 0));
-        const winners = prevRound.map((m) => m.winner_id).filter(Boolean) as string[];
-        if (winners.length !== playoffSize >> nextRoundIndex) return; // round not decided
+        // Later round: pair the previous round's confirmed winners.
+        const prevConfirmed = matches.filter(
+          (m) => m.round === knockoutStartRound + nextRoundIndex - 1 && m.confirmed,
+        );
+        if (prevConfirmed.length !== playoffSize >> nextRoundIndex) return; // round not decided
         const standingsRankMap = new Map(standings.map((s) => [s.id, s.rank]));
-        pairings = [];
-        for (let i = 0; i < winners.length; i += 2) {
-          pairings.push(
-            decideKnockoutHomeTeam(
-              winners[i],
-              winners[i + 1],
-              targetRound,
-              matches,
-              standingsRankMap,
-              knockoutStartRound,
-            ),
-          );
-        }
+        pairings = pairKnockoutWinners(
+          prevConfirmed,
+          targetRound,
+          knockoutStartRound,
+          matches,
+          standingsRankMap,
+        );
       }
 
       const scheduled = assignTablesAndWaves(pairings, activeTableCount);
@@ -446,28 +425,9 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   const knockoutMatches = matches.filter((m) => m.round >= knockoutStartRound);
   const knockoutResults = knockoutMatches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
 
-  // Build the live bracket straight from the generated match rows: each knockout
-  // round's matches give that round's pairings (recovered in bracket order by sorting
-  // on wave then table); rounds not yet generated stay empty (TBD).
-  let liveBracket: KnockoutBracketType | null = null;
-  const firstRoundMatches = knockoutMatches.filter((m) => m.round === knockoutStartRound);
-  if (status === 'knockout' && firstRoundMatches.length === playoffSize / 2) {
-    const rounds: BracketSlot[][] = [];
-    for (let r = 0; r < numKnockoutRounds; r++) {
-      const roundMatches = knockoutMatches
-        .filter((m) => m.round === knockoutStartRound + r)
-        .sort((a, b) => a.wave - b.wave || (a.table_number ?? 0) - (b.table_number ?? 0));
-      const slotCount = playoffSize >> (r + 1); // matches in round r
-      rounds.push(
-        Array.from({ length: slotCount }, (_, i) => ({
-          matchIndex: i,
-          team1Id: roundMatches[i]?.team1_id ?? null,
-          team2Id: roundMatches[i]?.team2_id ?? null,
-        })),
-      );
-    }
-    liveBracket = { rounds, labels: knockoutLabels(playoffSize) };
-  }
+  // Live bracket from the generated match rows (null until the first round exists).
+  const liveBracket: KnockoutBracketType | null =
+    status === 'knockout' ? buildLiveBracket(knockoutMatches, knockoutStartRound, playoffSize) : null;
 
   const lastKnockoutRound = knockoutStartRound + numKnockoutRounds - 1;
   const finalResult = knockoutMatches.find((m) => m.round === lastKnockoutRound && m.winner_id);

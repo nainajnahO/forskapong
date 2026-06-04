@@ -4,12 +4,8 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { getKnockoutStartRound, DEFAULT_KNOCKOUT_SIZE } from '@/lib/constants';
 import type { Team, Match, Tournament } from '@/lib/database.types';
-import {
-  knockoutLabels,
-  type MatchResult,
-  type BracketSlot,
-  type KnockoutBracket,
-} from '@/lib/tournament-engine';
+import { type MatchResult, type KnockoutBracket } from '@/lib/tournament-engine';
+import { buildLiveBracket } from '@/lib/live-knockout';
 import { dbMatchToResult, standingsFromMatches } from '@/pages/admin/lib/match-utils';
 import TournamentMapView from '@/pages/admin/components/TournamentMapView';
 
@@ -102,30 +98,11 @@ export default function DisplayPage() {
   }
   const rounds = [...roundsMap.entries()].sort(([a], [b]) => a - b);
 
-  // Build the knockout bracket straight from the generated match rows: each round's
-  // matches give its pairings (bracket order recovered by sorting on wave then table);
-  // ungenerated rounds stay empty (TBD).
+  // Live bracket from the generated match rows (null until the first round exists).
   const knockoutMatches = matches.filter((m) => m.round >= knockoutStartRound);
   const knockoutResults = knockoutMatches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
-  let liveBracket: KnockoutBracket | null = null;
-  const firstRoundMatches = knockoutMatches.filter((m) => m.round === knockoutStartRound);
-  if (status === 'knockout' && firstRoundMatches.length === playoffSize / 2) {
-    const bracketRounds: BracketSlot[][] = [];
-    for (let r = 0; r < numKnockoutRounds; r++) {
-      const roundMatches = knockoutMatches
-        .filter((m) => m.round === knockoutStartRound + r)
-        .sort((a, b) => a.wave - b.wave || (a.table_number ?? 0) - (b.table_number ?? 0));
-      const slotCount = playoffSize >> (r + 1);
-      bracketRounds.push(
-        Array.from({ length: slotCount }, (_, i) => ({
-          matchIndex: i,
-          team1Id: roundMatches[i]?.team1_id ?? null,
-          team2Id: roundMatches[i]?.team2_id ?? null,
-        })),
-      );
-    }
-    liveBracket = { rounds: bracketRounds, labels: knockoutLabels(playoffSize) };
-  }
+  const liveBracket: KnockoutBracket | null =
+    status === 'knockout' ? buildLiveBracket(knockoutMatches, knockoutStartRound, playoffSize) : null;
 
   const lastKnockoutRound = knockoutStartRound + numKnockoutRounds - 1;
   const finalResult = knockoutMatches.find((m) => m.round === lastKnockoutRound && m.winner_id);
