@@ -390,3 +390,44 @@ export function detectUnresolvedCutoffTie(
 
   return { cutoff, teamIds: group.map((s) => s.id) };
 }
+
+/**
+ * Apply an admin-chosen ordering to a tied group within the standings.
+ *
+ * The tied teams (equal on wins + cup diff) sit in a contiguous run of slots in
+ * `standings`; this places them into those same slots in the order given by
+ * `orderedTeamIds` and recomputes every rank. It generalizes the old 2-team RPS
+ * swap to any N≥2 tied group (issues #24, #27) and never mutates its input.
+ *
+ * No-op (returns the input unchanged) when the order is empty, contains
+ * duplicates, or references a team not in `standings` — so a malformed order can
+ * never silently mis-rank the field. Completeness of the order (covering the
+ * whole tied group) is the caller's responsibility, since this function does not
+ * know which group is tied.
+ */
+export function applyCutoffTieOrder(
+  standings: TeamStanding[],
+  orderedTeamIds: string[],
+): TeamStanding[] {
+  if (orderedTeamIds.length === 0) return standings;
+
+  const unique = new Set(orderedTeamIds);
+  if (unique.size !== orderedTeamIds.length) return standings;
+
+  const byId = new Map(standings.map((s) => [s.id, s]));
+  if (orderedTeamIds.some((id) => !byId.has(id))) return standings;
+
+  const slots: number[] = [];
+  standings.forEach((s, i) => {
+    if (unique.has(s.id)) slots.push(i);
+  });
+
+  const reordered = standings.map((s) => ({ ...s }));
+  slots.forEach((slot, k) => {
+    reordered[slot] = { ...byId.get(orderedTeamIds[k])! };
+  });
+  reordered.forEach((s, i) => {
+    s.rank = i + 1;
+  });
+  return reordered;
+}

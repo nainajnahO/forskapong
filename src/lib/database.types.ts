@@ -227,6 +227,35 @@ export type Database = {
           },
         ]
       }
+      tiebreak_order: {
+        Row: {
+          created_at: string
+          cutoff: number
+          rank: number
+          team_id: string
+        }
+        Insert: {
+          created_at?: string
+          cutoff: number
+          rank: number
+          team_id: string
+        }
+        Update: {
+          created_at?: string
+          cutoff?: number
+          rank?: number
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tiebreak_order_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tournament: {
         Row: {
           current_round: number
@@ -492,6 +521,21 @@ export type Database = {
           to: "tiebreak_decisions"
           isOneToOne: true
           isSetofReturn: false
+        }
+      }
+      set_tiebreak_order: {
+        Args: { admin_code: string; p_cutoff: number; p_team_ids: string[] }
+        Returns: {
+          created_at: string
+          cutoff: number
+          rank: number
+          team_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "tiebreak_order"
+          isOneToOne: false
+          isSetofReturn: true
         }
       }
       update_team_profile: {

@@ -5,8 +5,10 @@ import {
   advanceKnockoutRound,
   calculateRankings,
   detectUnresolvedCutoffTie,
+  applyCutoffTieOrder,
   type TournamentTeam,
   type MatchResult,
+  type TeamStanding,
 } from './tournament-engine';
 
 /* ─── Helpers ─────────────────────────────────────────────────── */
@@ -445,6 +447,102 @@ describe('calculateRankings', () => {
 
     expect(warning).not.toBeNull();
     expect(new Set(warning?.teamIds)).toEqual(new Set(['a', 'b']));
+  });
+});
+
+/* ─── N-way Cutoff Tie Ordering Tests ─────────────────────────── */
+
+describe('applyCutoffTieOrder', () => {
+  function standing(id: string, rank: number, wins = 3, cupDiff = 5): TeamStanding {
+    return {
+      id,
+      name: id.toUpperCase(),
+      wins,
+      losses: 0,
+      cupsFor: 0,
+      cupsAgainst: 0,
+      cupDiff,
+      rank,
+    };
+  }
+
+  it('reorders a 3-team tied block into the admin order and re-ranks', () => {
+    // a, b, c are tied in the middle slots; top/bot bracket them.
+    const standings: TeamStanding[] = [
+      standing('top', 1, 4, 9),
+      standing('a', 2),
+      standing('b', 3),
+      standing('c', 4),
+      standing('bot', 5, 2, 1),
+    ];
+    const result = applyCutoffTieOrder(standings, ['c', 'a', 'b']);
+    expect(result.map((s) => s.id)).toEqual(['top', 'c', 'a', 'b', 'bot']);
+    expect(result.map((s) => s.rank)).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it('generalizes the 2-team RPS swap', () => {
+    const standings: TeamStanding[] = [standing('a', 1), standing('b', 2)];
+    const result = applyCutoffTieOrder(standings, ['b', 'a']);
+    expect(result.map((s) => s.id)).toEqual(['b', 'a']);
+    expect(result.map((s) => s.rank)).toEqual([1, 2]);
+  });
+
+  it('is a no-op for an empty order', () => {
+    const standings: TeamStanding[] = [standing('a', 1), standing('b', 2)];
+    expect(applyCutoffTieOrder(standings, [])).toBe(standings);
+  });
+
+  it('is a no-op for an order with duplicates or unknown teams', () => {
+    const standings: TeamStanding[] = [standing('a', 1), standing('b', 2), standing('c', 3)];
+    expect(applyCutoffTieOrder(standings, ['a', 'a'])).toBe(standings);
+    expect(applyCutoffTieOrder(standings, ['a', 'b', 'ghost'])).toBe(standings);
+  });
+
+  it('does not mutate the input standings', () => {
+    const standings: TeamStanding[] = [standing('a', 1), standing('b', 2)];
+    const snapshot = standings.map((s) => ({ ...s }));
+    applyCutoffTieOrder(standings, ['b', 'a']);
+    expect(standings).toEqual(snapshot);
+  });
+
+  it('detect → order → slice qualifies the admin-chosen team when the cutoff is inside the tie', () => {
+    // A wins everything; B, C, D form a 3-way cycle → all 1 win, equal cup diff.
+    const teams: TournamentTeam[] = [
+      { id: 'A', name: 'A', wins: 0, losses: 0 },
+      { id: 'B', name: 'B', wins: 0, losses: 0 },
+      { id: 'C', name: 'C', wins: 0, losses: 0 },
+      { id: 'D', name: 'D', wins: 0, losses: 0 },
+    ];
+    const win = (t1: string, t2: string): MatchResult => ({
+      team1Id: t1,
+      team2Id: t2,
+      winnerId: t1,
+      loserId: t2,
+      scoreTeam1: 6,
+      scoreTeam2: 4,
+    });
+    const results: MatchResult[] = [
+      win('A', 'B'),
+      win('A', 'C'),
+      win('A', 'D'),
+      win('B', 'C'),
+      win('C', 'D'),
+      win('D', 'B'),
+    ];
+
+    const standings = calculateRankings(teams, results);
+    expect(standings[0].id).toBe('A'); // clear #1
+
+    // Cutoff falls inside the tie: B/C/D straddle the Top-2 line (ranks 2–4).
+    const cutoff = 2;
+    const tie = detectUnresolvedCutoffTie(standings, results, cutoff);
+    expect(tie).not.toBeNull();
+    expect(new Set(tie?.teamIds)).toEqual(new Set(['B', 'C', 'D']));
+
+    // Admin orders the tied group D > C > B → D takes the final qualifying slot.
+    const resolved = applyCutoffTieOrder(standings, ['D', 'C', 'B']);
+    expect(resolved.map((s) => s.id)).toEqual(['A', 'D', 'C', 'B']);
+    expect(resolved.slice(0, cutoff).map((s) => s.id)).toEqual(['A', 'D']);
   });
 });
 

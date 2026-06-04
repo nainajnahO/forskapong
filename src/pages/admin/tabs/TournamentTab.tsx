@@ -9,11 +9,12 @@ import {
   advanceKnockoutRound,
   calculateRankings,
   detectUnresolvedCutoffTie,
+  applyCutoffTieOrder,
   type MatchResult,
   type TeamStanding,
   type KnockoutBracket as KnockoutBracketType,
 } from '@/lib/tournament-engine';
-import { List, LayoutGrid } from 'lucide-react';
+import { List, LayoutGrid, ChevronUp, ChevronDown } from 'lucide-react';
 import SwissRoundCard from '../components/SwissRoundCard';
 import KnockoutBracketView from '../components/KnockoutBracketView';
 import MatchResultEditor from '../components/MatchResultEditor';
@@ -44,18 +45,16 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
   const [roundTime, setRoundTime] = useState('');
   const [roundCount, setRoundCount] = useState(7);
   const [tableCount, setTableCount] = useState(16);
-  const [manualRpsWinnerByKey, setManualRpsWinnerByKey] = useState<Record<string, string>>({});
-  const [savingRps, setSavingRps] = useState(false);
-  const [rpsError, setRpsError] = useState('');
+  // Persisted N-way tie ordering, keyed by cutoff → team ids in rank order.
+  // A 2-team tie is just N=2; this supersedes the old pairwise RPS flow.
+  const [tieOrderByCutoff, setTieOrderByCutoff] = useState<Record<number, string[]>>({});
+  const [draftTieOrder, setDraftTieOrder] = useState<string[]>([]);
+  const [savingTieOrder, setSavingTieOrder] = useState(false);
+  const [tieOrderError, setTieOrderError] = useState('');
   const [flowError, setFlowError] = useState('');
 
-  const getTiebreakKey = (cutoff: number, teamAId: string, teamBId: string): string => {
-    const [t1, t2] = [teamAId, teamBId].sort();
-    return `${cutoff}:${t1}-${t2}`;
-  };
-
   const loadData = useCallback(async () => {
-    const [tRes, teamsRes, matchesRes, tiebreakRes] = await Promise.all([
+    const [tRes, teamsRes, matchesRes, tieOrderRes] = await Promise.all([
       supabase.from('tournament').select('*').maybeSingle(),
       supabase.from('teams').select('*'),
       supabase
@@ -64,7 +63,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
         .order('round', { ascending: true })
         .order('wave', { ascending: true })
         .order('table_number', { ascending: true }),
-      supabase.from('tiebreak_decisions').select('*'),
+      supabase.from('tiebreak_order').select('*').order('cutoff').order('rank'),
     ]);
 
     const t = tRes.data;
@@ -76,14 +75,13 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     if (t?.table_count) setTableCount(t.table_count);
     setTeams(allTeams);
     setMatches(allMatches);
-    const decisionMap: Record<string, string> = {};
-    if (tiebreakRes.data) {
-      for (const d of tiebreakRes.data) {
-        const key = getTiebreakKey(d.cutoff, d.team1_id, d.team2_id);
-        decisionMap[key] = d.winner_team_id;
-      }
+    // Rows arrive sorted by (cutoff, rank), so pushing yields each cutoff's
+    // team ids already in rank order.
+    const orderMap: Record<number, string[]> = {};
+    for (const row of tieOrderRes.data ?? []) {
+      (orderMap[row.cutoff] ??= []).push(row.team_id);
     }
-    setManualRpsWinnerByKey(decisionMap);
+    setTieOrderByCutoff(orderMap);
 
     // Calculate standings
     const results = allMatches.map(dbMatchToResult).filter(Boolean) as MatchResult[];
@@ -112,66 +110,85 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
     .map(dbMatchToResult)
     .filter(Boolean) as MatchResult[];
   const unresolvedCutoffTie = detectUnresolvedCutoffTie(standings, completedResults, PLAYOFF_CUTOFF);
-  const unresolvedPair =
-    unresolvedCutoffTie && unresolvedCutoffTie.teamIds.length === 2 ? unresolvedCutoffTie.teamIds : null;
-  const unresolvedKey = unresolvedPair
-    ? getTiebreakKey(PLAYOFF_CUTOFF, unresolvedPair[0], unresolvedPair[1])
-    : null;
-  const selectedRpsWinner = unresolvedKey ? manualRpsWinnerByKey[unresolvedKey] ?? null : null;
+  const tieGroupIds = unresolvedCutoffTie?.teamIds ?? null;
+  const storedTieOrder = tieOrderByCutoff[PLAYOFF_CUTOFF] ?? [];
 
-  // Any unresolved cutoff tie blocks knockout generation. A 2-team tie can be resolved via the
-  // RPS picker below; 3+-team ties have no auto-resolution path, so they stay blocked until the
-  // standings change — otherwise the bracket would silently fall back to alphabetical order.
-  const knockoutBlockedByTie = unresolvedCutoffTie !== null && !(unresolvedPair && selectedRpsWinner);
+  // The tied group occupies a contiguous run of standings slots starting at this
+  // placement; the Top-8 cutoff falls somewhere inside it, so draft position k
+  // lands at placement firstTieRank + k and qualifies iff that is ≤ PLAYOFF_CUTOFF.
+  const firstTieRank = tieGroupIds
+    ? standings.findIndex((s) => tieGroupIds.includes(s.id)) + 1
+    : 0;
 
-  async function handleSelectRpsWinner(teamId: string): Promise<void> {
-    if (!unresolvedPair) return;
-    const [team1Id, team2Id] = [...unresolvedPair].sort();
-    setRpsError('');
-    setSavingRps(true);
+  // A tie is resolved once a stored order covers exactly the tied group (any N≥2).
+  const tieResolved =
+    tieGroupIds !== null &&
+    storedTieOrder.length === tieGroupIds.length &&
+    new Set(storedTieOrder).size === tieGroupIds.length &&
+    tieGroupIds.every((id) => storedTieOrder.includes(id));
+
+  // Any unresolved cutoff tie blocks knockout generation — otherwise the bracket
+  // would silently use the arbitrary alphabetical fallback to decide who makes
+  // Top 8. The admin resolves it by recording a full order below (issues #24, #27).
+  const knockoutBlockedByTie = unresolvedCutoffTie !== null && !tieResolved;
+
+  // Seed the editable draft order from the persisted order if it covers the group,
+  // otherwise from the current standings order of the tied teams. Re-seed only when
+  // the tied group or the persisted order changes (tracked via primitive keys) — not
+  // on every standings re-render — so an in-progress reordering isn't clobbered.
+  const tieGroupKey = tieGroupIds ? [...tieGroupIds].sort().join(',') : '';
+  const storedTieOrderKey = storedTieOrder.join(',');
+  useEffect(() => {
+    if (!tieGroupIds) {
+      setDraftTieOrder([]);
+      return;
+    }
+    const groupSet = new Set(tieGroupIds);
+    setDraftTieOrder(
+      tieResolved
+        ? [...storedTieOrder]
+        : standings.filter((s) => groupSet.has(s.id)).map((s) => s.id),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tieGroupKey, storedTieOrderKey]);
+
+  function moveTieTeam(index: number, dir: -1 | 1): void {
+    setDraftTieOrder((prev) => {
+      const target = index + dir;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }
+
+  async function handleSaveTieOrder(): Promise<void> {
+    if (draftTieOrder.length === 0) return;
+    setTieOrderError('');
+    setSavingTieOrder(true);
     try {
       const adminCode = sessionStorage.getItem('adminCode');
       if (!adminCode) throw new Error('Logga in som admin igen');
-      // Writes go through an admin-gated RPC; tiebreak_decisions is no longer
-      // directly writable with the public anon key (issue #18).
-      const { error } = await supabase.rpc('set_tiebreak_decision', {
+      // Writes go through an admin-gated RPC; tiebreak_order is not directly
+      // writable with the public anon key (issues #18, #24, #27). The RPC clears
+      // and rewrites the cutoff's order atomically.
+      const { error } = await supabase.rpc('set_tiebreak_order', {
         p_cutoff: PLAYOFF_CUTOFF,
-        p_team1_id: team1Id,
-        p_team2_id: team2Id,
-        p_winner_team_id: teamId,
+        p_team_ids: draftTieOrder,
         admin_code: adminCode,
       });
       if (error) throw error;
-      setManualRpsWinnerByKey((prev) => ({
-        ...prev,
-        [getTiebreakKey(PLAYOFF_CUTOFF, team1Id, team2Id)]: teamId,
-      }));
+      setTieOrderByCutoff((prev) => ({ ...prev, [PLAYOFF_CUTOFF]: [...draftTieOrder] }));
     } catch (err) {
-      setRpsError(err instanceof Error ? err.message : 'Kunde inte spara RPS-vinnaren');
+      setTieOrderError(err instanceof Error ? err.message : 'Kunde inte spara ordningen');
     } finally {
-      setSavingRps(false);
+      setSavingTieOrder(false);
     }
   }
 
   function getPlayoffQualifiedStandings(): TeamStanding[] {
-    if (!unresolvedPair || !selectedRpsWinner) return standings;
-    const [a, b] = unresolvedPair;
-    const loser = selectedRpsWinner === a ? b : a;
-    const ia = standings.findIndex((s) => s.id === a);
-    const ib = standings.findIndex((s) => s.id === b);
-    if (ia === -1 || ib === -1) return standings;
-    if (ia < ib && selectedRpsWinner === a) return standings;
-    if (ib < ia && selectedRpsWinner === b) return standings;
-
-    const copy = standings.map((s) => ({ ...s }));
-    const winnerStanding = copy.find((s) => s.id === selectedRpsWinner)!;
-    const loserStanding = copy.find((s) => s.id === loser)!;
-    copy[Math.min(ia, ib)] = winnerStanding;
-    copy[Math.max(ia, ib)] = loserStanding;
-    copy.forEach((s, i) => {
-      s.rank = i + 1;
-    });
-    return copy;
+    if (!tieResolved) return standings;
+    return applyCutoffTieOrder(standings, storedTieOrder);
   }
 
   // Group matches by round
@@ -301,7 +318,9 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
         wins: s.wins,
         losses: s.losses,
       }));
-      const standingsRankMap = new Map(standings.map((s) => [s.id, s.rank]));
+      // Use the tiebreak-resolved ranks so a team promoted past a cutoff tie is
+      // seeded/oriented by its resolved position, not its pre-resolution rank.
+      const standingsRankMap = new Map(playoffStandings.map((s) => [s.id, s.rank]));
       const bracket = generateKnockoutBracket(top8);
 
       // Insert QF matches as the first knockout round (orientation falls back to standings)
@@ -599,57 +618,92 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
         <span><span className="text-zinc-300">3.</span> Inbördes möte (2 lag)</span>
       </div>
 
-      {unresolvedPair && (
+      {unresolvedCutoffTie && (
         <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4 space-y-3">
           <div className="text-sm text-amber-300">
-            ⚠ Oavgjort vid slutspelsgränsen (Topp 8). Dessa två lag är fortfarande lika efter
-            vinster, cup diff och inbördes möte.
+            ⚠ Oavgjort vid slutspelsgränsen (Topp {PLAYOFF_CUTOFF}).{' '}
+            {unresolvedCutoffTie.teamIds.length} lag är lika på vinster och cup diff och kan inte
+            avgöras automatiskt.
           </div>
           <div className="text-xs text-amber-200/90">
-            Kör sten-sax-påse framför admins och välj vinnaren här:
+            Kör sten-sax-påse (eller en tiebreak-match) framför admins och sätt slutordningen nedan.
+            Lagen ovanför gränsen går till slutspel (Topp {PLAYOFF_CUTOFF}), lagen under slås ut.
+            Slutspelet låses upp när ordningen sparats.
           </div>
-          <div className="flex gap-2 flex-wrap">
-            {unresolvedPair.map((teamId) => (
-              <button
-                key={teamId}
-                onClick={() => void handleSelectRpsWinner(teamId)}
-                disabled={savingRps}
-                className={cn(
-                  'px-3 py-1.5 rounded-lg text-xs border transition-all disabled:opacity-60',
-                  selectedRpsWinner === teamId
-                    ? 'bg-amber-400/20 border-amber-300/50 text-amber-100'
-                    : 'bg-white/[0.03] border-white/[0.1] text-zinc-300 hover:bg-white/[0.06]',
-                )}
-              >
-                {teamNameMap.get(teamId) ?? teamId}
-                {selectedRpsWinner === teamId ? ' (RPS-vinnare)' : ''}
-              </button>
-            ))}
+          <div className="space-y-1.5">
+            {draftTieOrder.map((teamId, i) => {
+              const placement = firstTieRank + i;
+              const qualifies = placement <= PLAYOFF_CUTOFF;
+              return (
+                <div key={teamId}>
+                  <div
+                    className={cn(
+                      'flex items-center gap-2 px-3 py-1.5 rounded-lg border',
+                      qualifies
+                        ? 'border-emerald-400/25 bg-emerald-400/[0.06]'
+                        : 'border-white/[0.08] bg-white/[0.02] opacity-70',
+                    )}
+                  >
+                    <span className="font-mono text-xs text-zinc-400 w-6">#{placement}</span>
+                    <span className="text-sm text-zinc-200 flex-1">
+                      {teamNameMap.get(teamId) ?? teamId}
+                    </span>
+                    <span
+                      className={cn(
+                        'text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded',
+                        qualifies ? 'text-emerald-300 bg-emerald-400/10' : 'text-zinc-500',
+                      )}
+                    >
+                      {qualifies ? 'Slutspel' : 'Utslagen'}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => moveTieTeam(i, -1)}
+                        disabled={i === 0 || savingTieOrder}
+                        aria-label="Flytta upp"
+                        className="p-1 rounded-md border border-white/[0.1] text-zinc-400 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+                      >
+                        <ChevronUp size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveTieTeam(i, 1)}
+                        disabled={i === draftTieOrder.length - 1 || savingTieOrder}
+                        aria-label="Flytta ner"
+                        className="p-1 rounded-md border border-white/[0.1] text-zinc-400 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+                      >
+                        <ChevronDown size={14} />
+                      </button>
+                    </div>
+                  </div>
+                  {placement === PLAYOFF_CUTOFF && i < draftTieOrder.length - 1 && (
+                    <div className="flex items-center gap-2 py-1 px-1 text-[10px] uppercase tracking-wider text-amber-300/70">
+                      <span className="flex-1 border-t border-amber-400/30" />
+                      Slutspelsgräns
+                      <span className="flex-1 border-t border-amber-400/30" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
-          {rpsError && <p className="text-red-400 text-sm">{rpsError}</p>}
-        </div>
-      )}
-
-      {unresolvedCutoffTie && !unresolvedPair && (
-        <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4 space-y-2">
-          <div className="text-sm text-amber-300">
-            ⚠ Oavgjort vid slutspelsgränsen (Topp {PLAYOFF_CUTOFF}). {unresolvedCutoffTie.teamIds.length}{' '}
-            lag är lika på vinster och cup diff och kan inte avgöras automatiskt.
-          </div>
-          <div className="text-xs text-amber-200/90">
-            Slutspelet är låst tills detta är löst. Spela ut placeringen (t.ex. tiebreak-match) och
-            registrera resultatet så att lagen rankas innan kvartsfinalerna genereras.
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            {unresolvedCutoffTie.teamIds.map((teamId) => (
-              <span
-                key={teamId}
-                className="px-3 py-1.5 rounded-lg text-xs border border-white/[0.1] bg-white/[0.03] text-zinc-300"
-              >
-                {teamNameMap.get(teamId) ?? teamId}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void handleSaveTieOrder()}
+              disabled={savingTieOrder || draftTieOrder.length === 0}
+              className="px-3 py-1.5 rounded-lg text-xs border border-amber-300/50 bg-amber-400/20 text-amber-100 hover:bg-amber-400/30 transition-all disabled:opacity-60"
+            >
+              {savingTieOrder ? 'Sparar…' : 'Spara ordning'}
+            </button>
+            {tieResolved && (
+              <span className="text-xs text-emerald-300">
+                ✓ Ordning sparad — slutspelet kan genereras.
               </span>
-            ))}
+            )}
           </div>
+          {tieOrderError && <p className="text-red-400 text-sm">{tieOrderError}</p>}
         </div>
       )}
 
