@@ -723,6 +723,7 @@ export default function TournamentTab({ onTabChange }: TournamentTabProps) {
             knockoutResults={knockoutResults}
             champion={champion}
             totalRounds={tournament?.total_rounds ?? 7}
+            playoffSize={playoffSize}
             status={status}
             onEditMatch={setEditingMatchId}
           />

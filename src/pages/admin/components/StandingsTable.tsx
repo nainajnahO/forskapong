@@ -4,13 +4,14 @@ import type { TeamStanding } from '@/lib/tournament-engine';
 
 interface Props {
   standings: TeamStanding[];
-  highlightTop?: number;
+  /** Teams advancing into the knockout — drives the playoff highlight. Pass the configured size, not a literal. */
+  highlightTop: number;
   compact?: boolean;
 }
 
 export default function StandingsTable({
   standings,
-  highlightTop = 8,
+  highlightTop,
   compact = false,
 }: Props) {
   if (standings.length === 0) return null;
