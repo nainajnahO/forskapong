@@ -18,7 +18,6 @@ import {
   generateSwissPairings,
   generateKnockoutBracket,
   advanceKnockoutRound,
-  calculateRankings,
   deriveByes,
   countByesPerTeam,
   knockoutLabels,
@@ -264,9 +263,8 @@ function runFlow(cfg: Config, seed: number): FlowOutcome {
           reported_by: s.homeTeamId,
         }),
       );
-      // scheduled_time invariant.
-      const expectTime = waveStartTime(roundStart, s.wave, duration);
-      check(expectTime === waveStartTime(roundStart, s.wave, duration), 'scheduled_time deterministic', {});
+      // scheduled_time arithmetic itself is covered by table-scheduling.test.ts; the
+      // row above just stores waveStartTime()'s output, so we don't re-assert it here.
     }
   }
 
@@ -324,11 +322,8 @@ function runFlow(cfg: Config, seed: number): FlowOutcome {
     const order = standings.filter((s) => tie.teamIds.includes(s.id)).map((s) => s.id);
     playoffStandings = applyCutoffTieOrder(standings, order);
     tieResolved = true;
-    // After applying a complete order, the same tie must no longer block.
-    const reDetect = detectUnresolvedCutoffTie(playoffStandings, completedForTie, playoffSize);
-    // It may still report the group (same wins/cupdiff), but our order is now the
-    // authoritative ranking; assert ranks are a clean 1..N permutation.
-    check(reDetect === null || reDetect.teamIds.length === tie.teamIds.length, 'tie group size stable after resolution', { cfg, seed });
+    // (applyCutoffTieOrder's renumbering/contiguity is verified directly in its own
+    // describe block below; re-detecting here added no real signal, so it's omitted.)
   }
 
   const numKO = Math.log2(playoffSize);
@@ -506,53 +501,10 @@ describe('knockout bracket seeding — seed 1 and seed 2 meet only in the final'
   }
 });
 
-describe('rankings — head-to-head tiebreak between two teams', () => {
-  it('when two teams tie on wins & cupDiff, the head-to-head winner ranks higher', () => {
-    const teams: TournamentTeam[] = [
-      { id: 'A', name: 'A', wins: 0, losses: 0 },
-      { id: 'B', name: 'B', wins: 0, losses: 0 },
-      { id: 'C', name: 'C', wins: 0, losses: 0 },
-      { id: 'D', name: 'D', wins: 0, losses: 0 },
-    ];
-    // A and B both beat C and D by identical margins (same wins, same cupDiff),
-    // and B beat A head-to-head — but A has the higher aggregate? Make them equal:
-    // Give A a 6-0 and a 6-4 over C,D; B a 6-0 and 6-4 over C,D → identical cupDiff.
-    // Then B beats A 6-5; to keep cupDiff equal we offset with losses. Simpler:
-    // both finish 2 wins / same cupDiff via their C/D games, and B>A directly.
-    const results: MatchResult[] = [
-      { team1Id: 'A', team2Id: 'C', winnerId: 'A', loserId: 'C', scoreTeam1: 6, scoreTeam2: 1 },
-      { team1Id: 'A', team2Id: 'D', winnerId: 'A', loserId: 'D', scoreTeam1: 6, scoreTeam2: 2 },
-      { team1Id: 'B', team2Id: 'C', winnerId: 'B', loserId: 'C', scoreTeam1: 6, scoreTeam2: 1 },
-      { team1Id: 'B', team2Id: 'D', winnerId: 'B', loserId: 'D', scoreTeam1: 6, scoreTeam2: 2 },
-      // Head-to-head, equal-margin so it doesn't change relative cupDiff between A & B:
-      // both already 2-0; this makes both 3 wins? No — make it a separate equal game.
-    ];
-    // A and B identical on wins(2) and cupDiff(+9). Add head-to-head where B wins,
-    // but mirror cup totals by giving each the same for/against in it is impossible
-    // in one game — instead test the path directly with a constructed tie.
-    const standings = calculateRankings(teams, results);
-    // A and B tie on wins(2) cupDiff(9); C,D tie on wins(0). Verify A,B are the top
-    // two and the head-to-head hook is exercised (no h2h game here → alphabetical A<B).
-    check(standings[0].wins === 2 && standings[1].wins === 2, 'A,B on top', { standings });
-
-    // Now add a head-to-head B>A while keeping wins & cupDiff equal:
-    const results2: MatchResult[] = [
-      { team1Id: 'A', team2Id: 'C', winnerId: 'A', loserId: 'C', scoreTeam1: 6, scoreTeam2: 0 },
-      { team1Id: 'B', team2Id: 'D', winnerId: 'B', loserId: 'D', scoreTeam1: 6, scoreTeam2: 0 },
-      { team1Id: 'B', team2Id: 'A', winnerId: 'B', loserId: 'A', scoreTeam1: 6, scoreTeam2: 5 },
-      { team1Id: 'A', team2Id: 'D', winnerId: 'A', loserId: 'D', scoreTeam1: 5, scoreTeam2: 0 },
-      { team1Id: 'B', team2Id: 'C', winnerId: 'C', loserId: 'B', scoreTeam1: 1, scoreTeam2: 6 },
-    ];
-    // Tally: A: beat C 6-0, lost B 5-6, lost D? no — A beat D 5-0. A wins=2 (C,D), loss=1 (B). cupsFor=6+5+5=16, cupsAgainst=0+6+0=6 → +10, wins 2.
-    // B: beat D 6-0, beat A 6-5, lost C 6-1(as team2? winner C) → B beat D, beat A, lost to C. wins=2, cupsFor=6+6+6=18? recompute below via engine.
-    const s2 = calculateRankings(teams, results2);
-    const a = s2.find((s) => s.id === 'A')!;
-    const b = s2.find((s) => s.id === 'B')!;
-    if (a.wins === b.wins && a.cupDiff === b.cupDiff) {
-      check(b.rank < a.rank, 'head-to-head: B beat A so B must rank higher', { a, b });
-    }
-  });
-});
+// Head-to-head tiebreak (two teams equal on wins & cupDiff → the direct-meeting
+// winner ranks higher) is covered with a real, constructed tie in
+// tournament-engine.test.ts ("uses head-to-head when wins and cup diff are equal for
+// two teams"), so it is not duplicated here.
 
 describe('applyCutoffTieOrder — reorders the tied group, recomputes ranks, rejects bad input', () => {
   const base: TeamStanding[] = [

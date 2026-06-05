@@ -1,6 +1,12 @@
 /**
  * Throwaway live-DB RPC flow test (Part 2).
  *
+ * ⚠️  WRITES TO THE LIVE PROJECT in `.env` (VITE_SUPABASE_URL) — i.e. PRODUCTION.
+ *     It creates a tiny 4-team / 2-round slice and runs dispute scenarios, then
+ *     calls admin_reset_tournament to restore a clean baseline. Only run against a
+ *     project whose data you can safely mutate, during a quiet window. Requires
+ *     ADMIN_CODE + T1..T4 id/code env vars, so it cannot run by accident.
+ *
  * Drives the REAL Supabase RPCs through the anon key — the exact path the browser
  * uses — to exercise the SQL-only logic that pure in-process tests can't reach:
  *   • anon write-gateway (direct table writes must be rejected by RLS)
