@@ -18,6 +18,8 @@ interface TournamentMapViewProps {
   knockoutResults: MatchResult[];
   champion: string | null;
   totalRounds: number;
+  /** Teams advancing from Swiss into the knockout — drives the standings cutoff highlight. */
+  playoffSize: number;
   status: string;
   onEditMatch?: (matchId: string) => void;
   large?: boolean;
@@ -298,6 +300,7 @@ export default function TournamentMapView({
   knockoutResults,
   champion,
   totalRounds,
+  playoffSize,
   status,
   onEditMatch,
   large,
@@ -357,7 +360,7 @@ export default function TournamentMapView({
                 </div>
               </div>
             )}
-            <StandingsColumn standings={standings} highlightTop={8} large={large} />
+            <StandingsColumn standings={standings} highlightTop={playoffSize} large={large} />
           </div>
         </div>
       )}

@@ -728,6 +728,7 @@ function MapView({ state }: { state: SimState }) {
       knockoutResults={state.knockoutResults}
       champion={state.champion}
       totalRounds={state.config.swissRounds}
+      playoffSize={state.config.knockoutSize}
       status={mapStatus}
     />
   );

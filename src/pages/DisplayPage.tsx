@@ -154,6 +154,7 @@ export default function DisplayPage() {
           knockoutResults={knockoutResults}
           champion={champion}
           totalRounds={tournament?.total_rounds ?? 7}
+          playoffSize={playoffSize}
           status={status}
           currentRound={currentRound}
           large
