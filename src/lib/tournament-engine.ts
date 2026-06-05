@@ -119,17 +119,19 @@ export function generateSwissPairings(
   let activeTeams = [...teams];
 
   if (activeTeams.length % 2 !== 0) {
-    // Pick lowest-wins team that hasn't had a bye, shuffle to randomize ties
-    const candidates = shuffle(
-      activeTeams
-        .filter((t) => !byeTeams.has(t.id))
-        .sort((a, b) => a.wins - b.wins),
+    // Pick a lowest-wins team that hasn't had a bye. Shuffle BEFORE sorting: the
+    // sort is stable, so shuffling first randomizes ties *within* each win group
+    // while keeping the groups ordered by wins. (Shuffling after the sort — as this
+    // once did — re-randomized the whole array and made the wins-sort dead code, so
+    // the bye went to a random eligible team instead of a lowest-wins one.)
+    const candidates = shuffle(activeTeams.filter((t) => !byeTeams.has(t.id))).sort(
+      (a, b) => a.wins - b.wins,
     );
     // If all teams already had a bye, allow repeats
     const byeTeam =
       candidates.length > 0
         ? candidates[0]
-        : shuffle([...activeTeams].sort((a, b) => a.wins - b.wins))[0];
+        : shuffle([...activeTeams]).sort((a, b) => a.wins - b.wins)[0];
     bye = byeTeam.id;
     activeTeams = activeTeams.filter((t) => t.id !== bye);
   }
