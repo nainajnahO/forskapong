@@ -52,14 +52,14 @@ export const SCHEDULE_PHASES = [
     startTime: '17:45',
     events: [
       {
-        time: '17:45-18:30',
+        time: '17:45-18:45',
         title: 'Gruppspel',
         description: 'Skriv in din 6-teckens kod för att se era matcher.',
         bold: true,
         type: 'login' as const,
       },
       {
-        time: '18:30-19:30',
+        time: '18:45-19:30',
         title: 'Slutspel',
         description: '',
         bold: true,
