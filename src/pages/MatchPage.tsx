@@ -151,9 +151,9 @@ export default function MatchPage() {
   const [error, setError] = useState('');
 
   // Reporting state
-  const [step, setStep] = useState<'idle' | 'won' | 'lost' | 'done'>('idle');
+  const [step, setStep] = useState<'idle' | 'report' | 'done'>('idle');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [ourCups, setOurCups] = useState(6); // cups our team hit (0–6)
+  const [ourCups, setOurCups] = useState(0); // cups our team hit (0–6)
   const [theirCups, setTheirCups] = useState(0); // cups the opponent hit (0–6)
   const [submitError, setSubmitError] = useState('');
 
@@ -233,18 +233,20 @@ export default function MatchPage() {
 
   // ── Report result ──────────────────────────────
   // score_team1/score_team2 = cups HIT by that team (0–6). The reporter enters both
-  // teams' cups; the declared winner must have strictly more (the RPC re-checks).
-  const handleReport = async (weAreWinner: boolean) => {
+  // teams' cups; the winner is whoever hit more — equal scores aren't a valid result
+  // (the RPC re-checks winner > loser).
+  const handleReport = async () => {
     if (!match || !teamId || !isHomeTeam) {
       setSubmitError('Endast hemmalaget kan rapportera resultatet.');
       return;
     }
-    const winnerCups = weAreWinner ? ourCups : theirCups;
-    const loserCups = weAreWinner ? theirCups : ourCups;
-    if (winnerCups <= loserCups) {
+    if (ourCups === theirCups) {
       setSubmitError('Vinnaren måste ha fler koppar än motståndaren.');
       return;
     }
+    const weAreWinner = ourCups > theirCups;
+    const winnerCups = weAreWinner ? ourCups : theirCups;
+    const loserCups = weAreWinner ? theirCups : ourCups;
     setIsSubmitting(true);
     setSubmitError('');
 
@@ -596,33 +598,17 @@ export default function MatchPage() {
                   Du spelar som hemmalag. Rapportera matchresultatet efter att ni spelat klart.
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <button
-                    onClick={() => {
-                      setStep('won');
-                      setOurCups(6);
-                      setTheirCups(0);
-                    }}
-                    className="px-6 py-3 rounded-xl text-sm font-semibold bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:brightness-110 transition-all"
-                  >
-                    Vi vann 🎉
-                  </button>
-                  <button
-                    onClick={() => {
-                      setStep('lost');
-                      setOurCups(0);
-                      setTheirCups(6);
-                    }}
-                    className={cn(
-                      'px-6 py-3 rounded-xl text-sm font-semibold border transition-all hover:opacity-80',
-                      theme === 'dark'
-                        ? 'bg-red-500/15 text-red-400 border-red-500/20'
-                        : 'bg-red-50 text-red-600 border-red-200',
-                    )}
-                  >
-                    Vi förlorade
-                  </button>
-                </div>
+                <button
+                  onClick={() => {
+                    setStep('report');
+                    setOurCups(0);
+                    setTheirCups(0);
+                    setSubmitError('');
+                  }}
+                  className="px-6 py-3 rounded-xl text-sm font-semibold bg-brand-500 text-white shadow-lg shadow-brand-500/20 hover:brightness-110 transition-all"
+                >
+                  Rapportera resultat
+                </button>
               </div>
             )}
 
@@ -635,12 +621,9 @@ export default function MatchPage() {
               </div>
             )}
 
-            {/* ─── STATE: Score picker (won — how many did THEY hit?) ── */}
-            {canReport && step === 'won' && (
+            {/* ─── STATE: Score entry — winner derived from cups ── */}
+            {canReport && step === 'report' && (
               <div>
-                <p className={cn('text-sm text-center mb-2 font-semibold text-emerald-400')}>
-                  Ni vann!
-                </p>
                 <p className={cn('text-sm text-center mb-6', themeText(theme, 'secondary'))}>
                   Hur många koppar träffade varje lag?
                 </p>
@@ -670,9 +653,15 @@ export default function MatchPage() {
                       max={6}
                     />
                   </div>
-                  {ourCups <= theirCups && (
+                  {ourCups > theirCups && (
+                    <p className="text-sm font-semibold text-emerald-400">Ni vann 🎉</p>
+                  )}
+                  {theirCups > ourCups && (
+                    <p className="text-sm font-semibold text-red-400">Ni förlorade</p>
+                  )}
+                  {ourCups === theirCups && (
                     <p className="text-xs text-amber-400">
-                      Vinnaren måste ha fler koppar än motståndaren.
+                      Lika går inte att spara – laget med flest koppar vinner.
                     </p>
                   )}
                 </div>
@@ -683,77 +672,8 @@ export default function MatchPage() {
 
                 <div className="flex gap-3 justify-center">
                   <button
-                    onClick={() => handleReport(true)}
-                    disabled={isSubmitting || ourCups <= theirCups}
-                    className="px-6 py-3 rounded-xl text-sm font-semibold bg-brand-500 text-white shadow-lg shadow-brand-500/20 hover:brightness-110 transition-all disabled:opacity-40"
-                  >
-                    {isSubmitting ? 'Sparar…' : 'Skicka resultat'}
-                  </button>
-                  <button
-                    onClick={() => setStep('idle')}
-                    className={cn(
-                      'px-6 py-3 rounded-xl text-sm font-medium border transition-all hover:opacity-80',
-                      theme === 'dark'
-                        ? 'bg-white/[0.04] border-white/10 text-zinc-400'
-                        : 'bg-zinc-100 border-zinc-200 text-zinc-500',
-                    )}
-                  >
-                    Avbryt
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ─── STATE: Score picker (lost — how many did WE hit?) ── */}
-            {canReport && step === 'lost' && (
-              <div>
-                <p className={cn('text-sm text-center mb-2 font-semibold text-red-400')}>
-                  Ni förlorade
-                </p>
-                <p className={cn('text-sm text-center mb-6', themeText(theme, 'secondary'))}>
-                  Hur många koppar träffade varje lag?
-                </p>
-
-                <div className="flex flex-col items-center gap-4 mb-8">
-                  <div className="flex items-center gap-6">
-                    <ScorePicker
-                      theme={theme}
-                      value={ourCups}
-                      onChange={setOurCups}
-                      label={ourTeam.name}
-                      max={6}
-                    />
-                    <span
-                      className={cn(
-                        'text-xl font-display',
-                        theme === 'dark' ? 'text-zinc-600' : 'text-zinc-300',
-                      )}
-                    >
-                      –
-                    </span>
-                    <ScorePicker
-                      theme={theme}
-                      value={theirCups}
-                      onChange={setTheirCups}
-                      label={theirTeam.name}
-                      max={6}
-                    />
-                  </div>
-                  {theirCups <= ourCups && (
-                    <p className="text-xs text-amber-400">
-                      Vinnaren måste ha fler koppar än motståndaren.
-                    </p>
-                  )}
-                </div>
-
-                {submitError && (
-                  <p className="text-sm text-red-400 text-center mb-4">{submitError}</p>
-                )}
-
-                <div className="flex gap-3 justify-center">
-                  <button
-                    onClick={() => handleReport(false)}
-                    disabled={isSubmitting || theirCups <= ourCups}
+                    onClick={handleReport}
+                    disabled={isSubmitting || ourCups === theirCups}
                     className="px-6 py-3 rounded-xl text-sm font-semibold bg-brand-500 text-white shadow-lg shadow-brand-500/20 hover:brightness-110 transition-all disabled:opacity-40"
                   >
                     {isSubmitting ? 'Sparar…' : 'Skicka resultat'}
